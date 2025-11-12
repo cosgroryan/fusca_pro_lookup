@@ -57,7 +57,7 @@ sudo chown ubuntu:ubuntu /var/www/fusca
 cd /var/www/fusca
 
 # Clone repository (or upload files via SCP)
-git clone <your-repo-url> .
+git clone https://github.com/cosgroryan/fusca_pro_lookup 
 # OR upload files manually:
 # scp -i your-key.pem -r /path/to/fusca_pro_loockup ubuntu@your-ec2-ip:/var/www/fusca
 
@@ -83,14 +83,18 @@ sudo nano /etc/fusca-env.conf
 
 Add your database credentials:
 ```bash
-DB_HOST=your-db-host
+# Database Configuration (READ-ONLY USER)
+DB_HOST=mysql57
 DB_PORT=3306
-DB_USER=your-db-user
-DB_PASSWORD=your-db-password
-DB_NAME=your-db-name
-SSH_HOST=your-ssh-host
-SSH_USER=your-ssh-user
-SSH_KEY_PATH=/path/to/ssh/key
+DB_USER=fuscaread
+DB_PASSWORD=ydv.mqy3avy7jxj6WXZ
+DB_NAME=fuscadb
+
+# SSH Tunnel Configuration
+SSH_HOST=120.138.27.51
+SSH_PORT=22
+SSH_USER=appfusca
+SSH_KEY_PATH=/home/ubuntu/.ssh/id_rsa_nopass
 ```
 
 ---

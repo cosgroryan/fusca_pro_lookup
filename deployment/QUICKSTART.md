@@ -32,12 +32,18 @@ sudo nano /etc/fusca-env.conf
 
 Add your credentials (copy from `deployment/env.example`):
 ```bash
-DB_HOST=your-database-host
+# Database Configuration (READ-ONLY USER)
+DB_HOST=mysql57
 DB_PORT=3306
-DB_USER=your-db-username
-DB_PASSWORD=your-db-password
-DB_NAME=your-database-name
-# Add SSH tunnel config if needed
+DB_USER=fuscaread
+DB_PASSWORD=ydv.mqy3avy7jxj6WXZ
+DB_NAME=fuscadb
+
+# SSH Tunnel Configuration
+SSH_HOST=120.138.27.51
+SSH_PORT=22
+SSH_USER=appfusca
+SSH_KEY_PATH=/home/ubuntu/.ssh/id_rsa_nopass
 ```
 
 Save and exit (Ctrl+X, Y, Enter)

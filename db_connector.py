@@ -21,6 +21,7 @@ def get_db_connection():
     db_password = os.environ.get('DB_PASSWORD', 'ydv.mqy3avy7jxj6WXZ')
     db_name = os.environ.get('DB_NAME', 'fuscadb')
 
+    # Use port 0 to let the OS choose an available port (fixes multi-worker conflicts)
     tunnel = SSHTunnelForwarder(
         (ssh_host, ssh_port),
         ssh_username=ssh_user,
@@ -28,15 +29,16 @@ def get_db_connection():
         allow_agent=False,                   # ❗️turn off SSH agent fallback
         host_pkey_directories=[],           # ❗️prevent scanning for default keys
         remote_bind_address=(db_host, db_port),
-        local_bind_address=('127.0.0.1', 33306)
+        local_bind_address=('127.0.0.1', 0)  # Port 0 = auto-assign available port
     )
 
     tunnel.start()
-    print("tunnel found")
+    local_port = tunnel.local_bind_port
+    print(f"tunnel found on local port {local_port}")
 
     conn = mysql.connector.connect(
         host='127.0.0.1',
-        port=33306,
+        port=local_port,  # Use the dynamically assigned port
         user=db_user,
         password=db_password,
         database=db_name,
@@ -44,7 +46,7 @@ def get_db_connection():
         use_pure=True
     )
 
-    print("Connected via SSH tunnel")
+    print(f"Connected via SSH tunnel on port {local_port}")
     return conn, tunnel
 
 if __name__ == "__main__":

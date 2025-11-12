@@ -217,6 +217,105 @@ def search_auctions():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/bales_chart', methods=['POST'])
+def get_bales_chart():
+    """Get bales data grouped by sale_date for chart"""
+    try:
+        data = request.json
+        
+        # Build query with filters - get bales grouped by date
+        query = """
+            SELECT 
+                sale_date,
+                SUM(bales) as total_bales
+            FROM auction_data_joined
+            WHERE price > 10
+        """
+        
+        params = []
+        
+        # Apply same filters as search - wool type search
+        if data.get('wool_type_search'):
+            search_term = data['wool_type_search'].strip()
+            if search_term:
+                query += " AND (CAST(wool_type_id AS CHAR) LIKE %s OR type_combined LIKE %s)"
+                params.append(f"%{search_term}%")
+                params.append(f"%{search_term}%")
+        
+        # Apply column filters (same as search endpoint)
+        if data.get('column_filters'):
+            for filter_item in data['column_filters']:
+                column = filter_item.get('column')
+                operator = filter_item.get('operator')
+                value = filter_item.get('value')
+                value2 = filter_item.get('value2')
+                
+                if not column or not operator or not value:
+                    continue
+                
+                # Security: Validate column name against whitelist
+                if column not in ALLOWED_COLUMNS:
+                    print(f"Warning: Invalid column name attempted: {column}")
+                    continue
+                
+                # Build filter condition based on operator
+                if operator == 'eq':
+                    query += f" AND {column} = %s"
+                    params.append(value)
+                elif operator == 'ne':
+                    query += f" AND {column} != %s"
+                    params.append(value)
+                elif operator == 'gt':
+                    query += f" AND {column} > %s"
+                    params.append(value)
+                elif operator == 'lt':
+                    query += f" AND {column} < %s"
+                    params.append(value)
+                elif operator == 'gte':
+                    query += f" AND {column} >= %s"
+                    params.append(value)
+                elif operator == 'lte':
+                    query += f" AND {column} <= %s"
+                    params.append(value)
+                elif operator == 'between' and value2:
+                    query += f" AND {column} BETWEEN %s AND %s"
+                    params.append(value)
+                    params.append(value2)
+                elif operator == 'contains':
+                    query += f" AND {column} LIKE %s"
+                    params.append(f"%{value}%")
+                elif operator == 'not_contains':
+                    query += f" AND {column} NOT LIKE %s"
+                    params.append(f"%{value}%")
+        
+        # Group by sale_date
+        query += " GROUP BY sale_date ORDER BY sale_date ASC"
+        
+        conn, tunnel = get_db()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        
+        # Format data for chart
+        labels = []
+        bales_data = []
+        
+        for row in results:
+            if row['sale_date'] and row['total_bales']:
+                labels.append(row['sale_date'].strftime('%Y-%m-%d'))
+                bales_data.append(int(row['total_bales']))
+        
+        return jsonify({
+            'labels': labels,
+            'data': bales_data
+        })
+        
+    except Exception as e:
+        print(f"Bales chart error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/price_chart', methods=['POST'])
 def get_price_chart():
     """Get price data grouped by sale_date for chart"""

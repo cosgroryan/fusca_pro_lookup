@@ -357,6 +357,13 @@
         
         <div id="errorMsg" class="error" style="display: none;"></div>
         
+        <div class="chart-section" id="balesChartSection" style="display: none;">
+            <h2 style="margin-bottom: 10px; color: #153D33; font-size: 20px;">Total Bales by Sale Date</h2>
+            <div class="chart-container">
+                <canvas id="balesChart"></canvas>
+            </div>
+        </div>
+        
         <div id="resultsSection" style="display: none;">
             <div class="results-info">
                 <span class="results-count" id="resultsCount">-</span>
@@ -399,6 +406,7 @@
 
     <script>
         let priceChart = null;
+        let balesChart = null;
         let filterCount = 0;
         let currentResults = [];
         
@@ -545,6 +553,7 @@
             document.getElementById('loading').style.display = 'block';
             document.getElementById('resultsSection').style.display = 'none';
             document.getElementById('chartSection').style.display = 'none';
+            document.getElementById('balesChartSection').style.display = 'none';
             document.getElementById('errorMsg').style.display = 'none';
             document.getElementById('searchBtn').disabled = true;
             
@@ -593,6 +602,21 @@
                 
                 // Display chart
                 displayChart(chartData);
+                
+                // Fetch bales chart data
+                console.log('Fetching bales chart data...');
+                const balesChartResponse = await fetch('/api/bales_chart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(filters)
+                });
+                
+                if (balesChartResponse.ok) {
+                    const balesChartData = await balesChartResponse.json();
+                    if (!balesChartData.error) {
+                        displayBalesChart(balesChartData);
+                    }
+                }
                 
             } catch (error) {
                 console.error('Search error:', error);
@@ -709,6 +733,75 @@
             });
         }
         
+        function displayBalesChart(data) {
+            document.getElementById('balesChartSection').style.display = 'block';
+            
+            const ctx = document.getElementById('balesChart').getContext('2d');
+            
+            // Destroy existing chart
+            if (balesChart) {
+                balesChart.destroy();
+            }
+            
+            balesChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Total Bales',
+                        data: data.data,
+                        backgroundColor: '#3D7F4B',
+                        borderColor: '#153D33',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Total Bales: ' + context.parsed.y.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Total Bales'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Sale Date'
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                maxTicksLimit: 20
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
         function resetFilters() {
             // Clear text input
             document.getElementById('wool_type').value = '';
@@ -720,6 +813,7 @@
             // Hide results and charts
             document.getElementById('resultsSection').style.display = 'none';
             document.getElementById('chartSection').style.display = 'none';
+            document.getElementById('balesChartSection').style.display = 'none';
             document.getElementById('errorMsg').style.display = 'none';
             
             console.log('Filters reset');
