@@ -9,8 +9,12 @@ from db_connector import get_db_connection
 from datetime import datetime
 import json
 import time
+import threading
 
 app = Flask(__name__)
+
+# Lock to prevent simultaneous tunnel creation across workers
+_tunnel_lock = threading.Lock()
 
 # Security: Whitelist of allowed columns for filtering
 ALLOWED_COLUMNS = {

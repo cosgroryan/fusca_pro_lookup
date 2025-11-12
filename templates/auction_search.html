@@ -558,8 +558,54 @@
             document.getElementById('searchBtn').disabled = true;
             
             try {
-                // Fetch results first
-                console.log('Fetching search results...');
+                // Step 1: Fetch and display price chart FIRST
+                console.log('Step 1: Fetching price chart...');
+                const chartResponse = await fetch('/api/price_chart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(filters)
+                });
+                
+                if (chartResponse.ok) {
+                    const chartData = await chartResponse.json();
+                    if (!chartData.error) {
+                        console.log('✅ Price chart loaded');
+                        displayChart(chartData);
+                    } else {
+                        console.warn('Price chart error:', chartData.error);
+                    }
+                } else {
+                    console.warn('Price chart failed with status:', chartResponse.status);
+                }
+                
+                // Wait a moment before next request
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Step 2: Fetch and display bales chart SECOND
+                console.log('Step 2: Fetching bales chart...');
+                const balesChartResponse = await fetch('/api/bales_chart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(filters)
+                });
+                
+                if (balesChartResponse.ok) {
+                    const balesChartData = await balesChartResponse.json();
+                    if (!balesChartData.error) {
+                        console.log('✅ Bales chart loaded');
+                        displayBalesChart(balesChartData);
+                    } else {
+                        console.warn('Bales chart error:', balesChartData.error);
+                    }
+                } else {
+                    console.warn('Bales chart failed with status:', balesChartResponse.status);
+                }
+                
+                // Wait a moment before next request
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Step 3: Fetch and display table data LAST
+                console.log('Step 3: Fetching search results...');
                 const resultsResponse = await fetch('/api/search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -571,7 +617,7 @@
                 }
                 
                 const resultsData = await resultsResponse.json();
-                console.log('Search results:', resultsData.count, 'records');
+                console.log('✅ Search results:', resultsData.count, 'records');
                 
                 if (resultsData.error) {
                     throw new Error(resultsData.error);
@@ -579,44 +625,6 @@
                 
                 // Display results
                 displayResults(resultsData);
-                
-                // Fetch chart data
-                console.log('Fetching chart data...');
-                const chartResponse = await fetch('/api/price_chart', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(filters)
-                });
-                
-                if (!chartResponse.ok) {
-                    console.warn('Chart failed, but showing results');
-                    return;
-                }
-                
-                const chartData = await chartResponse.json();
-                
-                if (chartData.error) {
-                    console.warn('Chart error:', chartData.error);
-                    return;
-                }
-                
-                // Display chart
-                displayChart(chartData);
-                
-                // Fetch bales chart data
-                console.log('Fetching bales chart data...');
-                const balesChartResponse = await fetch('/api/bales_chart', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(filters)
-                });
-                
-                if (balesChartResponse.ok) {
-                    const balesChartData = await balesChartResponse.json();
-                    if (!balesChartData.error) {
-                        displayBalesChart(balesChartData);
-                    }
-                }
                 
             } catch (error) {
                 console.error('Search error:', error);
