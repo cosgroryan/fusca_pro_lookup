@@ -333,7 +333,17 @@ def cleanup_connection(error):
     pass
 
 if __name__ == '__main__':
+    import os
+    
+    # Check if running in production (via gunicorn) or development
+    is_production = os.environ.get('FLASK_ENV') == 'production'
+    
     print("Starting Auction Search GUI...")
-    print("Open http://localhost:5001 in your browser")
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    if not is_production:
+        print("Open http://localhost:5001 in your browser")
+        print("Running in DEVELOPMENT mode")
+        app.run(debug=True, host='0.0.0.0', port=5001)
+    else:
+        print("Running in PRODUCTION mode")
+        app.run(debug=False, host='127.0.0.1', port=5001)
 
