@@ -20,50 +20,51 @@ ALLOWED_COLUMNS = {
     'type_combined', 'lot_number', 'is_sold'
 }
 
-# Global connection with retry logic
-_db_conn = None
-_db_tunnel = None
-_last_connection_time = 0
+# Per-worker connection storage (each Gunicorn worker process keeps its own connection)
+_worker_conn = None
+_worker_tunnel = None
+_worker_pid = None
 
 def get_db():
-    """Get or create database connection with retry logic"""
-    global _db_conn, _db_tunnel, _last_connection_time
+    """Get or create database connection per worker process"""
+    global _worker_conn, _worker_tunnel, _worker_pid
+    import os as os_module
     
-    # Check if connection is still valid
+    current_pid = os_module.getpid()
+    
+    # If this is a new worker process, clear old connection
+    if _worker_pid != current_pid:
+        _worker_conn = None
+        _worker_tunnel = None
+        _worker_pid = current_pid
+        print(f"New worker process {current_pid}, creating new connection...")
+    
+    # Check if existing connection is still valid
     try:
-        if _db_conn and _db_conn.is_connected():
-            return _db_conn, _db_tunnel
+        if _worker_conn and _worker_conn.is_connected() and _worker_tunnel:
+            return _worker_conn, _worker_tunnel
     except:
         pass
     
-    # Need new connection - add small delay to avoid port conflicts
-    current_time = time.time()
-    if current_time - _last_connection_time < 1:
-        time.sleep(0.5)
-    
-    # Close old connection if exists
-    if _db_tunnel:
-        try:
-            _db_tunnel.stop()
-        except:
-            pass
-    if _db_conn:
-        try:
-            _db_conn.close()
-        except:
-            pass
-    
-    # Create new connection with retries
+    # Need new connection
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            print(f"Connecting to database (attempt {attempt + 1}/{max_retries})...")
-            _db_conn, _db_tunnel = get_db_connection()
-            _last_connection_time = time.time()
-            print("Database connected successfully!")
-            return _db_conn, _db_tunnel
+            print(f"Worker {current_pid}: Connecting to database (attempt {attempt + 1}/{max_retries})...")
+            _worker_conn, _worker_tunnel = get_db_connection()
+            print(f"Worker {current_pid}: Database connected successfully!")
+            return _worker_conn, _worker_tunnel
         except Exception as e:
-            print(f"Connection attempt {attempt + 1} failed: {e}")
+            print(f"Worker {current_pid}: Connection attempt {attempt + 1} failed: {e}")
+            # Clean up failed tunnel
+            if _worker_tunnel:
+                try:
+                    _worker_tunnel.stop()
+                except:
+                    pass
+            _worker_tunnel = None
+            _worker_conn = None
+            
             if attempt < max_retries - 1:
                 time.sleep(1)
             else:
