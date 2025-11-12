@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auction Data Search</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #153D33;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .search-section {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .search-group {
+            margin-bottom: 15px;
+        }
+        
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .search-bar input {
+            flex: 1;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        input[type="text"], input[type="number"], select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+        }
+        
+        .filter-row {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .filter-row select {
+            min-width: 150px;
+        }
+        
+        .filter-row input {
+            flex: 1;
+        }
+        
+        .remove-filter {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .remove-filter:hover {
+            background: #c82333;
+        }
+        
+        .add-filter-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .add-filter-btn:hover {
+            background: #138496;
+        }
+        
+        .filters-container {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .filters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .filters-header h3 {
+            margin: 0;
+            color: #153D33;
+            font-size: 16px;
+        }
+        
+        .filter-column {
+            font-weight: 600;
+            color: #666;
+            font-size: 13px;
+            margin-right: 10px;
+            min-width: 120px;
+        }
+        
+        button {
+            background: #3D7F4B;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #153D33;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .chart-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 20px;
+        }
+        
+        .results-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 4px;
+        }
+        
+        .results-count {
+            font-weight: 600;
+            color: #153D33;
+            font-size: 16px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        thead {
+            position: sticky;
+            top: 0;
+            background: #153D33;
+            color: white;
+            z-index: 10;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        th {
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        tbody tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2, .range-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐑 Auction Data Search & Analysis</h1>
+        
+        <div class="search-section">
+            <h2 style="margin-bottom: 20px; color: #153D33; font-size: 20px;">Search Wool Auctions</h2>
+            
+            <div class="search-group">
+                <label for="wool_type">Wool Type Search (ID or Type Name)</label>
+                <div class="search-bar">
+                    <input type="text" id="wool_type" placeholder="e.g. F2N, 1, MULTI... (leave blank for all)">
+                    <button onclick="search()" id="searchBtn">Search</button>
+                    <button onclick="resetFilters()" style="background: #666;">Reset</button>
+                </div>
+            </div>
+            
+            <div class="filters-container" id="filtersContainer">
+                <div class="filters-header">
+                    <h3>Column Filters</h3>
+                    <button class="add-filter-btn" onclick="addFilter()">+ Add Filter</button>
+                </div>
+                <div id="filtersList"></div>
+            </div>
+        </div>
+        
+        <div class="chart-section" id="chartSection" style="display: none;">
+            <h2 style="margin-bottom: 10px; color: #153D33; font-size: 20px;">Average Price Over Time</h2>
+            <div class="chart-container">
+                <canvas id="priceChart"></canvas>
+            </div>
+        </div>
+        
+        <div id="errorMsg" class="error" style="display: none;"></div>
+        
+        <div id="resultsSection" style="display: none;">
+            <div class="results-info">
+                <span class="results-count" id="resultsCount">-</span>
+                <span style="color: #666; font-size: 14px;">Showing up to 1,000 results</span>
+            </div>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sale Date</th>
+                            <th>Lot Number</th>
+                            <th>Wool Type</th>
+                            <th>Price</th>
+                            <th>Bales</th>
+                            <th>KG</th>
+                            <th>Colour</th>
+                            <th>Micron</th>
+                            <th>Yield %</th>
+                            <th>VM %</th>
+                            <th>Location</th>
+                            <th>Seller</th>
+                            <th>Farm Brand</th>
+                            <th>Sold</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTable">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            Loading...
+        </div>
+    </div>
+
+    <script>
+        let priceChart = null;
+        let filterCount = 0;
+        
+        const columns = [
+            { name: 'price', label: 'Price', type: 'number' },
+            { name: 'bales', label: 'Bales', type: 'number' },
+            { name: 'kg', label: 'KG', type: 'number' },
+            { name: 'colour', label: 'Colour', type: 'number' },
+            { name: 'micron', label: 'Micron', type: 'number' },
+            { name: 'yield', label: 'Yield %', type: 'number' },
+            { name: 'vegetable_matter', label: 'Vegetable Matter %', type: 'number' },
+            { name: 'sale_date', label: 'Sale Date', type: 'date' },
+            { name: 'location', label: 'Location', type: 'text' },
+            { name: 'seller_name', label: 'Seller', type: 'text' },
+            { name: 'farm_brand_name', label: 'Farm Brand', type: 'text' }
+        ];
+        
+        const operators = {
+            number: [
+                { value: 'eq', label: 'Equals' },
+                { value: 'ne', label: 'Not Equals' },
+                { value: 'gt', label: 'Greater Than' },
+                { value: 'lt', label: 'Less Than' },
+                { value: 'gte', label: 'Greater Than or Equal' },
+                { value: 'lte', label: 'Less Than or Equal' },
+                { value: 'between', label: 'Between' }
+            ],
+            text: [
+                { value: 'contains', label: 'Contains' },
+                { value: 'not_contains', label: 'Does Not Contain' },
+                { value: 'eq', label: 'Equals' },
+                { value: 'ne', label: 'Not Equals' }
+            ],
+            date: [
+                { value: 'eq', label: 'Equals' },
+                { value: 'gt', label: 'After' },
+                { value: 'lt', label: 'Before' },
+                { value: 'between', label: 'Between' }
+            ]
+        };
+        
+        function addFilter() {
+            const filterId = `filter_${filterCount++}`;
+            const filtersList = document.getElementById('filtersList');
+            
+            const filterDiv = document.createElement('div');
+            filterDiv.className = 'filter-row';
+            filterDiv.id = filterId;
+            
+            filterDiv.innerHTML = `
+                <select class="filter-column" onchange="updateFilterOperators('${filterId}')">
+                    <option value="">Select Column</option>
+                    ${columns.map(col => `<option value="${col.name}" data-type="${col.type}">${col.label}</option>`).join('')}
+                </select>
+                <select class="filter-operator">
+                    <option value="">Select Operator</option>
+                </select>
+                <input type="text" class="filter-value" placeholder="Value">
+                <input type="text" class="filter-value2" placeholder="Value 2" style="display:none;">
+                <button class="remove-filter" onclick="removeFilter('${filterId}')">Remove</button>
+            `;
+            
+            filtersList.appendChild(filterDiv);
+        }
+        
+        function updateFilterOperators(filterId) {
+            const filterDiv = document.getElementById(filterId);
+            const columnSelect = filterDiv.querySelector('.filter-column');
+            const operatorSelect = filterDiv.querySelector('.filter-operator');
+            const valueInput = filterDiv.querySelector('.filter-value');
+            const value2Input = filterDiv.querySelector('.filter-value2');
+            
+            const selectedOption = columnSelect.options[columnSelect.selectedIndex];
+            const columnType = selectedOption.getAttribute('data-type');
+            
+            operatorSelect.innerHTML = '<option value="">Select Operator</option>';
+            value2Input.style.display = 'none';
+            
+            if (columnType && operators[columnType]) {
+                operators[columnType].forEach(op => {
+                    const option = document.createElement('option');
+                    option.value = op.value;
+                    option.textContent = op.label;
+                    operatorSelect.appendChild(option);
+                });
+            }
+            
+            // Update input type based on column type
+            if (columnType === 'number') {
+                valueInput.type = 'number';
+                valueInput.step = '0.1';
+                value2Input.type = 'number';
+                value2Input.step = '0.1';
+            } else if (columnType === 'date') {
+                valueInput.type = 'date';
+                value2Input.type = 'date';
+            } else {
+                valueInput.type = 'text';
+                value2Input.type = 'text';
+            }
+            
+            operatorSelect.onchange = function() {
+                value2Input.style.display = this.value === 'between' ? 'block' : 'none';
+            };
+        }
+        
+        function removeFilter(filterId) {
+            document.getElementById(filterId).remove();
+        }
+        
+        function getFilters() {
+            const filters = {};
+            
+            const woolType = document.getElementById('wool_type').value.trim();
+            if (woolType) filters.wool_type_search = woolType;
+            
+            // Collect column filters
+            filters.column_filters = [];
+            const filterRows = document.querySelectorAll('.filter-row');
+            filterRows.forEach(row => {
+                const column = row.querySelector('.filter-column').value;
+                const operator = row.querySelector('.filter-operator').value;
+                const value = row.querySelector('.filter-value').value;
+                const value2 = row.querySelector('.filter-value2').value;
+                
+                if (column && operator && value) {
+                    filters.column_filters.push({
+                        column,
+                        operator,
+                        value,
+                        value2: operator === 'between' ? value2 : null
+                    });
+                }
+            });
+            
+            return filters;
+        }
+        
+        async function search() {
+            const filters = getFilters();
+            
+            console.log('Searching with filters:', filters);
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('chartSection').style.display = 'none';
+            document.getElementById('errorMsg').style.display = 'none';
+            document.getElementById('searchBtn').disabled = true;
+            
+            try {
+                // Fetch results first
+                console.log('Fetching search results...');
+                const resultsResponse = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(filters)
+                });
+                
+                if (!resultsResponse.ok) {
+                    throw new Error(`Server error: ${resultsResponse.status}`);
+                }
+                
+                const resultsData = await resultsResponse.json();
+                console.log('Search results:', resultsData.count, 'records');
+                
+                if (resultsData.error) {
+                    throw new Error(resultsData.error);
+                }
+                
+                // Display results
+                displayResults(resultsData);
+                
+                // Fetch chart data
+                console.log('Fetching chart data...');
+                const chartResponse = await fetch('/api/price_chart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(filters)
+                });
+                
+                if (!chartResponse.ok) {
+                    console.warn('Chart failed, but showing results');
+                    return;
+                }
+                
+                const chartData = await chartResponse.json();
+                
+                if (chartData.error) {
+                    console.warn('Chart error:', chartData.error);
+                    return;
+                }
+                
+                // Display chart
+                displayChart(chartData);
+                
+            } catch (error) {
+                console.error('Search error:', error);
+                showError('Search failed: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('searchBtn').disabled = false;
+            }
+        }
+        
+        function displayResults(data) {
+            const tbody = document.getElementById('resultsTable');
+            tbody.innerHTML = '';
+            
+            document.getElementById('resultsCount').textContent = `Found ${data.count} results`;
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            data.results.forEach(row => {
+                // Convert price from cents to dollars
+                const priceInDollars = row.price / 100;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.sale_date || '-'}</td>
+                    <td>${row.lot_number ? row.lot_number.trim() : '-'}</td>
+                    <td>${row.type_combined || '-'}</td>
+                    <td style="font-weight: 600;">$${priceInDollars.toFixed(2)}</td>
+                    <td>${row.bales}</td>
+                    <td>${row.kg.toLocaleString()}</td>
+                    <td>${row.colour ? row.colour.toFixed(1) : '-'}</td>
+                    <td>${row.micron ? row.micron.toFixed(1) : '-'}</td>
+                    <td>${row.yield ? row.yield.toFixed(1) : '-'}</td>
+                    <td>${row.vegetable_matter ? row.vegetable_matter.toFixed(1) : '-'}</td>
+                    <td>${row.location || '-'}</td>
+                    <td>${row.seller_name || '-'}</td>
+                    <td>${row.farm_brand_name || '-'}</td>
+                    <td>${row.is_sold ? '✓' : '✗'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function displayChart(data) {
+            document.getElementById('chartSection').style.display = 'block';
+            
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            
+            // Destroy existing chart
+            if (priceChart) {
+                priceChart.destroy();
+            }
+            
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Average Price',
+                        data: data.data,
+                        borderColor: '#3D7F4B',
+                        backgroundColor: 'rgba(61, 127, 75, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return 'Avg Price (filtered): $' + context.parsed.y.toFixed(2);
+                                    }
+                                }
+                            }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Price ($)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Sale Date'
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                maxTicksLimit: 20
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function resetFilters() {
+            // Clear text input
+            document.getElementById('wool_type').value = '';
+            
+            // Remove all filters
+            document.getElementById('filtersList').innerHTML = '';
+            filterCount = 0;
+            
+            // Hide results and charts
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('chartSection').style.display = 'none';
+            document.getElementById('errorMsg').style.display = 'none';
+            
+            console.log('Filters reset');
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMsg');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        // Page ready
+        console.log('Auction search ready');
+    </script>
+</body>
+</html>
+
