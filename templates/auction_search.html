@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auction Data Search</title>
+    <title>Fusca Pro Lookup - Auction Data Search</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/fusca-favicon.png') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {
@@ -27,10 +28,34 @@
             padding: 30px;
         }
         
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #3D7F4B;
+        }
+        
+        .header-logo {
+            height: 60px;
+            width: auto;
+        }
+        
+        .header-content {
+            flex: 1;
+        }
+        
         h1 {
             color: #153D33;
-            margin-bottom: 30px;
+            margin: 0;
             font-size: 28px;
+        }
+        
+        .header-subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
         }
         
         .search-section {
@@ -197,6 +222,27 @@
             font-size: 16px;
         }
         
+        .download-csv-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .download-csv-btn:hover {
+            background: #218838;
+        }
+        
+        .download-csv-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
         .table-container {
             overflow-x: auto;
             max-height: 600px;
@@ -259,12 +305,27 @@
             .grid-2, .range-container {
                 grid-template-columns: 1fr;
             }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .header-logo {
+                height: 45px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🐑 Auction Data Search & Analysis</h1>
+        <div class="header">
+            <img src="{{ url_for('static', filename='images/fusca-logo.png') }}" alt="Fusca Logo" class="header-logo">
+            <div class="header-content">
+                <h1>Auction Data Search & Analysis</h1>
+                <div class="header-subtitle">Professional wool auction data analysis and insights</div>
+            </div>
+        </div>
         
         <div class="search-section">
             <h2 style="margin-bottom: 20px; color: #153D33; font-size: 20px;">Search Wool Auctions</h2>
@@ -299,7 +360,10 @@
         <div id="resultsSection" style="display: none;">
             <div class="results-info">
                 <span class="results-count" id="resultsCount">-</span>
-                <span style="color: #666; font-size: 14px;">Showing up to 1,000 results</span>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <button class="download-csv-btn" onclick="downloadCSV()" id="downloadBtn">📥 Download CSV</button>
+                    <span style="color: #666; font-size: 14px;">Showing up to 1,000 results</span>
+                </div>
             </div>
             
             <div class="table-container">
@@ -336,6 +400,7 @@
     <script>
         let priceChart = null;
         let filterCount = 0;
+        let currentResults = [];
         
         const columns = [
             { name: 'price', label: 'Price', type: 'number' },
@@ -542,6 +607,9 @@
             const tbody = document.getElementById('resultsTable');
             tbody.innerHTML = '';
             
+            // Store results for CSV export
+            currentResults = data.results;
+            
             document.getElementById('resultsCount').textContent = `Found ${data.count} results`;
             document.getElementById('resultsSection').style.display = 'block';
             
@@ -661,6 +729,75 @@
             const errorDiv = document.getElementById('errorMsg');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
+        }
+        
+        function downloadCSV() {
+            if (!currentResults || currentResults.length === 0) {
+                alert('No results to download');
+                return;
+            }
+            
+            // Define CSV headers
+            const headers = [
+                'Sale Date', 'Lot Number', 'Wool Type ID', 'Type Combined', 
+                'Price ($)', 'Bales', 'KG', 'Colour', 'Micron', 'Yield %', 
+                'VM %', 'Location', 'Seller', 'Farm Brand', 'Sold'
+            ];
+            
+            // Convert data to CSV format
+            let csvContent = headers.join(',') + '\n';
+            
+            currentResults.forEach(row => {
+                const priceInDollars = (row.price / 100).toFixed(2);
+                
+                const rowData = [
+                    row.sale_date || '',
+                    (row.lot_number || '').trim(),
+                    row.wool_type_id || '',
+                    escapeCSV(row.type_combined || ''),
+                    priceInDollars,
+                    row.bales || '',
+                    row.kg || '',
+                    row.colour ? row.colour.toFixed(1) : '',
+                    row.micron ? row.micron.toFixed(1) : '',
+                    row.yield ? row.yield.toFixed(1) : '',
+                    row.vegetable_matter ? row.vegetable_matter.toFixed(1) : '',
+                    escapeCSV(row.location || ''),
+                    escapeCSV(row.seller_name || ''),
+                    escapeCSV(row.farm_brand_name || ''),
+                    row.is_sold ? 'Yes' : 'No'
+                ];
+                
+                csvContent += rowData.join(',') + '\n';
+            });
+            
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            // Generate filename with timestamp
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            const filename = `auction_data_${timestamp}.csv`;
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log(`Downloaded ${currentResults.length} results to ${filename}`);
+        }
+        
+        function escapeCSV(str) {
+            if (str == null) return '';
+            str = String(str);
+            // If the string contains comma, quote, or newline, wrap it in quotes and escape quotes
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return '"' + str.replace(/"/g, '""') + '"';
+            }
+            return str;
         }
         
         // Page ready

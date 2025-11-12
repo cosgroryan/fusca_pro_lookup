@@ -68,6 +68,19 @@ def index():
     """Main page"""
     return render_template('auction_search.html')
 
+@app.route('/test-static')
+def test_static():
+    """Test static folder"""
+    import os
+    return jsonify({
+        'static_folder': app.static_folder,
+        'static_url_path': app.static_url_path,
+        'cwd': os.getcwd(),
+        'static_exists': os.path.exists(app.static_folder),
+        'logo_exists': os.path.exists(os.path.join(app.static_folder, 'images', 'fusca-logo.png')),
+        'files_in_static': os.listdir(app.static_folder) if os.path.exists(app.static_folder) else []
+    })
+
 @app.route('/api/filters')
 def get_filters():
     """Get min/max values for all filter fields"""
