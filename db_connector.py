@@ -1,6 +1,10 @@
 from sshtunnel import SSHTunnelForwarder
 import mysql.connector
 import os
+import logging
+
+# Enable verbose logging for sshtunnel
+logging.basicConfig(level=logging.DEBUG)
 
 def get_db_connection():
     """
