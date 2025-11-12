@@ -12,6 +12,14 @@ import time
 
 app = Flask(__name__)
 
+# Security: Whitelist of allowed columns for filtering
+ALLOWED_COLUMNS = {
+    'price', 'bales', 'kg', 'colour', 'micron', 'yield', 
+    'vegetable_matter', 'sale_date', 'location', 
+    'seller_name', 'farm_brand_name', 'wool_type_id',
+    'type_combined', 'lot_number', 'is_sold'
+}
+
 # Global connection with retry logic
 _db_conn = None
 _db_tunnel = None
@@ -150,6 +158,11 @@ def search_auctions():
                 if not column or not operator or not value:
                     continue
                 
+                # Security: Validate column name against whitelist
+                if column not in ALLOWED_COLUMNS:
+                    print(f"Warning: Invalid column name attempted: {column}")
+                    continue
+                
                 # Build filter condition based on operator
                 if operator == 'eq':
                     query += f" AND {column} = %s"
@@ -238,6 +251,11 @@ def get_price_chart():
                 value2 = filter_item.get('value2')
                 
                 if not column or not operator or not value:
+                    continue
+                
+                # Security: Validate column name against whitelist
+                if column not in ALLOWED_COLUMNS:
+                    print(f"Warning: Invalid column name attempted: {column}")
                     continue
                 
                 # Build filter condition based on operator
