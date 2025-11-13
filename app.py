@@ -336,160 +336,225 @@ def get_bales_chart():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+def interpolate_series(values):
+    """Apply linear interpolation to fill missing data points"""
+    interpolated = values[:]
+    
+    for i in range(len(interpolated)):
+        if interpolated[i] is None:
+            # Find previous valid point
+            prev_idx = i - 1
+            while prev_idx >= 0 and interpolated[prev_idx] is None:
+                prev_idx -= 1
+            
+            # Find next valid point
+            next_idx = i + 1
+            while next_idx < len(interpolated) and interpolated[next_idx] is None:
+                next_idx += 1
+            
+            # Interpolate if we have both prev and next
+            if prev_idx >= 0 and next_idx < len(interpolated):
+                prev_value = interpolated[prev_idx]
+                next_value = interpolated[next_idx]
+                distance = next_idx - prev_idx
+                position = i - prev_idx
+                
+                # Linear interpolation
+                interpolated[i] = prev_value + (next_value - prev_value) * (position / distance)
+            # If only prev exists, use prev (flat line forward)
+            elif prev_idx >= 0:
+                interpolated[i] = interpolated[prev_idx]
+            # If only next exists, use next (flat line backward)
+            elif next_idx < len(interpolated):
+                interpolated[i] = interpolated[next_idx]
+    
+    return interpolated
+
 @app.route('/api/compare_chart_blend', methods=['POST'])
 def get_compare_chart_blend():
-    """Get price comparison data with per-type filters for blend mode"""
+    """Get price comparison data with per-entry filters for blend mode (supports grouped types)"""
     try:
         data = request.json
-        wool_types = data.get('wool_types', [])
-        type_filters_list = data.get('type_filters', [])
+        entries = data.get('entries', [])
         date_filter = data.get('date_filter')
         
-        if not wool_types or len(wool_types) == 0:
-            return jsonify({'error': 'No wool types specified'}), 400
+        if not entries or len(entries) == 0:
+            return jsonify({'error': 'No entries specified'}), 400
         
-        if len(wool_types) > 5:
-            return jsonify({'error': 'Maximum 5 wool types for comparison'}), 400
+        if len(entries) > 5:
+            return jsonify({'error': 'Maximum 5 entries for comparison'}), 400
+        
+        from collections import defaultdict
+        import statistics
         
         all_series = {}
         
-        for idx, wool_type in enumerate(wool_types):
-            # Build query for this wool type
-            query = """
-                SELECT 
-                    sale_date,
-                    price
-                FROM auction_data_joined
-                WHERE price > 10
-                AND (CAST(wool_type_id AS CHAR) LIKE %s OR type_combined LIKE %s)
-            """
+        for entry in entries:
+            types = entry.get('types', [])
+            label = entry.get('label', '')
+            entry_filters = entry.get('filters', [])
             
-            params = [f"%{wool_type}%", f"%{wool_type}%"]
+            if not types:
+                continue
             
-            # Apply date filter (shared across all types)
-            if date_filter:
-                column = 'sale_date'
-                operator = date_filter.get('operator')
-                value = date_filter.get('value')
-                value2 = date_filter.get('value2')
+            # Process each type in the group individually
+            type_series = []  # Will store series data for each type in this group
+            
+            for wool_type in types:
+                # Build query for this wool type
+                query = """
+                    SELECT 
+                        sale_date,
+                        price
+                    FROM auction_data_joined
+                    WHERE price > 10
+                    AND (CAST(wool_type_id AS CHAR) LIKE %s OR type_combined LIKE %s)
+                """
                 
-                if operator == 'eq':
-                    query += f" AND {column} = %s"
-                    params.append(value)
-                elif operator == 'gt':
-                    query += f" AND {column} > %s"
-                    params.append(value)
-                elif operator == 'lt':
-                    query += f" AND {column} < %s"
-                    params.append(value)
-                elif operator == 'gte':
-                    query += f" AND {column} >= %s"
-                    params.append(value)
-                elif operator == 'lte':
-                    query += f" AND {column} <= %s"
-                    params.append(value)
-                elif operator == 'between' and value2:
-                    query += f" AND {column} BETWEEN %s AND %s"
-                    params.append(value)
-                    params.append(value2)
+                params = [f"%{wool_type}%", f"%{wool_type}%"]
             
-            # Apply per-type filters
-            type_filters = type_filters_list[idx] if idx < len(type_filters_list) else []
-            for filter_item in type_filters:
-                column = filter_item.get('column')
-                operator = filter_item.get('operator')
-                value = filter_item.get('value')
-                value2 = filter_item.get('value2')
-                
-                if not column or not operator or not value:
-                    continue
-                
-                if column not in ALLOWED_COLUMNS:
-                    continue
-                
-                if operator == 'eq':
-                    query += f" AND {column} = %s"
-                    params.append(value)
-                elif operator == 'ne':
-                    query += f" AND {column} != %s"
-                    params.append(value)
-                elif operator == 'gt':
-                    query += f" AND {column} > %s"
-                    params.append(value)
-                elif operator == 'lt':
-                    query += f" AND {column} < %s"
-                    params.append(value)
-                elif operator == 'gte':
-                    query += f" AND {column} >= %s"
-                    params.append(value)
-                elif operator == 'lte':
-                    query += f" AND {column} <= %s"
-                    params.append(value)
-                elif operator == 'between' and value2:
-                    query += f" AND {column} BETWEEN %s AND %s"
-                    params.append(value)
-                    params.append(value2)
-            
-            query += " ORDER BY sale_date ASC"
-            
-            conn, tunnel = get_db()
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute(query, params)
-            results = cursor.fetchall()
-            
-            # Group by date and calculate average with outlier filtering
-            from collections import defaultdict
-            import statistics
-            
-            date_prices = defaultdict(list)
-            for row in results:
-                if row['sale_date'] and row['price']:
-                    date_prices[row['sale_date']].append(float(row['price']))
-            
-            # Calculate filtered averages (same logic as price chart)
-            series_data = {}
-            for sale_date in sorted(date_prices.keys()):
-                price_list = date_prices[sale_date]
-                
-                if len(price_list) == 0:
-                    continue
-                
-                # Calculate median
-                median_price = statistics.median(price_list)
-                
-                # Filter outliers: remove values +/- 20% from median (only if more than 1 value)
-                if len(price_list) > 1:
-                    lower_bound = median_price * 0.8
-                    upper_bound = median_price * 1.2
-                    filtered_prices = [p for p in price_list if lower_bound <= p <= upper_bound]
+                # Apply date filter (shared across all entries)
+                if date_filter:
+                    column = 'sale_date'
+                    operator = date_filter.get('operator')
+                    value = date_filter.get('value')
+                    value2 = date_filter.get('value2')
                     
-                    # If we filtered everything out, use original list
-                    if len(filtered_prices) == 0:
-                        filtered_prices = price_list
-                else:
-                    filtered_prices = price_list
+                    if operator == 'eq':
+                        query += f" AND {column} = %s"
+                        params.append(value)
+                    elif operator == 'gt':
+                        query += f" AND {column} > %s"
+                        params.append(value)
+                    elif operator == 'lt':
+                        query += f" AND {column} < %s"
+                        params.append(value)
+                    elif operator == 'gte':
+                        query += f" AND {column} >= %s"
+                        params.append(value)
+                    elif operator == 'lte':
+                        query += f" AND {column} <= %s"
+                        params.append(value)
+                    elif operator == 'between' and value2:
+                        query += f" AND {column} BETWEEN %s AND %s"
+                        params.append(value)
+                        params.append(value2)
                 
-                # Calculate average of filtered prices and convert cents to dollars
-                avg_price = sum(filtered_prices) / len(filtered_prices)
-                avg_price_dollars = avg_price / 100
-                date_key = sale_date.strftime('%Y-%m-%d')
-                series_data[date_key] = round(avg_price_dollars, 2)
+                # Apply per-entry filters
+                for filter_item in entry_filters:
+                    column = filter_item.get('column')
+                    operator = filter_item.get('operator')
+                    value = filter_item.get('value')
+                    value2 = filter_item.get('value2')
+                    
+                    if not column or not operator or not value:
+                        continue
+                    
+                    if column not in ALLOWED_COLUMNS:
+                        continue
+                    
+                    if operator == 'eq':
+                        query += f" AND {column} = %s"
+                        params.append(value)
+                    elif operator == 'ne':
+                        query += f" AND {column} != %s"
+                        params.append(value)
+                    elif operator == 'gt':
+                        query += f" AND {column} > %s"
+                        params.append(value)
+                    elif operator == 'lt':
+                        query += f" AND {column} < %s"
+                        params.append(value)
+                    elif operator == 'gte':
+                        query += f" AND {column} >= %s"
+                        params.append(value)
+                    elif operator == 'lte':
+                        query += f" AND {column} <= %s"
+                        params.append(value)
+                    elif operator == 'between' and value2:
+                        query += f" AND {column} BETWEEN %s AND %s"
+                        params.append(value)
+                        params.append(value2)
+                
+                query += " ORDER BY sale_date ASC"
+                
+                conn, tunnel = get_db()
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute(query, params)
+                results = cursor.fetchall()
+                
+                # Group by date for THIS specific type
+                type_date_prices = defaultdict(list)
+                for row in results:
+                    if row['sale_date'] and row['price']:
+                        type_date_prices[row['sale_date']].append(float(row['price']))
+                
+                # Calculate filtered averages for THIS type
+                type_data = {}
+                for sale_date in sorted(type_date_prices.keys()):
+                    price_list = type_date_prices[sale_date]
+                    
+                    if len(price_list) == 0:
+                        continue
+                    
+                    # Calculate median
+                    median_price = statistics.median(price_list)
+                    
+                    # Filter outliers: remove values +/- 20% from median (only if more than 1 value)
+                    if len(price_list) > 1:
+                        lower_bound = median_price * 0.8
+                        upper_bound = median_price * 1.2
+                        filtered_prices = [p for p in price_list if lower_bound <= p <= upper_bound]
+                        
+                        # If we filtered everything out, use original list
+                        if len(filtered_prices) == 0:
+                            filtered_prices = price_list
+                    else:
+                        filtered_prices = price_list
+                    
+                    # Calculate average of filtered prices and convert cents to dollars
+                    avg_price = sum(filtered_prices) / len(filtered_prices)
+                    avg_price_dollars = avg_price / 100
+                    date_key = sale_date.strftime('%Y-%m-%d')
+                    type_data[date_key] = avg_price_dollars
+                
+                type_series.append(type_data)
             
-            all_series[wool_type] = series_data
+            # Get all unique dates across all types in this group
+            group_dates = sorted(set(date for series in type_series for date in series.keys()))
+            
+            # Interpolate each type's series to fill missing dates
+            interpolated_series = []
+            for type_data in type_series:
+                # Create array with None for missing dates
+                values = [type_data.get(date, None) for date in group_dates]
+                # Apply linear interpolation
+                interpolated = interpolate_series(values)
+                interpolated_series.append(interpolated)
+            
+            # Now average the interpolated series together
+            series_data = {}
+            for idx, date in enumerate(group_dates):
+                valid_values = [series[idx] for series in interpolated_series if series[idx] is not None]
+                if len(valid_values) > 0:
+                    avg_value = sum(valid_values) / len(valid_values)
+                    series_data[date] = round(avg_value, 2)
+            
+            all_series[label] = series_data
         
         # Get all unique dates across all series
         all_dates = sorted(set(date for series in all_series.values() for date in series.keys()))
         
-        # Build datasets for Chart.js
+        # Build datasets for Chart.js (one per entry/label)
         datasets = []
         colors = ['#3D7F4B', '#1976D2', '#D32F2F', '#F57C00', '#7B1FA2']
         
-        for idx, wool_type in enumerate(wool_types):
-            series_data = all_series.get(wool_type, {})
+        for idx, entry_label in enumerate(all_series.keys()):
+            series_data = all_series.get(entry_label, {})
             data_values = [series_data.get(date, None) for date in all_dates]
             
             datasets.append({
-                'label': wool_type,
+                'label': entry_label,
                 'data': data_values,
                 'borderColor': colors[idx % len(colors)],
                 'backgroundColor': colors[idx % len(colors)] + '20',

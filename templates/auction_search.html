@@ -1341,6 +1341,62 @@
         }
         
         // Blend Mode Functions
+        // Parse wool types input, handling parentheses for groups
+        // Example: "F3D, F2D, (C3G, C4G, C3D), F2E"
+        // Returns: [{types: ['F3D'], label: 'F3D'}, {types: ['F2D'], label: 'F2D'}, 
+        //           {types: ['C3G','C4G','C3D'], label: '(C3G + C4G + C3D)'}, {types: ['F2E'], label: 'F2E'}]
+        function parseWoolTypeEntries(input) {
+            const entries = [];
+            let current = '';
+            let inGroup = false;
+            
+            for (let i = 0; i < input.length; i++) {
+                const char = input[i];
+                
+                if (char === '(') {
+                    inGroup = true;
+                    current = '';
+                } else if (char === ')') {
+                    inGroup = false;
+                    // Process group
+                    const types = current.split(',').map(t => t.trim()).filter(t => t);
+                    if (types.length > 0) {
+                        entries.push({
+                            types: types,
+                            label: '(' + types.join(' + ') + ')',
+                            isGroup: true
+                        });
+                    }
+                    current = '';
+                } else if (char === ',' && !inGroup) {
+                    // Process single type
+                    const type = current.trim();
+                    if (type) {
+                        entries.push({
+                            types: [type],
+                            label: type,
+                            isGroup: false
+                        });
+                    }
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            // Process remaining
+            if (current.trim()) {
+                const type = current.trim();
+                entries.push({
+                    types: [type],
+                    label: type,
+                    isGroup: false
+                });
+            }
+            
+            return entries;
+        }
+        
         function toggleBlendMode() {
             const section = document.getElementById('blendModeSection');
             const button = document.getElementById('blendModeToggle');
@@ -1353,8 +1409,8 @@
                     return;
                 }
                 
-                const woolTypes = input.split(',').map(t => t.trim()).filter(t => t);
-                if (woolTypes.length === 0) {
+                const entries = parseWoolTypeEntries(input);
+                if (entries.length === 0) {
                     alert('Please enter wool types first');
                     return;
                 }
@@ -1362,29 +1418,29 @@
                 // Show blend mode and populate weights
                 section.style.display = 'block';
                 button.textContent = 'Hide Blend Mode';
-                populateBlendWeights(woolTypes);
+                populateBlendWeights(entries);
             } else {
                 section.style.display = 'none';
                 button.textContent = 'Advanced Blend Mode';
             }
         }
         
-        function populateBlendWeights(woolTypes) {
+        function populateBlendWeights(entries) {
             const container = document.getElementById('blendWeights');
             container.innerHTML = '';
             
-            woolTypes.forEach((type, idx) => {
+            entries.forEach((entry, idx) => {
                 const div = document.createElement('div');
                 div.className = 'blend-item';
                 div.innerHTML = `
                     <div class="blend-item-header">
-                        <label>${type}:</label>
+                        <label>${entry.label}:</label>
                         <input type="number" id="weight_${idx}" value="1" min="0" step="0.1" />
                         <span style="color: #666; font-size: 13px;">weight</span>
                     </div>
                     <div class="blend-filters">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <span style="font-size: 13px; color: #666;">Custom filters for ${type}:</span>
+                            <span style="font-size: 13px; color: #666;">Custom filters for ${entry.label}:</span>
                             <button class="add-blend-filter-btn" onclick="addBlendFilter(${idx})">+ Add Filter</button>
                         </div>
                         <div id="blend_filters_${idx}"></div>
@@ -1449,14 +1505,14 @@
                 return;
             }
             
-            // Get total number of types
+            // Get total number of entries
             const input = document.getElementById('compareTypes').value.trim();
-            const woolTypes = input.split(',').map(t => t.trim()).filter(t => t);
+            const entries = parseWoolTypeEntries(input);
             
-            // Apply to all other types
-            woolTypes.forEach((type, idx) => {
+            // Apply to all other entries
+            entries.forEach((entry, idx) => {
                 if (idx !== sourceTypeIdx) {
-                    // Add filter to this type
+                    // Add filter to this entry
                     addBlendFilter(idx);
                     const container = document.getElementById(`blend_filters_${idx}`);
                     const newRow = container.lastElementChild;
@@ -1481,18 +1537,18 @@
         
         async function applyBlendedCompare() {
             const input = document.getElementById('compareTypes').value.trim();
-            const woolTypes = input.split(',').map(t => t.trim()).filter(t => t);
+            const entries = parseWoolTypeEntries(input);
             
             // Get weights
             const weights = [];
-            woolTypes.forEach((type, idx) => {
+            entries.forEach((entry, idx) => {
                 const weight = parseFloat(document.getElementById(`weight_${idx}`).value) || 1;
                 weights.push(weight);
             });
             
-            // Collect per-type filters
-            const typeFilters = [];
-            woolTypes.forEach((type, idx) => {
+            // Collect per-entry filters
+            const entryFilters = [];
+            entries.forEach((entry, idx) => {
                 const filters = [];
                 const container = document.getElementById(`blend_filters_${idx}`);
                 if (container) {
@@ -1507,7 +1563,7 @@
                         }
                     });
                 }
-                typeFilters.push(filters);
+                entryFilters.push(filters);
             });
             
             // Use blend date filter (set by date range buttons)
@@ -1527,14 +1583,19 @@
             document.getElementById('compareChartSection').style.display = 'none';
             
             try {
-                console.log('Comparing with blend:', woolTypes, 'Weights:', weights, 'Type filters:', typeFilters);
+                console.log('Comparing with blend:', entries, 'Weights:', weights, 'Entry filters:', entryFilters);
                 
+                // Send entries to backend (each entry has types array and filters)
                 const response = await fetch('/api/compare_chart_blend', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        wool_types: woolTypes,
-                        type_filters: typeFilters,
+                        entries: entries.map((entry, idx) => ({
+                            types: entry.types,  // Array of types (could be 1 or more)
+                            label: entry.label,
+                            filters: entryFilters[idx],
+                            weight: weights[idx]
+                        })),
                         date_filter: blendDateFilter
                     })
                 });
@@ -1550,7 +1611,7 @@
                 }
                 
                 // Display with blend
-                displayBlendedChart(data, woolTypes, weights);
+                displayBlendedChart(data, entries, weights);
                 
             } catch (error) {
                 console.error('Blend compare error:', error);
@@ -1602,7 +1663,7 @@
             return interpolated;
         }
         
-        function displayBlendedChart(data, woolTypes, weights) {
+        function displayBlendedChart(data, entries, weights) {
             document.getElementById('compareChartSection').style.display = 'block';
             
             const ctx = document.getElementById('compareChart').getContext('2d');
@@ -1636,14 +1697,14 @@
                 blendedData.push(totalWeight > 0 ? weightedSum / totalWeight : null);
             }
             
-            // Create datasets: individual types (75% opacity) + blended line (bold)
+            // Create datasets: individual entry lines (20% opacity) + blended line (bold)
             const colors = ['#3D7F4B', '#1976D2', '#D32F2F', '#F57C00', '#7B1FA2'];
             const datasets = [];
             
-            // Add individual type lines (20% opacity, very faint, using interpolated data)
+            // Add individual entry lines (20% opacity, very faint, using interpolated data)
             interpolatedDatasets.forEach((dataset, idx) => {
                 datasets.push({
-                    label: woolTypes[idx] + ` (weight: ${weights[idx]})`,
+                    label: entries[idx].label + ` (weight: ${weights[idx]})`,
                     data: dataset.data,
                     borderColor: colors[idx % colors.length] + '33',  // 20% opacity (very faint)
                     backgroundColor: 'transparent',
@@ -1871,9 +1932,9 @@
         // Save Blend Search Function
         async function saveBlendSearch() {
             const input = document.getElementById('compareTypes').value.trim();
-            const woolTypes = input.split(',').map(t => t.trim()).filter(t => t);
+            const entries = parseWoolTypeEntries(input);
             
-            if (woolTypes.length === 0) {
+            if (entries.length === 0) {
                 alert('Please enter wool types first');
                 return;
             }
@@ -1883,14 +1944,14 @@
             
             // Collect weights
             const weights = [];
-            woolTypes.forEach((type, idx) => {
+            entries.forEach((entry, idx) => {
                 const weight = parseFloat(document.getElementById(`weight_${idx}`).value) || 1;
                 weights.push(weight);
             });
             
-            // Collect per-type filters
-            const typeFilters = [];
-            woolTypes.forEach((type, idx) => {
+            // Collect per-entry filters
+            const entryFilters = [];
+            entries.forEach((entry, idx) => {
                 const filters = [];
                 const container = document.getElementById(`blend_filters_${idx}`);
                 if (container) {
@@ -1905,20 +1966,21 @@
                         }
                     });
                 }
-                typeFilters.push(filters);
+                entryFilters.push(filters);
             });
             
             // Get existing saved searches
             let savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
             
-            // Add blend search (using blend module's date filter, not global)
+            // Add blend search (save the original input string to preserve groupings)
             savedSearches.push({
                 id: Date.now(),
                 name: name,
                 type: 'blend',
-                woolTypes: woolTypes,
+                inputString: input,  // Save original input to preserve parentheses
+                entries: entries,    // Also save parsed entries for reference
                 weights: weights,
-                typeFilters: typeFilters,
+                entryFilters: entryFilters,
                 dateFilter: blendDateFilter,
                 created: new Date().toISOString()
             });
@@ -1934,7 +1996,7 @@
                     body: JSON.stringify({ 
                         name: name, 
                         type: 'blend',
-                        blend_data: { woolTypes, weights, typeFilters, dateFilter }
+                        blend_data: { inputString: input, entries, weights, entryFilters, dateFilter: blendDateFilter }
                     })
                 });
             } catch (e) {
@@ -2039,8 +2101,12 @@
             // Restore date filter to blend module
             blendDateFilter = savedSearch.dateFilter;
             
-            // Set wool types in compare input
-            document.getElementById('compareTypes').value = savedSearch.woolTypes.join(', ');
+            // Set wool types in compare input (use inputString if available, otherwise reconstruct)
+            const inputString = savedSearch.inputString || savedSearch.woolTypes.join(', ');
+            document.getElementById('compareTypes').value = inputString;
+            
+            // Parse entries from saved input string
+            const entries = parseWoolTypeEntries(inputString);
             
             // Show blend mode
             const section = document.getElementById('blendModeSection');
@@ -2049,17 +2115,20 @@
             button.textContent = 'Hide Blend Mode';
             
             // Populate weights
-            populateBlendWeights(savedSearch.woolTypes);
+            populateBlendWeights(entries);
             
             // Set weight values
-            savedSearch.woolTypes.forEach((type, idx) => {
-                document.getElementById(`weight_${idx}`).value = savedSearch.weights[idx];
+            entries.forEach((entry, idx) => {
+                if (savedSearch.weights[idx] !== undefined) {
+                    document.getElementById(`weight_${idx}`).value = savedSearch.weights[idx];
+                }
             });
             
-            // Populate per-type filters
-            savedSearch.woolTypes.forEach((type, idx) => {
-                if (savedSearch.typeFilters[idx]) {
-                    savedSearch.typeFilters[idx].forEach(filter => {
+            // Populate per-entry filters (check both entryFilters and typeFilters for backward compatibility)
+            const filtersToLoad = savedSearch.entryFilters || savedSearch.typeFilters || [];
+            entries.forEach((entry, idx) => {
+                if (filtersToLoad[idx]) {
+                    filtersToLoad[idx].forEach(filter => {
                         addBlendFilter(idx);
                         const container = document.getElementById(`blend_filters_${idx}`);
                         const lastRow = container.lastElementChild;

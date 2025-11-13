@@ -1,2 +1,3 @@
 [2025-11-13 14:09:26] Saved Search: Mid odds | Filters: {"wool_type_search": "C3O", "column_filters": [{"column": "micron", "operator": "gt", "value": "35.2", "value2": null}, {"column": "vegetable_matter", "operator": "lt", "value": "0.3", "value2": null}, {"column": "sale_date", "operator": "gt", "value": "2024-11-01", "value2": null}]}
 [2025-11-13 14:35:06] Saved Search: test belnd
+[2025-11-13 15:24:15] Saved Search: test group snap
