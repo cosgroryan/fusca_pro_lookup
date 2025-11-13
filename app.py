@@ -14,9 +14,10 @@ import os
 
 app = Flask(__name__)
 
-# Configure log file path (works both locally and on server)
+# Configure log file path (outside git repo to avoid conflicts)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOG_FILE = os.path.join(BASE_DIR, 'saved_searches.log')
+# Place log in parent directory (outside git repo)
+LOG_FILE = os.path.join(os.path.dirname(BASE_DIR), 'saved_searches.log')
 
 # Lock to prevent simultaneous tunnel creation across workers
 _tunnel_lock = threading.Lock()
@@ -83,8 +84,24 @@ def get_db():
 
 @app.route('/')
 def index():
-    """Main page"""
-    return render_template('auction_search.html')
+    """Redirect to simple search"""
+    from flask import redirect
+    return redirect('/simple')
+
+@app.route('/simple')
+def simple_search():
+    """Simple search page"""
+    return render_template('simple_search.html', page='simple')
+
+@app.route('/compare')
+def compare_types():
+    """Compare types page"""
+    return render_template('compare_types.html', page='compare')
+
+@app.route('/blends')
+def advanced_blends():
+    """Advanced blends page"""
+    return render_template('advanced_blends.html', page='blends')
 
 @app.route('/api/log_saved_search', methods=['POST'])
 def log_saved_search():

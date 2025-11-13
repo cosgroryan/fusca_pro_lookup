@@ -1,0 +1,475 @@
+{% extends "base.html" %}
+
+{% block title %}Compare Types - Fusca Pro Lookup{% endblock %}
+
+{% block styles %}
+<style>
+    .help-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #9C4DB5;
+        color: white;
+        font-size: 11px;
+        font-weight: bold;
+        cursor: help;
+        margin-left: 6px;
+        position: relative;
+        vertical-align: middle;
+        opacity: 0.5;
+        transition: opacity 0.2s;
+    }
+    
+    .help-icon:hover {
+        background: #7B1FA2;
+        opacity: 1;
+    }
+    
+    .tooltip {
+        position: absolute;
+        background: #f5f0e8;
+        color: #333;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        line-height: 1.6;
+        width: 360px;
+        max-width: 90vw;
+        left: 24px;
+        bottom: 0;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        border: 1px solid #d4c5a9;
+        display: none;
+        font-weight: normal;
+        pointer-events: none;
+    }
+    
+    .help-icon:hover .tooltip,
+    .tooltip:hover {
+        display: block;
+        pointer-events: auto;
+    }
+    
+    .help-icon:hover .tooltip {
+        pointer-events: auto;
+    }
+    
+    .tooltip strong {
+        color: #3D7F4B;
+        display: block;
+        margin-top: 10px;
+        margin-bottom: 4px;
+        font-weight: 600;
+    }
+    
+    .tooltip strong:first-child {
+        margin-top: 0;
+    }
+    
+    .tooltip code {
+        background: rgba(61, 127, 75, 0.1);
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        color: #153D33;
+        border: 1px solid rgba(61, 127, 75, 0.2);
+    }
+    
+    /* Mobile tooltip fix */
+    @media (max-width: 768px) {
+        .help-icon {
+            width: 14px;
+            height: 14px;
+            font-size: 10px;
+        }
+        
+        .tooltip {
+            position: fixed;
+            left: 10px !important;
+            right: 10px !important;
+            bottom: auto !important;
+            top: 50% !important;
+            transform: translateY(-50%);
+            width: auto !important;
+            max-width: none;
+            font-size: 11px;
+            padding: 10px;
+        }
+        
+        .tooltip code {
+            font-size: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 20px; color: #153D33;">Compare Wool Types</h1>
+
+<!-- Compare Section -->
+<div class="search-section" style="background: #e8f5e9; border: 2px solid #3D7F4B;">
+    <h2 style="margin-bottom: 12px; color: #153D33; font-size: 14px;">
+        🔍 Compare Wool Types
+        <span class="help-icon">
+            ?
+            <div class="tooltip">
+                <strong>How it works:</strong>
+                Compare multiple wool types side-by-side to see price trends over time.
+                
+                <strong>Basic Syntax:</strong>
+                Enter wool types separated by commas<br>
+                <code>F2N, F3D, C3G</code>
+                
+                <strong>Examples:</strong>
+                <code>F2N, F3D</code> - Compare 2 types<br>
+                <code>C3G, C4G, F2D</code> - Compare 3 types
+                
+                <strong>Tip:</strong>
+                For advanced features like weighted averages and grouped types, use the "Advanced Blends" tool.
+            </div>
+        </span>
+    </h2>
+    
+    <div class="search-group">
+        <label for="compareTypes">Enter wool types to compare (comma-separated, max 5)</label>
+        <div class="search-bar">
+            <input type="text" id="compareTypes" placeholder="e.g. F2N, F3D, C3G">
+            <button onclick="compareWoolTypes()" id="compareBtn">Compare</button>
+            <button onclick="resetFilters()" style="background: #666;">Reset</button>
+        </div>
+    </div>
+    
+    <!-- Date Range Buttons -->
+    <div class="search-group">
+        <label>Quick Date Range:</label>
+        <div class="date-range-buttons">
+            <button class="date-range-btn" onclick="setDateRange('6m')">6 Months</button>
+            <button class="date-range-btn" onclick="setDateRange('1y')">1 Year</button>
+            <button class="date-range-btn" onclick="setDateRange('3y')">3 Years</button>
+            <button class="date-range-btn" onclick="setDateRange('all')">All Time</button>
+            <button class="date-range-btn" onclick="toggleCustomDateRange()">Custom</button>
+            <div class="date-range-custom" id="customDateRange">
+                <label style="font-size: 12px; margin: 0;">From:</label>
+                <input type="date" id="customDateFrom" />
+                <label style="font-size: 12px; margin: 0;">To:</label>
+                <input type="date" id="customDateTo" />
+                <button class="date-range-btn" style="background: #3D7F4B;" onclick="applyCustomDateRange()">Apply</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Column Filters -->
+    <div class="filters-container">
+        <div class="filters-header">
+            <h3>Additional Filters</h3>
+            <button class="add-filter-btn" onclick="addFilter()">+ Add Filter</button>
+        </div>
+        <div id="filtersList"></div>
+    </div>
+</div>
+
+<!-- Comparison Chart -->
+<div class="chart-section" id="compareChartSection" style="display: none;">
+    <div class="module-header">
+        <h2 style="color: #153D33; font-size: 14px;">Price Comparison</h2>
+        <button class="hide-btn" onclick="toggleModule('compareChart')">Hide</button>
+    </div>
+    <div id="compareChartContent" class="module-content">
+        <div class="chart-container">
+            <canvas id="compareChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div id="errorMsg" class="error" style="display: none;"></div>
+<div id="loading" class="loading" style="display: none;">Loading...</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let compareChart = null;
+    let filterCount = 0;
+    let currentDateFilter = null;
+    
+    function setDateRange(range) {
+        document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('customDateRange').classList.remove('show');
+        
+        if (range === 'all') {
+            currentDateFilter = null;
+        } else {
+            currentDateFilter = getDateRangeFilter(range);
+        }
+    }
+    
+    function toggleCustomDateRange() {
+        const customSection = document.getElementById('customDateRange');
+        document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
+        
+        if (!customSection.classList.contains('show')) {
+            customSection.classList.add('show');
+            event.target.classList.add('active');
+        } else {
+            customSection.classList.remove('show');
+        }
+    }
+    
+    function applyCustomDateRange() {
+        const fromDate = document.getElementById('customDateFrom').value;
+        const toDate = document.getElementById('customDateTo').value;
+        
+        if (!fromDate || !toDate) {
+            alert('Please select both dates');
+            return;
+        }
+        
+        currentDateFilter = {
+            column: 'sale_date',
+            operator: 'between',
+            value: fromDate,
+            value2: toDate
+        };
+    }
+    
+    function addFilter() {
+        const filterId = `filter_${filterCount++}`;
+        const filtersList = document.getElementById('filtersList');
+        
+        const filterDiv = document.createElement('div');
+        filterDiv.className = 'filter-row';
+        filterDiv.id = filterId;
+        
+        filterDiv.innerHTML = `
+            <select class="filter-column" onchange="updateFilterOperators('${filterId}')">
+                <option value="">Select Column</option>
+                ${columns.filter(c => c.name !== 'sale_date').map(col => 
+                    `<option value="${col.name}" data-type="${col.type}">${col.label}</option>`
+                ).join('')}
+            </select>
+            <select class="filter-operator">
+                <option value="">Select Operator</option>
+            </select>
+            <input type="text" class="filter-value" placeholder="Value">
+            <input type="text" class="filter-value2" placeholder="Value 2" style="display:none;">
+            <button class="remove-filter" onclick="removeFilter('${filterId}')">Remove</button>
+        `;
+        
+        filtersList.appendChild(filterDiv);
+    }
+    
+    function updateFilterOperators(filterId) {
+        const filterDiv = document.getElementById(filterId);
+        const columnSelect = filterDiv.querySelector('.filter-column');
+        const operatorSelect = filterDiv.querySelector('.filter-operator');
+        const valueInput = filterDiv.querySelector('.filter-value');
+        const value2Input = filterDiv.querySelector('.filter-value2');
+        
+        const selectedOption = columnSelect.options[columnSelect.selectedIndex];
+        const columnType = selectedOption.getAttribute('data-type');
+        
+        operatorSelect.innerHTML = '<option value="">Select Operator</option>';
+        value2Input.style.display = 'none';
+        
+        if (columnType && operators[columnType]) {
+            operators[columnType].forEach(op => {
+                const option = document.createElement('option');
+                option.value = op.value;
+                option.textContent = op.label;
+                operatorSelect.appendChild(option);
+            });
+        }
+        
+        if (columnType === 'number') {
+            valueInput.type = 'number';
+            valueInput.step = '0.1';
+            value2Input.type = 'number';
+            value2Input.step = '0.1';
+        } else if (columnType === 'date') {
+            valueInput.type = 'date';
+            value2Input.type = 'date';
+        } else {
+            valueInput.type = 'text';
+            value2Input.type = 'text';
+        }
+        
+        operatorSelect.onchange = function() {
+            value2Input.style.display = this.value === 'between' ? 'block' : 'none';
+        };
+    }
+    
+    function removeFilter(filterId) {
+        document.getElementById(filterId).remove();
+    }
+    
+    function getFilters() {
+        const filters = [];
+        
+        // Add date filter if set
+        if (currentDateFilter) {
+            filters.push(currentDateFilter);
+        }
+        
+        // Add user filters
+        const filterRows = document.querySelectorAll('.filter-row');
+        filterRows.forEach(row => {
+            const column = row.querySelector('.filter-column').value;
+            const operator = row.querySelector('.filter-operator').value;
+            const value = row.querySelector('.filter-value').value;
+            const value2 = row.querySelector('.filter-value2').value;
+            
+            if (column && operator && value) {
+                filters.push({
+                    column,
+                    operator,
+                    value,
+                    value2: operator === 'between' ? value2 : null
+                });
+            }
+        });
+        
+        return filters;
+    }
+    
+    async function compareWoolTypes() {
+        const input = document.getElementById('compareTypes').value.trim();
+        
+        if (!input) {
+            alert('Please enter wool types to compare');
+            return;
+        }
+        
+        const woolTypes = input.split(',').map(t => t.trim()).filter(t => t);
+        
+        if (woolTypes.length === 0) {
+            alert('Please enter at least one wool type');
+            return;
+        }
+        
+        if (woolTypes.length > 5) {
+            alert('Maximum 5 wool types for comparison');
+            return;
+        }
+        
+        if (!currentDateFilter) {
+            const proceed = confirm(
+                '⚠️ No date filter selected!\n\n' +
+                'This query will process all historical data and may take 10-30 seconds.\n\n' +
+                'Continue anyway?'
+            );
+            if (!proceed) return;
+        }
+        
+        document.getElementById('compareBtn').disabled = true;
+        document.getElementById('compareChartSection').style.display = 'none';
+        document.getElementById('loading').style.display = 'block';
+        
+        try {
+            const response = await fetch('/api/compare_chart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    wool_types: woolTypes,
+                    column_filters: getFilters()
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            displayCompareChart(data);
+            
+        } catch (error) {
+            console.error('Compare error:', error);
+            showError('Comparison failed: ' + error.message);
+        } finally {
+            document.getElementById('compareBtn').disabled = false;
+            document.getElementById('loading').style.display = 'none';
+        }
+    }
+    
+    function displayCompareChart(data) {
+        document.getElementById('compareChartSection').style.display = 'block';
+        
+        const ctx = document.getElementById('compareChart').getContext('2d');
+        
+        if (compareChart) {
+            compareChart.destroy();
+        }
+        
+        compareChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: data.datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Average Price ($)' },
+                        ticks: { callback: function(value) { return '$' + value; } }
+                    },
+                    x: {
+                        title: { display: true, text: 'Sale Date' },
+                        ticks: { maxRotation: 45, minRotation: 45, maxTicksLimit: 20 }
+                    }
+                }
+            }
+        });
+    }
+    
+    function resetFilters() {
+        document.getElementById('compareTypes').value = '';
+        document.getElementById('filtersList').innerHTML = '';
+        filterCount = 0;
+        currentDateFilter = null;
+        
+        document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('customDateRange').classList.remove('show');
+        
+        document.getElementById('compareChartSection').style.display = 'none';
+        document.getElementById('errorMsg').style.display = 'none';
+    }
+    
+    function showError(message) {
+        const errorDiv = document.getElementById('errorMsg');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+    
+    console.log('Compare types ready');
+</script>
+{% endblock %}
+
