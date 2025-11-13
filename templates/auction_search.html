@@ -683,18 +683,401 @@
             gap: 20px;
         }
         
+        /* Mobile-only responsive design */
         @media (max-width: 768px) {
-            .grid-2, .range-container {
-                grid-template-columns: 1fr;
+            body {
+                padding: 8px;
+                font-size: 11px;
             }
             
+            .container {
+                padding: 12px;
+                border-radius: 4px;
+            }
+            
+            /* Header */
             .header {
                 flex-direction: column;
-                align-items: flex-start;
+                align-items: center;
+                text-align: center;
+                gap: 8px;
+                margin-bottom: 16px;
+                padding-bottom: 12px;
             }
             
             .header-logo {
-                height: 45px;
+                height: 36px;
+            }
+            
+            .header-content {
+                text-align: center;
+            }
+            
+            h1 {
+                font-size: 16px;
+            }
+            
+            h2 {
+                font-size: 13px;
+            }
+            
+            h3 {
+                font-size: 12px;
+            }
+            
+            .header-subtitle {
+                font-size: 10px;
+            }
+            
+            /* Search sections */
+            .search-section {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+            
+            .search-group {
+                margin-bottom: 10px;
+            }
+            
+            /* Stack buttons vertically on mobile */
+            .search-bar {
+                flex-direction: column;
+                gap: 6px;
+                align-items: stretch;
+                width: 100%;
+            }
+            
+            .search-bar input,
+            .search-bar button {
+                width: 100%;
+                margin: 0 !important;
+                box-sizing: border-box;
+            }
+            
+            .save-search-btn {
+                width: 100%;
+                margin: 0 !important;
+                box-sizing: border-box;
+            }
+            
+            .blend-mode-btn {
+                width: 100%;
+                margin: 0 !important;
+                box-sizing: border-box;
+            }
+            
+            /* Filters */
+            .filters-container {
+                padding: 10px;
+                margin-bottom: 12px;
+            }
+            
+            .filters-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            
+            .filter-row {
+                flex-direction: column;
+                gap: 6px;
+                padding: 8px;
+                align-items: stretch;
+            }
+            
+            .filter-row select,
+            .filter-row input,
+            .filter-row button {
+                width: 100%;
+                min-width: auto;
+                margin: 0;
+                box-sizing: border-box;
+            }
+            
+            /* Blend mode */
+            .blend-mode-section {
+                padding: 10px;
+                margin-top: 10px;
+            }
+            
+            .blend-item {
+                padding: 10px;
+                margin-bottom: 10px;
+            }
+            
+            .blend-item-header {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            
+            .blend-item label {
+                min-width: auto;
+                width: 100%;
+            }
+            
+            .blend-item input[type="number"] {
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .blend-filters > div {
+                width: 100%;
+            }
+            
+            .blend-filters > div:first-child {
+                flex-direction: column !important;
+                align-items: stretch !important;
+            }
+            
+            .blend-filter-row {
+                flex-direction: column;
+                gap: 6px;
+                align-items: stretch;
+            }
+            
+            .blend-filter-row select,
+            .blend-filter-row input,
+            .blend-filter-row button {
+                width: 100%;
+                margin: 0;
+                box-sizing: border-box;
+            }
+            
+            /* Date range buttons */
+            .date-range-buttons {
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-bottom: 10px;
+                justify-content: center;
+            }
+            
+            .date-range-btn {
+                padding: 6px 10px;
+                font-size: 11px;
+                height: 28px;
+                box-sizing: border-box;
+                margin: 0;
+            }
+            
+            .date-range-buttons > span {
+                width: 100%;
+                text-align: center;
+                margin-bottom: 4px;
+            }
+            
+            .date-range-custom {
+                flex-direction: column;
+                width: 100%;
+                margin-left: 0;
+                margin-top: 8px;
+                align-items: stretch;
+            }
+            
+            .date-range-custom input,
+            .date-range-custom button,
+            .date-range-custom label {
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .date-range-custom label {
+                text-align: left;
+                margin-bottom: 4px;
+            }
+            
+            /* Blend action buttons */
+            .blend-mode-section > div > div:last-child {
+                flex-direction: column !important;
+                gap: 8px !important;
+                align-items: stretch !important;
+            }
+            
+            .blend-mode-section > div > div:last-child button {
+                width: 100%;
+                margin: 0 !important;
+                box-sizing: border-box;
+            }
+            
+            /* Charts */
+            .chart-container {
+                height: 240px;
+                margin-top: 12px;
+            }
+            
+            .chart-section {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+            
+            /* Module headers */
+            .module-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            
+            .module-header h2 {
+                text-align: center;
+                margin-bottom: 0;
+            }
+            
+            .module-header button {
+                width: 100%;
+            }
+            
+            /* Results section */
+            #resultsSection .module-header {
+                padding: 10px;
+                margin-bottom: 10px;
+            }
+            
+            #resultsSection .module-header > div {
+                flex-direction: column;
+                gap: 8px;
+                width: 100%;
+            }
+            
+            #resultsSection .module-header span {
+                text-align: center;
+            }
+            
+            /* Table - horizontal scroll */
+            .table-container {
+                max-height: 400px;
+                font-size: 10px;
+            }
+            
+            table {
+                font-size: 10px;
+            }
+            
+            th, td {
+                padding: 6px;
+                white-space: nowrap;
+            }
+            
+            /* Saved searches */
+            .saved-searches-section {
+                padding: 10px;
+                margin-bottom: 12px;
+            }
+            
+            .saved-search-item {
+                font-size: 11px;
+                padding: 6px 8px;
+                margin: 3px;
+            }
+            
+            /* Buttons */
+            button {
+                font-size: 11px;
+                padding: 6px 12px;
+                height: 28px;
+                box-sizing: border-box;
+            }
+            
+            .remove-filter {
+                width: 100%;
+                margin: 0;
+            }
+            
+            .download-csv-btn {
+                font-size: 11px;
+                padding: 6px 12px;
+                height: 28px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .hide-btn {
+                font-size: 11px;
+                padding: 6px 10px;
+                height: 28px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .add-filter-btn {
+                font-size: 11px;
+                padding: 6px 12px;
+                height: 28px;
+                margin-top: 8px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .add-blend-filter-btn,
+            .remove-blend-filter-btn,
+            .apply-to-all-btn {
+                font-size: 11px;
+                padding: 4px 8px;
+                height: 26px;
+                box-sizing: border-box;
+            }
+            
+            .add-blend-filter-btn {
+                width: 100%;
+            }
+            
+            /* Tooltip adjustments for mobile */
+            .help-icon {
+                width: 14px;
+                height: 14px;
+                font-size: 10px;
+                margin-left: 4px;
+            }
+            
+            .tooltip {
+                width: calc(100vw - 40px);
+                left: auto;
+                right: 0;
+                font-size: 11px;
+                padding: 10px;
+                line-height: 1.5;
+            }
+            
+            .tooltip code {
+                font-size: 10px;
+            }
+            
+            /* Forms */
+            input[type="text"],
+            input[type="number"],
+            input[type="date"],
+            select {
+                font-size: 11px;
+                padding: 6px;
+                height: 28px;
+                box-sizing: border-box;
+            }
+            
+            label {
+                font-size: 11px;
+                margin-bottom: 4px;
+            }
+            
+            /* Ensure all containers align properly */
+            .search-group,
+            .filters-header,
+            .blend-filters > div {
+                width: 100%;
+            }
+            
+            /* Loading and error */
+            .loading {
+                padding: 20px;
+                font-size: 12px;
+            }
+            
+            .error {
+                padding: 10px;
+                font-size: 11px;
+                margin-bottom: 12px;
+            }
+            
+            /* Grid layouts */
+            .grid-2 {
+                grid-template-columns: 1fr;
             }
         }
     </style>
