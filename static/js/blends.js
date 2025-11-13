@@ -2,6 +2,10 @@
 
 let compareChart = null;
 let blendDateFilter = null;
+let currentChartData = null;
+let currentEntries = null;
+let currentWeights = null;
+let isBlending = false;
 
 // Parse wool types input, handling parentheses for groups
 function parseWoolTypeEntries(input) {
@@ -212,6 +216,12 @@ function setDateRange(range) {
     } else {
         blendDateFilter = getDateRangeFilter(range);
     }
+    
+    // Auto-trigger blend if already set up
+    const blendSection = document.getElementById('blendModeSection');
+    if (blendSection && blendSection.style.display !== 'none') {
+        applyBlendedCompare();
+    }
 }
 
 function toggleCustomDateRange() {
@@ -241,9 +251,23 @@ function applyCustomDateRange() {
         value: fromDate,
         value2: toDate
     };
+    
+    // Auto-trigger blend if already set up
+    const blendSection = document.getElementById('blendModeSection');
+    if (blendSection && blendSection.style.display !== 'none') {
+        applyBlendedCompare();
+    }
 }
 
 async function applyBlendedCompare() {
+    // Prevent concurrent blends
+    if (isBlending) {
+        console.log('Blend already in progress, skipping...');
+        return;
+    }
+    
+    isBlending = true;
+    
     const input = document.getElementById('compareTypes').value.trim();
     const entries = parseWoolTypeEntries(input);
     
@@ -316,11 +340,23 @@ async function applyBlendedCompare() {
         showError('Blend failed: ' + error.message);
     } finally {
         document.getElementById('loading').style.display = 'none';
+        isBlending = false;
     }
 }
 
 function displayBlendedChart(data, entries, weights) {
     document.getElementById('compareChartSection').style.display = 'block';
+    
+    // Store for MA updates
+    currentChartData = data;
+    currentEntries = entries;
+    currentWeights = weights;
+    
+    updateChart();
+}
+
+function updateChart() {
+    if (!currentChartData || !currentEntries || !currentWeights) return;
     
     const ctx = document.getElementById('compareChart').getContext('2d');
     
@@ -328,13 +364,13 @@ function displayBlendedChart(data, entries, weights) {
         compareChart.destroy();
     }
     
-    const interpolatedDatasets = data.datasets.map(dataset => ({
+    const interpolatedDatasets = currentChartData.datasets.map(dataset => ({
         ...dataset,
         data: interpolateDataset(dataset.data)
     }));
     
     const blendedData = [];
-    const labels = data.labels;
+    const labels = currentChartData.labels;
     
     for (let i = 0; i < labels.length; i++) {
         let weightedSum = 0;
@@ -343,8 +379,8 @@ function displayBlendedChart(data, entries, weights) {
         interpolatedDatasets.forEach((dataset, idx) => {
             const value = dataset.data[i];
             if (value !== null && value !== undefined) {
-                weightedSum += value * weights[idx];
-                totalWeight += weights[idx];
+                weightedSum += value * currentWeights[idx];
+                totalWeight += currentWeights[idx];
             }
         });
         
@@ -357,7 +393,7 @@ function displayBlendedChart(data, entries, weights) {
     // Individual entry lines (20% opacity)
     interpolatedDatasets.forEach((dataset, idx) => {
         datasets.push({
-            label: entries[idx].label + ` (weight: ${weights[idx]})`,
+            label: currentEntries[idx].label + ` (weight: ${currentWeights[idx]})`,
             data: dataset.data,
             borderColor: colors[idx % colors.length] + '33',
             backgroundColor: 'transparent',
@@ -365,7 +401,8 @@ function displayBlendedChart(data, entries, weights) {
             tension: 0.1,
             fill: false,
             spanGaps: false,
-            pointRadius: 0
+            pointRadius: 0,
+            order: 2
         });
     });
     
@@ -380,7 +417,8 @@ function displayBlendedChart(data, entries, weights) {
         fill: true,
         spanGaps: true,
         pointRadius: 2,
-        pointBackgroundColor: '#153D33'
+        pointBackgroundColor: '#153D33',
+        order: 1
     });
     
     compareChart = new Chart(ctx, {

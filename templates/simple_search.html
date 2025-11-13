@@ -59,10 +59,27 @@
 <!-- Charts -->
 <div class="chart-section" id="chartSection" style="display: none;">
     <div class="module-header">
-        <h2 style="color: #153D33; font-size: 14px;">Average Price Over Time</h2>
+        <h2 style="color: #153D33; font-size: 14px;">Average Price Over Time (Volume-Weighted)</h2>
         <button class="hide-btn" onclick="toggleModule('priceChart')">Hide</button>
     </div>
     <div id="priceChartContent" class="module-content">
+        <!-- Statistics Summary -->
+        <div id="statsSection"></div>
+        
+        <!-- Moving Average Controls -->
+        <div style="display: flex; gap: 12px; align-items: center; margin: 12px 0 20px 0; padding: 12px; background: #f9f9f9; border-radius: 4px; flex-wrap: wrap;">
+            <span style="font-weight: 600; font-size: 12px; color: #153D33;">Moving Averages:</span>
+            <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
+                <input type="checkbox" id="ma30" onchange="updateChart()"> 30-day
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
+                <input type="checkbox" id="ma90" onchange="updateChart()"> 90-day
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
+                <input type="checkbox" id="ma180" onchange="updateChart()"> 180-day
+            </label>
+        </div>
+        
         <div class="chart-container">
             <canvas id="priceChart"></canvas>
         </div>
@@ -134,6 +151,8 @@
     let sortColumn = null;
     let sortDirection = 'asc';
     let currentDateFilter = null;
+    let currentChartData = null;  // Store chart data for MA updates
+    let isSearching = false;  // Prevent concurrent searches
     
     function setDateRange(range) {
         // Clear active state
@@ -150,6 +169,9 @@
             currentDateFilter = getDateRangeFilter(range);
             console.log('Date range set:', range, currentDateFilter);
         }
+        
+        // Auto-trigger search
+        search();
     }
     
     function toggleCustomDateRange() {
@@ -184,6 +206,9 @@
         };
         
         console.log('Custom date range set:', currentDateFilter);
+        
+        // Auto-trigger search
+        search();
     }
     
     function addFilter() {
@@ -289,6 +314,14 @@
     }
     
     async function search() {
+        // Prevent concurrent searches
+        if (isSearching) {
+            console.log('Search already in progress, skipping...');
+            return;
+        }
+        
+        isSearching = true;
+        
         const filters = getFilters();
         
         console.log('Searching with filters:', filters);
@@ -361,6 +394,7 @@
         } finally {
             document.getElementById('loading').style.display = 'none';
             document.getElementById('searchBtn').disabled = false;
+            isSearching = false;
         }
     }
     
@@ -400,25 +434,86 @@
     function displayChart(data) {
         document.getElementById('chartSection').style.display = 'block';
         
+        // Store data for MA updates
+        currentChartData = data;
+        
+        // Display statistics
+        if (data.statistics) {
+            document.getElementById('statsSection').innerHTML = formatStats(data.statistics);
+        }
+        
+        // Draw the chart
+        updateChart();
+    }
+    
+    function updateChart() {
+        if (!currentChartData) return;
+        
         const ctx = document.getElementById('priceChart').getContext('2d');
         
         if (priceChart) {
             priceChart.destroy();
         }
         
+        const datasets = [{
+            label: 'Volume-Weighted Avg Price',
+            data: currentChartData.data,
+            borderColor: '#3D7F4B',
+            backgroundColor: 'rgba(61, 127, 75, 0.1)',
+            borderWidth: 2,
+            tension: 0.1,
+            fill: true,
+            order: 1
+        }];
+        
+        // Add moving averages if checked
+        if (document.getElementById('ma30').checked) {
+            datasets.push({
+                label: '30-day MA',
+                data: calculateMovingAverage(currentChartData.data, 30),
+                borderColor: '#FF9800',
+                borderWidth: 1.5,
+                borderDash: [5, 5],
+                tension: 0.1,
+                fill: false,
+                order: 2,
+                pointRadius: 0
+            });
+        }
+        
+        if (document.getElementById('ma90').checked) {
+            datasets.push({
+                label: '90-day MA',
+                data: calculateMovingAverage(currentChartData.data, 90),
+                borderColor: '#9C27B0',
+                borderWidth: 1.5,
+                borderDash: [5, 5],
+                tension: 0.1,
+                fill: false,
+                order: 3,
+                pointRadius: 0
+            });
+        }
+        
+        if (document.getElementById('ma180').checked) {
+            datasets.push({
+                label: '180-day MA',
+                data: calculateMovingAverage(currentChartData.data, 180),
+                borderColor: '#2196F3',
+                borderWidth: 1.5,
+                borderDash: [5, 5],
+                tension: 0.1,
+                fill: false,
+                order: 4,
+                pointRadius: 0
+            });
+        }
+        
         priceChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: data.labels,
-                datasets: [{
-                    label: 'Average Price',
-                    data: data.data,
-                    borderColor: '#3D7F4B',
-                    backgroundColor: 'rgba(61, 127, 75, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.1,
-                    fill: true
-                }]
+                labels: currentChartData.labels,
+                datasets: datasets
             },
             options: {
                 responsive: true,
@@ -430,7 +525,7 @@
                         intersect: false,
                         callbacks: {
                             label: function(context) {
-                                return 'Avg Price (filtered): $' + context.parsed.y.toFixed(2);
+                                return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
                             }
                         }
                     }

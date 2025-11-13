@@ -178,3 +178,69 @@ function interpolateDataset(dataArray) {
     return interpolated;
 }
 
+// Calculate Simple Moving Average
+function calculateMovingAverage(data, period) {
+    const ma = [];
+    
+    for (let i = 0; i < data.length; i++) {
+        if (data[i] === null || data[i] === undefined) {
+            ma.push(null);
+            continue;
+        }
+        
+        // Collect valid values in the window
+        const windowStart = Math.max(0, i - period + 1);
+        const windowValues = [];
+        
+        for (let j = windowStart; j <= i; j++) {
+            if (data[j] !== null && data[j] !== undefined) {
+                windowValues.push(data[j]);
+            }
+        }
+        
+        // Calculate average if we have enough data points
+        if (windowValues.length > 0) {
+            const sum = windowValues.reduce((a, b) => a + b, 0);
+            ma.push(sum / windowValues.length);
+        } else {
+            ma.push(null);
+        }
+    }
+    
+    return ma;
+}
+
+// Format statistics for display
+function formatStats(stats) {
+    if (!stats) return '';
+    
+    return `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-top: 12px; padding: 12px; background: white; border-radius: 4px; border: 1px solid #e0e0e0;">
+            <div style="text-align: center;">
+                <div style="font-size: 10px; color: #666; margin-bottom: 4px;">MIN</div>
+                <div style="font-size: 14px; font-weight: 600; color: #D32F2F;">$${stats.min}</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 10px; color: #666; margin-bottom: 4px;">MAX</div>
+                <div style="font-size: 14px; font-weight: 600; color: #28a745;">$${stats.max}</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 10px; color: #666; margin-bottom: 4px;">MEDIAN</div>
+                <div style="font-size: 14px; font-weight: 600; color: #3D7F4B;">$${stats.median}</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 10px; color: #666; margin-bottom: 4px;">AVG (VWAP)</div>
+                <div style="font-size: 14px; font-weight: 600; color: #1976D2;">$${stats.mean}</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 10px; color: #666; margin-bottom: 4px;">STD DEV</div>
+                <div style="font-size: 14px; font-weight: 600; color: #666;">$${stats.std_dev}</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 10px; color: #666; margin-bottom: 4px;">RECORDS</div>
+                <div style="font-size: 14px; font-weight: 600; color: #666;">${stats.count.toLocaleString()}</div>
+            </div>
+        </div>
+    `;
+}
+

@@ -176,7 +176,7 @@
 <!-- Comparison Chart -->
 <div class="chart-section" id="compareChartSection" style="display: none;">
     <div class="module-header">
-        <h2 style="color: #153D33; font-size: 14px;">Price Comparison</h2>
+        <h2 style="color: #153D33; font-size: 14px;">Price Comparison (Volume-Weighted)</h2>
         <button class="hide-btn" onclick="toggleModule('compareChart')">Hide</button>
     </div>
     <div id="compareChartContent" class="module-content">
@@ -196,6 +196,7 @@
     let compareChart = null;
     let filterCount = 0;
     let currentDateFilter = null;
+    let isComparing = false;
     
     function setDateRange(range) {
         document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
@@ -206,6 +207,12 @@
             currentDateFilter = null;
         } else {
             currentDateFilter = getDateRangeFilter(range);
+        }
+        
+        // Auto-trigger comparison if types are entered
+        const input = document.getElementById('compareTypes').value.trim();
+        if (input) {
+            compareWoolTypes();
         }
     }
     
@@ -236,6 +243,12 @@
             value: fromDate,
             value2: toDate
         };
+        
+        // Auto-trigger comparison if types are entered
+        const input = document.getElementById('compareTypes').value.trim();
+        if (input) {
+            compareWoolTypes();
+        }
     }
     
     function addFilter() {
@@ -338,6 +351,12 @@
     }
     
     async function compareWoolTypes() {
+        // Prevent concurrent comparisons
+        if (isComparing) {
+            console.log('Comparison already in progress, skipping...');
+            return;
+        }
+        
         const input = document.getElementById('compareTypes').value.trim();
         
         if (!input) {
@@ -366,6 +385,7 @@
             if (!proceed) return;
         }
         
+        isComparing = true;
         document.getElementById('compareBtn').disabled = true;
         document.getElementById('compareChartSection').style.display = 'none';
         document.getElementById('loading').style.display = 'block';
@@ -398,6 +418,7 @@
         } finally {
             document.getElementById('compareBtn').disabled = false;
             document.getElementById('loading').style.display = 'none';
+            isComparing = false;
         }
     }
     

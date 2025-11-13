@@ -422,9 +422,10 @@ def get_compare_chart_blend():
                 query = """
                     SELECT 
                         sale_date,
-                        price
+                        price,
+                        bales
                     FROM auction_data_joined
-                    WHERE price > 10
+                    WHERE price > 10 AND bales > 0
                     AND (CAST(wool_type_id AS CHAR) LIKE %s OR type_combined LIKE %s)
                 """
                 
@@ -500,40 +501,47 @@ def get_compare_chart_blend():
                 cursor.execute(query, params)
                 results = cursor.fetchall()
                 
-                # Group by date for THIS specific type
-                type_date_prices = defaultdict(list)
+                # Group by date for THIS specific type - store (price, bales)
+                type_date_data = defaultdict(list)
                 for row in results:
-                    if row['sale_date'] and row['price']:
-                        type_date_prices[row['sale_date']].append(float(row['price']))
+                    if row['sale_date'] and row['price'] and row['bales']:
+                        type_date_data[row['sale_date']].append({
+                            'price': float(row['price']),
+                            'bales': float(row['bales'])
+                        })
                 
-                # Calculate filtered averages for THIS type
+                # Calculate volume-weighted filtered averages for THIS type
                 type_data = {}
-                for sale_date in sorted(type_date_prices.keys()):
-                    price_list = type_date_prices[sale_date]
+                for sale_date in sorted(type_date_data.keys()):
+                    items = type_date_data[sale_date]
                     
-                    if len(price_list) == 0:
+                    if len(items) == 0:
                         continue
                     
-                    # Calculate median
+                    # Calculate median price for outlier filtering
+                    price_list = [item['price'] for item in items]
                     median_price = statistics.median(price_list)
                     
-                    # Filter outliers: remove values +/- 20% from median (only if more than 1 value)
-                    if len(price_list) > 1:
+                    # Filter outliers: remove items where price is +/- 20% from median
+                    if len(items) > 1:
                         lower_bound = median_price * 0.8
                         upper_bound = median_price * 1.2
-                        filtered_prices = [p for p in price_list if lower_bound <= p <= upper_bound]
+                        filtered_items = [item for item in items if lower_bound <= item['price'] <= upper_bound]
                         
-                        # If we filtered everything out, use original list
-                        if len(filtered_prices) == 0:
-                            filtered_prices = price_list
+                        if len(filtered_items) == 0:
+                            filtered_items = items
                     else:
-                        filtered_prices = price_list
+                        filtered_items = items
                     
-                    # Calculate average of filtered prices and convert cents to dollars
-                    avg_price = sum(filtered_prices) / len(filtered_prices)
-                    avg_price_dollars = avg_price / 100
-                    date_key = sale_date.strftime('%Y-%m-%d')
-                    type_data[date_key] = avg_price_dollars
+                    # Calculate volume-weighted average: sum(price * bales) / sum(bales)
+                    total_weighted_price = sum(item['price'] * item['bales'] for item in filtered_items)
+                    total_bales = sum(item['bales'] for item in filtered_items)
+                    
+                    if total_bales > 0:
+                        weighted_avg_price = total_weighted_price / total_bales
+                        weighted_avg_price_dollars = weighted_avg_price / 100
+                        date_key = sale_date.strftime('%Y-%m-%d')
+                        type_data[date_key] = weighted_avg_price_dollars
                 
                 type_series.append(type_data)
             
@@ -612,9 +620,10 @@ def get_compare_chart():
             query = """
                 SELECT 
                     sale_date,
-                    price
+                    price,
+                    bales
                 FROM auction_data_joined
-                WHERE price > 10
+                WHERE price > 10 AND bales > 0
                 AND (CAST(wool_type_id AS CHAR) LIKE %s OR type_combined LIKE %s)
             """
             
@@ -664,43 +673,50 @@ def get_compare_chart():
             cursor.execute(query, params)
             results = cursor.fetchall()
             
-            # Group by date and calculate average with outlier filtering
+            # Group by date - store (price, bales) for volume-weighted averaging
             from collections import defaultdict
             import statistics
             
-            date_prices = defaultdict(list)
+            date_data = defaultdict(list)
             for row in results:
-                if row['sale_date'] and row['price']:
-                    date_prices[row['sale_date']].append(float(row['price']))
+                if row['sale_date'] and row['price'] and row['bales']:
+                    date_data[row['sale_date']].append({
+                        'price': float(row['price']),
+                        'bales': float(row['bales'])
+                    })
             
-            # Calculate filtered averages (same logic as blend mode)
+            # Calculate volume-weighted filtered averages
             series_data = {}
-            for sale_date in sorted(date_prices.keys()):
-                price_list = date_prices[sale_date]
+            for sale_date in sorted(date_data.keys()):
+                items = date_data[sale_date]
                 
-                if len(price_list) == 0:
+                if len(items) == 0:
                     continue
                 
-                # Calculate median
+                # Calculate median price for outlier filtering
+                price_list = [item['price'] for item in items]
                 median_price = statistics.median(price_list)
                 
-                # Filter outliers: remove values +/- 20% from median (only if more than 1 value)
-                if len(price_list) > 1:
+                # Filter outliers: remove items where price is +/- 20% from median
+                if len(items) > 1:
                     lower_bound = median_price * 0.8
                     upper_bound = median_price * 1.2
-                    filtered_prices = [p for p in price_list if lower_bound <= p <= upper_bound]
+                    filtered_items = [item for item in items if lower_bound <= item['price'] <= upper_bound]
                     
-                    # If we filtered everything out, use original list
-                    if len(filtered_prices) == 0:
-                        filtered_prices = price_list
+                    if len(filtered_items) == 0:
+                        filtered_items = items
                 else:
-                    filtered_prices = price_list
+                    filtered_items = items
                 
-                # Calculate average of filtered prices and convert cents to dollars
-                avg_price = sum(filtered_prices) / len(filtered_prices)
-                avg_price_dollars = avg_price / 100
-                date_key = sale_date.strftime('%Y-%m-%d')
-                series_data[date_key] = round(avg_price_dollars, 2)
+                # Calculate volume-weighted average: sum(price * bales) / sum(bales)
+                total_weighted_price = sum(item['price'] * item['bales'] for item in filtered_items)
+                total_bales = sum(item['bales'] for item in filtered_items)
+                
+                if total_bales > 0:
+                    weighted_avg_price = total_weighted_price / total_bales
+                    weighted_avg_price_dollars = weighted_avg_price / 100
+                    date_key = sale_date.strftime('%Y-%m-%d')
+                    series_data[date_key] = round(weighted_avg_price_dollars, 2)
             
             all_series[wool_type] = series_data
         
@@ -743,13 +759,14 @@ def get_price_chart():
     try:
         data = request.json
         
-        # Build query with filters - get individual prices for outlier filtering
+        # Build query with filters - get price AND bales for volume-weighted averages
         query = """
             SELECT 
                 sale_date,
-                price
+                price,
+                bales
             FROM auction_data_joined
-            WHERE price > 10
+            WHERE price > 10 AND bales > 0
         """
         
         params = []
@@ -816,47 +833,72 @@ def get_price_chart():
         cursor.execute(query, params)
         all_results = cursor.fetchall()
         
-        # Group by sale_date and remove outliers
+        # Group by sale_date - store (price, bales) tuples for weighted averaging
         from collections import defaultdict
         import statistics
         
-        date_prices = defaultdict(list)
+        date_data = defaultdict(list)
         for row in all_results:
-            if row['sale_date'] and row['price']:
-                date_prices[row['sale_date']].append(float(row['price']))
+            if row['sale_date'] and row['price'] and row['bales']:
+                date_data[row['sale_date']].append({
+                    'price': float(row['price']),
+                    'bales': float(row['bales'])
+                })
         
-        # Calculate filtered averages
+        # Calculate volume-weighted filtered averages
         labels = []
         prices = []
+        stats_data = []  # For statistics summary
         
-        for sale_date in sorted(date_prices.keys()):
-            price_list = date_prices[sale_date]
+        for sale_date in sorted(date_data.keys()):
+            items = date_data[sale_date]
             
-            if len(price_list) == 0:
+            if len(items) == 0:
                 continue
             
-            # Calculate median
+            # Calculate median price for outlier filtering
+            price_list = [item['price'] for item in items]
             median_price = statistics.median(price_list)
             
-            # Filter outliers: remove values +/- 20% from median
+            # Filter outliers: remove items where price is +/- 20% from median
             lower_bound = median_price * 0.8
             upper_bound = median_price * 1.2
-            filtered_prices = [p for p in price_list if lower_bound <= p <= upper_bound]
+            filtered_items = [item for item in items if lower_bound <= item['price'] <= upper_bound]
             
             # If we filtered everything out, use original list
-            if len(filtered_prices) == 0:
-                filtered_prices = price_list
+            if len(filtered_items) == 0:
+                filtered_items = items
             
-            # Calculate average of filtered prices and convert cents to dollars
-            avg_price = sum(filtered_prices) / len(filtered_prices)
-            avg_price_dollars = avg_price / 100  # Convert cents to dollars
+            # Calculate volume-weighted average: sum(price * bales) / sum(bales)
+            total_weighted_price = sum(item['price'] * item['bales'] for item in filtered_items)
+            total_bales = sum(item['bales'] for item in filtered_items)
             
-            labels.append(sale_date.strftime('%Y-%m-%d'))
-            prices.append(round(avg_price_dollars, 2))
+            if total_bales > 0:
+                weighted_avg_price = total_weighted_price / total_bales
+                weighted_avg_price_dollars = weighted_avg_price / 100  # Convert cents to dollars
+                
+                labels.append(sale_date.strftime('%Y-%m-%d'))
+                prices.append(round(weighted_avg_price_dollars, 2))
+                
+                # Store for statistics
+                stats_data.extend([item['price'] / 100 for item in filtered_items])
+        
+        # Calculate statistics summary
+        statistics_summary = None
+        if len(stats_data) > 0:
+            statistics_summary = {
+                'min': round(min(stats_data), 2),
+                'max': round(max(stats_data), 2),
+                'median': round(statistics.median(stats_data), 2),
+                'mean': round(statistics.mean(stats_data), 2),
+                'std_dev': round(statistics.stdev(stats_data), 2) if len(stats_data) > 1 else 0,
+                'count': len(stats_data)
+            }
         
         return jsonify({
             'labels': labels,
-            'data': prices
+            'data': prices,
+            'statistics': statistics_summary
         })
         
     except Exception as e:
