@@ -10,8 +10,13 @@ from datetime import datetime
 import json
 import time
 import threading
+import os
 
 app = Flask(__name__)
+
+# Configure log file path (works both locally and on server)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_FILE = os.path.join(BASE_DIR, 'saved_searches.log')
 
 # Lock to prevent simultaneous tunnel creation across workers
 _tunnel_lock = threading.Lock()
@@ -95,7 +100,7 @@ def log_saved_search():
         print(log_entry)
         
         # Also write to a log file
-        with open('saved_searches.log', 'a') as f:
+        with open(LOG_FILE, 'a') as f:
             f.write(log_entry + '\n')
         
         return jsonify({'status': 'logged'})
@@ -784,8 +789,6 @@ def cleanup_connection(error):
     pass
 
 if __name__ == '__main__':
-    import os
-    
     # Check if running in production (via gunicorn) or development
     is_production = os.environ.get('FLASK_ENV') == 'production'
     

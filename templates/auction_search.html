@@ -1640,12 +1640,12 @@
             const colors = ['#3D7F4B', '#1976D2', '#D32F2F', '#F57C00', '#7B1FA2'];
             const datasets = [];
             
-            // Add individual type lines (80% opacity, using interpolated data)
+            // Add individual type lines (20% opacity, very faint, using interpolated data)
             interpolatedDatasets.forEach((dataset, idx) => {
                 datasets.push({
                     label: woolTypes[idx] + ` (weight: ${weights[idx]})`,
                     data: dataset.data,
-                    borderColor: colors[idx % colors.length] + 'CC',  // 80% opacity
+                    borderColor: colors[idx % colors.length] + '33',  // 20% opacity (very faint)
                     backgroundColor: 'transparent',
                     borderWidth: 1.5,
                     tension: 0.1,

@@ -55,10 +55,8 @@ id_rsa*
 *.ppk
 
 # Logs
-*.log
 logs/
 *.out
-saved_searches.log
 
 # Test files
 test_*.py
