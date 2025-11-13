@@ -271,6 +271,20 @@
             color: white;
         }
         
+        .saved-search-item.blend {
+            border: 2px solid #7B1FA2;
+            background: #f3e5f5;
+        }
+        
+        .saved-search-item.blend:hover {
+            background: #7B1FA2;
+            color: white;
+        }
+        
+        .saved-search-item.blend::before {
+            content: '✨ ';
+        }
+        
         .saved-search-item .delete-btn {
             margin-left: 10px;
             color: #dc3545;
@@ -295,6 +309,159 @@
         
         .save-search-btn:hover {
             background: #138496;
+        }
+        
+        .blend-mode-section {
+            background: #f0f8f0;
+            border: 1px solid #3D7F4B;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .blend-item {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .blend-item-header {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .blend-item label {
+            font-weight: 600;
+            color: #153D33;
+            min-width: 100px;
+            margin-bottom: 0;
+        }
+        
+        .blend-item input[type="number"] {
+            width: 80px;
+        }
+        
+        .blend-filters {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .blend-filter-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .blend-filter-row select, .blend-filter-row input {
+            height: 32px;
+            font-size: 13px;
+            padding: 6px;
+        }
+        
+        .add-blend-filter-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
+            height: 28px;
+        }
+        
+        .add-blend-filter-btn:hover {
+            background: #138496;
+        }
+        
+        .remove-blend-filter-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
+            height: 28px;
+        }
+        
+        .remove-blend-filter-btn:hover {
+            background: #c82333;
+        }
+        
+        .apply-to-all-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
+            height: 28px;
+        }
+        
+        .apply-to-all-btn:hover {
+            background: #218838;
+        }
+        
+        .blend-mode-btn {
+            background: #7B1FA2;
+            margin-left: 10px;
+        }
+        
+        .blend-mode-btn:hover {
+            background: #6A1B9A;
+        }
+        
+        .date-range-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .date-range-btn {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            height: 32px;
+            transition: background 0.3s;
+        }
+        
+        .date-range-btn:hover {
+            background: #444;
+        }
+        
+        .date-range-btn.active {
+            background: #3D7F4B;
+        }
+        
+        .date-range-custom {
+            display: none;
+            gap: 10px;
+            align-items: center;
+            margin-left: auto;
+        }
+        
+        .date-range-custom input {
+            width: 140px;
+            height: 32px;
+            font-size: 13px;
+        }
+        
+        .date-range-custom.show {
+            display: flex;
         }
         
         .module-header {
@@ -483,6 +650,35 @@
                 <div class="search-bar">
                     <input type="text" id="compareTypes" placeholder="e.g. F2N, F3D, MULTI">
                     <button onclick="compareWoolTypes()" id="compareBtn">Compare</button>
+                    <button onclick="toggleBlendMode()" class="blend-mode-btn" id="blendModeToggle">Advanced Blend Mode</button>
+                </div>
+                
+                <div id="blendModeSection" class="blend-mode-section">
+                    <h4 style="margin-top: 0; color: #153D33;">Weighted Blend Settings</h4>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 13px;">
+                        Adjust the weight of each wool type to create a blended average line. Higher weights have more influence.
+                    </p>
+                    
+                    <div class="date-range-buttons">
+                        <span style="font-weight: 600; color: #153D33; font-size: 14px;">Date Range:</span>
+                        <button class="date-range-btn" onclick="setDateRange('6m')">6 Months</button>
+                        <button class="date-range-btn" onclick="setDateRange('1y')">1 Year</button>
+                        <button class="date-range-btn" onclick="setDateRange('3y')">3 Years</button>
+                        <button class="date-range-btn" onclick="toggleCustomDateRange()">Custom</button>
+                        <div class="date-range-custom" id="customDateRange">
+                            <label style="font-size: 13px; margin: 0;">From:</label>
+                            <input type="date" id="customDateFrom" />
+                            <label style="font-size: 13px; margin: 0;">To:</label>
+                            <input type="date" id="customDateTo" />
+                            <button class="date-range-btn" style="background: #3D7F4B;" onclick="applyCustomDateRange()">Apply</button>
+                        </div>
+                    </div>
+                    
+                    <div id="blendWeights"></div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                        <button onclick="applyBlendedCompare()" style="background: #7B1FA2;">Apply Blend</button>
+                        <button onclick="saveBlendSearch()" style="background: #7B1FA2;">💾 Save Blend</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -576,6 +772,7 @@
         let currentResults = [];
         let sortColumn = null;
         let sortDirection = 'asc';
+        let blendDateFilter = null;
         
         const columns = [
             { name: 'price', label: 'Price', type: 'number' },
@@ -1069,6 +1266,468 @@
             return str;
         }
         
+        // Date Range Functions for Blend Mode
+        function setDateRange(range) {
+            const today = new Date();
+            let fromDate;
+            
+            // Clear active state
+            document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Hide custom range
+            document.getElementById('customDateRange').classList.remove('show');
+            
+            // Calculate date range
+            if (range === '6m') {
+                fromDate = new Date(today);
+                fromDate.setMonth(fromDate.getMonth() - 6);
+            } else if (range === '1y') {
+                fromDate = new Date(today);
+                fromDate.setFullYear(fromDate.getFullYear() - 1);
+            } else if (range === '3y') {
+                fromDate = new Date(today);
+                fromDate.setFullYear(fromDate.getFullYear() - 3);
+            }
+            
+            // Set blend date filter
+            blendDateFilter = {
+                column: 'sale_date',
+                operator: 'between',
+                value: fromDate.toISOString().split('T')[0],
+                value2: today.toISOString().split('T')[0]
+            };
+            
+            console.log('Date range set:', range, blendDateFilter);
+        }
+        
+        function toggleCustomDateRange() {
+            const customSection = document.getElementById('customDateRange');
+            
+            // Clear other active states
+            document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (customSection.classList.contains('show')) {
+                customSection.classList.remove('show');
+            } else {
+                customSection.classList.add('show');
+            }
+        }
+        
+        function applyCustomDateRange() {
+            const fromDate = document.getElementById('customDateFrom').value;
+            const toDate = document.getElementById('customDateTo').value;
+            
+            if (!fromDate || !toDate) {
+                alert('Please select both From and To dates');
+                return;
+            }
+            
+            if (fromDate > toDate) {
+                alert('From date must be before To date');
+                return;
+            }
+            
+            // Set blend date filter
+            blendDateFilter = {
+                column: 'sale_date',
+                operator: 'between',
+                value: fromDate,
+                value2: toDate
+            };
+            
+            console.log('Custom date range set:', blendDateFilter);
+        }
+        
+        // Blend Mode Functions
+        function toggleBlendMode() {
+            const section = document.getElementById('blendModeSection');
+            const button = document.getElementById('blendModeToggle');
+            const input = document.getElementById('compareTypes').value.trim();
+            
+            if (section.style.display === 'none' || !section.style.display) {
+                // Validate input first
+                if (!input) {
+                    alert('Please enter wool types first');
+                    return;
+                }
+                
+                const woolTypes = input.split(',').map(t => t.trim()).filter(t => t);
+                if (woolTypes.length === 0) {
+                    alert('Please enter wool types first');
+                    return;
+                }
+                
+                // Show blend mode and populate weights
+                section.style.display = 'block';
+                button.textContent = 'Hide Blend Mode';
+                populateBlendWeights(woolTypes);
+            } else {
+                section.style.display = 'none';
+                button.textContent = 'Advanced Blend Mode';
+            }
+        }
+        
+        function populateBlendWeights(woolTypes) {
+            const container = document.getElementById('blendWeights');
+            container.innerHTML = '';
+            
+            woolTypes.forEach((type, idx) => {
+                const div = document.createElement('div');
+                div.className = 'blend-item';
+                div.innerHTML = `
+                    <div class="blend-item-header">
+                        <label>${type}:</label>
+                        <input type="number" id="weight_${idx}" value="1" min="0" step="0.1" />
+                        <span style="color: #666; font-size: 13px;">weight</span>
+                    </div>
+                    <div class="blend-filters">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 13px; color: #666;">Custom filters for ${type}:</span>
+                            <button class="add-blend-filter-btn" onclick="addBlendFilter(${idx})">+ Add Filter</button>
+                        </div>
+                        <div id="blend_filters_${idx}"></div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        function addBlendFilter(typeIdx) {
+            const container = document.getElementById(`blend_filters_${typeIdx}`);
+            const filterId = `blend_${typeIdx}_${Date.now()}`;
+            
+            const filterRow = document.createElement('div');
+            filterRow.className = 'blend-filter-row';
+            filterRow.id = filterId;
+            filterRow.setAttribute('data-type-idx', typeIdx);
+            filterRow.innerHTML = `
+                <select class="blend-filter-column">
+                    <option value="">Select Column</option>
+                    ${columns.filter(c => c.name !== 'sale_date').map(col => 
+                        `<option value="${col.name}" data-type="${col.type}">${col.label}</option>`
+                    ).join('')}
+                </select>
+                <select class="blend-filter-operator">
+                    <option value="">Operator</option>
+                    <option value="gt">></option>
+                    <option value="lt"><</option>
+                    <option value="gte">>=</option>
+                    <option value="lte"><=</option>
+                    <option value="eq">=</option>
+                    <option value="between">Between</option>
+                </select>
+                <input type="text" class="blend-filter-value" placeholder="Value" />
+                <input type="text" class="blend-filter-value2" placeholder="Value 2" style="display:none;" />
+                <button class="apply-to-all-btn" onclick="applyFilterToAll('${filterId}', ${typeIdx})" title="Apply this filter to all types">Apply to All</button>
+                <button class="remove-blend-filter-btn" onclick="removeBlendFilter('${filterId}')">✕</button>
+            `;
+            
+            // Add operator change handler
+            const operatorSelect = filterRow.querySelector('.blend-filter-operator');
+            operatorSelect.onchange = function() {
+                const value2 = filterRow.querySelector('.blend-filter-value2');
+                value2.style.display = this.value === 'between' ? 'inline-block' : 'none';
+            };
+            
+            container.appendChild(filterRow);
+        }
+        
+        function applyFilterToAll(filterId, sourceTypeIdx) {
+            const sourceRow = document.getElementById(filterId);
+            if (!sourceRow) return;
+            
+            // Get filter values from source
+            const column = sourceRow.querySelector('.blend-filter-column').value;
+            const operator = sourceRow.querySelector('.blend-filter-operator').value;
+            const value = sourceRow.querySelector('.blend-filter-value').value;
+            const value2 = sourceRow.querySelector('.blend-filter-value2').value;
+            
+            if (!column || !operator || !value) {
+                alert('Please fill in all filter fields first');
+                return;
+            }
+            
+            // Get total number of types
+            const input = document.getElementById('compareTypes').value.trim();
+            const woolTypes = input.split(',').map(t => t.trim()).filter(t => t);
+            
+            // Apply to all other types
+            woolTypes.forEach((type, idx) => {
+                if (idx !== sourceTypeIdx) {
+                    // Add filter to this type
+                    addBlendFilter(idx);
+                    const container = document.getElementById(`blend_filters_${idx}`);
+                    const newRow = container.lastElementChild;
+                    
+                    newRow.querySelector('.blend-filter-column').value = column;
+                    newRow.querySelector('.blend-filter-operator').value = operator;
+                    newRow.querySelector('.blend-filter-value').value = value;
+                    
+                    if (operator === 'between' && value2) {
+                        newRow.querySelector('.blend-filter-value2').value = value2;
+                        newRow.querySelector('.blend-filter-value2').style.display = 'inline-block';
+                    }
+                }
+            });
+            
+            console.log(`Applied filter to all types: ${column} ${operator} ${value}`);
+        }
+        
+        function removeBlendFilter(filterId) {
+            document.getElementById(filterId).remove();
+        }
+        
+        async function applyBlendedCompare() {
+            const input = document.getElementById('compareTypes').value.trim();
+            const woolTypes = input.split(',').map(t => t.trim()).filter(t => t);
+            
+            // Get weights
+            const weights = [];
+            woolTypes.forEach((type, idx) => {
+                const weight = parseFloat(document.getElementById(`weight_${idx}`).value) || 1;
+                weights.push(weight);
+            });
+            
+            // Collect per-type filters
+            const typeFilters = [];
+            woolTypes.forEach((type, idx) => {
+                const filters = [];
+                const container = document.getElementById(`blend_filters_${idx}`);
+                if (container) {
+                    container.querySelectorAll('.blend-filter-row').forEach(row => {
+                        const column = row.querySelector('.blend-filter-column').value;
+                        const operator = row.querySelector('.blend-filter-operator').value;
+                        const value = row.querySelector('.blend-filter-value').value;
+                        const value2 = row.querySelector('.blend-filter-value2').value;
+                        
+                        if (column && operator && value) {
+                            filters.push({ column, operator, value, value2: operator === 'between' ? value2 : null });
+                        }
+                    });
+                }
+                typeFilters.push(filters);
+            });
+            
+            // Use blend date filter (set by date range buttons)
+            const hasDateFilter = blendDateFilter !== null;
+            
+            if (!hasDateFilter) {
+                const proceed = confirm(
+                    '⚠️ No date range selected!\n\n' +
+                    'This query will process all historical data and may take 10-30 seconds.\n\n' +
+                    'TIP: Select a date range (6 Months, 1 Year, or Custom) for faster results.\n\n' +
+                    'Continue anyway?'
+                );
+                if (!proceed) return;
+            }
+            
+            document.getElementById('compareBtn').disabled = true;
+            document.getElementById('compareChartSection').style.display = 'none';
+            
+            try {
+                console.log('Comparing with blend:', woolTypes, 'Weights:', weights, 'Type filters:', typeFilters);
+                
+                const response = await fetch('/api/compare_chart_blend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        wool_types: woolTypes,
+                        type_filters: typeFilters,
+                        date_filter: blendDateFilter
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Display with blend
+                displayBlendedChart(data, woolTypes, weights);
+                
+            } catch (error) {
+                console.error('Blend compare error:', error);
+                alert('Comparison failed: ' + error.message);
+            } finally {
+                document.getElementById('compareBtn').disabled = false;
+            }
+        }
+        
+        function interpolateDataset(dataArray) {
+            // Fill missing data points using linear interpolation
+            const interpolated = [...dataArray];
+            
+            for (let i = 0; i < interpolated.length; i++) {
+                if (interpolated[i] === null || interpolated[i] === undefined) {
+                    // Find previous valid point
+                    let prevIdx = i - 1;
+                    while (prevIdx >= 0 && (interpolated[prevIdx] === null || interpolated[prevIdx] === undefined)) {
+                        prevIdx--;
+                    }
+                    
+                    // Find next valid point
+                    let nextIdx = i + 1;
+                    while (nextIdx < interpolated.length && (interpolated[nextIdx] === null || interpolated[nextIdx] === undefined)) {
+                        nextIdx++;
+                    }
+                    
+                    // Interpolate if we have both prev and next
+                    if (prevIdx >= 0 && nextIdx < interpolated.length) {
+                        const prevValue = interpolated[prevIdx];
+                        const nextValue = interpolated[nextIdx];
+                        const distance = nextIdx - prevIdx;
+                        const position = i - prevIdx;
+                        
+                        // Linear interpolation
+                        interpolated[i] = prevValue + (nextValue - prevValue) * (position / distance);
+                    }
+                    // If only prev exists, use prev (flat line forward)
+                    else if (prevIdx >= 0) {
+                        interpolated[i] = interpolated[prevIdx];
+                    }
+                    // If only next exists, use next (flat line backward)
+                    else if (nextIdx < interpolated.length) {
+                        interpolated[i] = interpolated[nextIdx];
+                    }
+                }
+            }
+            
+            return interpolated;
+        }
+        
+        function displayBlendedChart(data, woolTypes, weights) {
+            document.getElementById('compareChartSection').style.display = 'block';
+            
+            const ctx = document.getElementById('compareChart').getContext('2d');
+            
+            if (compareChart) {
+                compareChart.destroy();
+            }
+            
+            // Interpolate missing values in each dataset first
+            const interpolatedDatasets = data.datasets.map(dataset => ({
+                ...dataset,
+                data: interpolateDataset(dataset.data)
+            }));
+            
+            // Calculate weighted average for each date using interpolated data
+            const blendedData = [];
+            const labels = data.labels;
+            
+            for (let i = 0; i < labels.length; i++) {
+                let weightedSum = 0;
+                let totalWeight = 0;
+                
+                interpolatedDatasets.forEach((dataset, idx) => {
+                    const value = dataset.data[i];
+                    if (value !== null && value !== undefined) {
+                        weightedSum += value * weights[idx];
+                        totalWeight += weights[idx];
+                    }
+                });
+                
+                blendedData.push(totalWeight > 0 ? weightedSum / totalWeight : null);
+            }
+            
+            // Create datasets: individual types (75% opacity) + blended line (bold)
+            const colors = ['#3D7F4B', '#1976D2', '#D32F2F', '#F57C00', '#7B1FA2'];
+            const datasets = [];
+            
+            // Add individual type lines (80% opacity, using interpolated data)
+            interpolatedDatasets.forEach((dataset, idx) => {
+                datasets.push({
+                    label: woolTypes[idx] + ` (weight: ${weights[idx]})`,
+                    data: dataset.data,
+                    borderColor: colors[idx % colors.length] + 'CC',  // 80% opacity
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5,
+                    tension: 0.1,
+                    fill: false,
+                    spanGaps: false,  // Don't span gaps, we interpolated them
+                    pointRadius: 0
+                });
+            });
+            
+            // Add blended average line (bold)
+            datasets.push({
+                label: '✨ Weighted Average',
+                data: blendedData,
+                borderColor: '#153D33',
+                backgroundColor: 'rgba(21, 61, 51, 0.1)',
+                borderWidth: 3,
+                tension: 0.1,
+                fill: true,
+                spanGaps: true,
+                pointRadius: 2,
+                pointBackgroundColor: '#153D33'
+            });
+            
+            compareChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed.y;
+                                    if (value === null) return null;
+                                    return context.dataset.label + ': $' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Average Price ($)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Sale Date'
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                maxTicksLimit: 20
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
         // Comparison Chart Functions
         async function compareWoolTypes() {
             const input = document.getElementById('compareTypes').value.trim();
@@ -1209,6 +1868,86 @@
             });
         }
         
+        // Save Blend Search Function
+        async function saveBlendSearch() {
+            const input = document.getElementById('compareTypes').value.trim();
+            const woolTypes = input.split(',').map(t => t.trim()).filter(t => t);
+            
+            if (woolTypes.length === 0) {
+                alert('Please enter wool types first');
+                return;
+            }
+            
+            const name = prompt('Enter a name for this blend:');
+            if (!name) return;
+            
+            // Collect weights
+            const weights = [];
+            woolTypes.forEach((type, idx) => {
+                const weight = parseFloat(document.getElementById(`weight_${idx}`).value) || 1;
+                weights.push(weight);
+            });
+            
+            // Collect per-type filters
+            const typeFilters = [];
+            woolTypes.forEach((type, idx) => {
+                const filters = [];
+                const container = document.getElementById(`blend_filters_${idx}`);
+                if (container) {
+                    container.querySelectorAll('.blend-filter-row').forEach(row => {
+                        const column = row.querySelector('.blend-filter-column').value;
+                        const operator = row.querySelector('.blend-filter-operator').value;
+                        const value = row.querySelector('.blend-filter-value').value;
+                        const value2 = row.querySelector('.blend-filter-value2').value;
+                        
+                        if (column && operator && value) {
+                            filters.push({ column, operator, value, value2 });
+                        }
+                    });
+                }
+                typeFilters.push(filters);
+            });
+            
+            // Get existing saved searches
+            let savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+            
+            // Add blend search (using blend module's date filter, not global)
+            savedSearches.push({
+                id: Date.now(),
+                name: name,
+                type: 'blend',
+                woolTypes: woolTypes,
+                weights: weights,
+                typeFilters: typeFilters,
+                dateFilter: blendDateFilter,
+                created: new Date().toISOString()
+            });
+            
+            // Save to localStorage
+            localStorage.setItem('fusca_saved_searches', JSON.stringify(savedSearches));
+            
+            // Log to server
+            try {
+                await fetch('/api/log_saved_search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        name: name, 
+                        type: 'blend',
+                        blend_data: { woolTypes, weights, typeFilters, dateFilter }
+                    })
+                });
+            } catch (e) {
+                console.warn('Failed to log saved blend:', e);
+            }
+            
+            // Refresh display
+            renderSavedSearches();
+            
+            console.log('Blend saved:', name);
+            alert(`Blend "${name}" saved successfully!`);
+        }
+        
         // Saved Searches Functions
         async function saveCurrentSearch() {
             const filters = getFilters();
@@ -1253,6 +1992,13 @@
             
             if (!savedSearch) return;
             
+            // Check if it's a blend search
+            if (savedSearch.type === 'blend') {
+                loadBlendSearch(savedSearch);
+                return;
+            }
+            
+            // Regular search loading
             // Clear current filters
             document.getElementById('filtersList').innerHTML = '';
             filterCount = 0;
@@ -1282,6 +2028,56 @@
             search();
         }
         
+        function loadBlendSearch(savedSearch) {
+            console.log('Loading blend search:', savedSearch.name);
+            
+            // Clear main search filters
+            document.getElementById('filtersList').innerHTML = '';
+            filterCount = 0;
+            document.getElementById('wool_type').value = '';
+            
+            // Restore date filter to blend module
+            blendDateFilter = savedSearch.dateFilter;
+            
+            // Set wool types in compare input
+            document.getElementById('compareTypes').value = savedSearch.woolTypes.join(', ');
+            
+            // Show blend mode
+            const section = document.getElementById('blendModeSection');
+            const button = document.getElementById('blendModeToggle');
+            section.style.display = 'block';
+            button.textContent = 'Hide Blend Mode';
+            
+            // Populate weights
+            populateBlendWeights(savedSearch.woolTypes);
+            
+            // Set weight values
+            savedSearch.woolTypes.forEach((type, idx) => {
+                document.getElementById(`weight_${idx}`).value = savedSearch.weights[idx];
+            });
+            
+            // Populate per-type filters
+            savedSearch.woolTypes.forEach((type, idx) => {
+                if (savedSearch.typeFilters[idx]) {
+                    savedSearch.typeFilters[idx].forEach(filter => {
+                        addBlendFilter(idx);
+                        const container = document.getElementById(`blend_filters_${idx}`);
+                        const lastRow = container.lastElementChild;
+                        lastRow.querySelector('.blend-filter-column').value = filter.column;
+                        lastRow.querySelector('.blend-filter-operator').value = filter.operator;
+                        lastRow.querySelector('.blend-filter-value').value = filter.value;
+                        if (filter.value2 && filter.operator === 'between') {
+                            lastRow.querySelector('.blend-filter-value2').value = filter.value2;
+                            lastRow.querySelector('.blend-filter-value2').style.display = 'inline-block';
+                        }
+                    });
+                }
+            });
+            
+            // Automatically run the blend
+            applyBlendedCompare();
+        }
+        
         function deleteSavedSearch(searchId) {
             if (!confirm('Delete this saved search?')) return;
             
@@ -1307,7 +2103,7 @@
             
             savedSearches.forEach(search => {
                 const item = document.createElement('div');
-                item.className = 'saved-search-item';
+                item.className = 'saved-search-item' + (search.type === 'blend' ? ' blend' : '');
                 item.innerHTML = `
                     <span onclick="loadSavedSearch(${search.id})">${search.name}</span>
                     <span class="delete-btn" onclick="event.stopPropagation(); deleteSavedSearch(${search.id})">✕</span>
