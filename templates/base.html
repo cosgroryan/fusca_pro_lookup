@@ -7,7 +7,7 @@
     <meta name="googlebot" content="noindex, nofollow">
     <title>{% block title %}Fusca Pro Lookup{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/fusca-favicon.png') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=2.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
     <style>
@@ -155,7 +155,7 @@
         {% block content %}{% endblock %}
     </div>
     
-    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/common.js') }}?v=2.0"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
