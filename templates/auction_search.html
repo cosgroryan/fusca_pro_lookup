@@ -1512,18 +1512,43 @@
             // Apply to all other entries
             entries.forEach((entry, idx) => {
                 if (idx !== sourceTypeIdx) {
-                    // Add filter to this entry
-                    addBlendFilter(idx);
                     const container = document.getElementById(`blend_filters_${idx}`);
-                    const newRow = container.lastElementChild;
                     
-                    newRow.querySelector('.blend-filter-column').value = column;
-                    newRow.querySelector('.blend-filter-operator').value = operator;
-                    newRow.querySelector('.blend-filter-value').value = value;
+                    // Check if this entry already has a filter for this column
+                    const existingRows = container.querySelectorAll('.blend-filter-row');
+                    let foundExisting = false;
                     
-                    if (operator === 'between' && value2) {
-                        newRow.querySelector('.blend-filter-value2').value = value2;
-                        newRow.querySelector('.blend-filter-value2').style.display = 'inline-block';
+                    existingRows.forEach(row => {
+                        const existingColumn = row.querySelector('.blend-filter-column').value;
+                        if (existingColumn === column) {
+                            // Update the existing filter instead of adding a new one
+                            row.querySelector('.blend-filter-operator').value = operator;
+                            row.querySelector('.blend-filter-value').value = value;
+                            
+                            if (operator === 'between' && value2) {
+                                row.querySelector('.blend-filter-value2').value = value2;
+                                row.querySelector('.blend-filter-value2').style.display = 'inline-block';
+                            } else {
+                                row.querySelector('.blend-filter-value2').style.display = 'none';
+                            }
+                            
+                            foundExisting = true;
+                        }
+                    });
+                    
+                    // If no existing filter for this column, add a new one
+                    if (!foundExisting) {
+                        addBlendFilter(idx);
+                        const newRow = container.lastElementChild;
+                        
+                        newRow.querySelector('.blend-filter-column').value = column;
+                        newRow.querySelector('.blend-filter-operator').value = operator;
+                        newRow.querySelector('.blend-filter-value').value = value;
+                        
+                        if (operator === 'between' && value2) {
+                            newRow.querySelector('.blend-filter-value2').value = value2;
+                            newRow.querySelector('.blend-filter-value2').style.display = 'inline-block';
+                        }
                     }
                 }
             });
