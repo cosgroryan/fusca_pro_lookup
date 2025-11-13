@@ -18,29 +18,30 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: #f5f5f5;
-            padding: 20px;
+            padding: 16px;
+            font-size: 12px;
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 1120px;
             margin: 0 auto;
             background: white;
-            border-radius: 8px;
+            border-radius: 6px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            padding: 30px;
+            padding: 24px;
         }
         
         .header {
             display: flex;
             align-items: center;
-            gap: 20px;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
             border-bottom: 2px solid #3D7F4B;
         }
         
         .header-logo {
-            height: 60px;
+            height: 48px;
             width: auto;
         }
         
@@ -52,29 +53,37 @@
         h1 {
             color: #153D33;
             margin: 0;
-            font-size: 28px;
+            font-size: 18px;
+        }
+        
+        h2 {
+            font-size: 14px;
+        }
+        
+        h3 {
+            font-size: 13px;
         }
         
         .header-subtitle {
             color: #666;
-            font-size: 14px;
-            margin-top: 5px;
+            font-size: 11px;
+            margin-top: 4px;
         }
         
         .search-section {
             background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
+            padding: 16px;
+            border-radius: 6px;
+            margin-bottom: 24px;
         }
         
         .search-group {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         
         .search-bar {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             align-items: center;
         }
         
@@ -85,18 +94,18 @@
         label {
             display: block;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             color: #333;
-            font-size: 14px;
+            font-size: 12px;
         }
         
         input[type="text"], input[type="number"], select, input[type="date"] {
-            padding: 10px;
+            padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 12px;
             background: white;
-            height: 40px;
+            height: 32px;
             line-height: 1;
         }
         
@@ -126,7 +135,8 @@
             padding: 8px 12px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
+            height: 32px;
         }
         
         .remove-filter:hover {
@@ -137,11 +147,12 @@
             background: #17a2b8;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
             margin-top: 10px;
+            height: 32px;
         }
         
         .add-filter-btn:hover {
@@ -166,13 +177,13 @@
         .filters-header h3 {
             margin: 0;
             color: #153D33;
-            font-size: 16px;
+            font-size: 13px;
         }
         
         .filter-column {
             font-weight: 600;
             color: #666;
-            font-size: 13px;
+            font-size: 12px;
             margin-right: 10px;
             min-width: 120px;
         }
@@ -181,13 +192,13 @@
             background: #3D7F4B;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: background 0.3s;
-            height: 40px;
+            height: 32px;
             line-height: 1;
         }
         
@@ -209,8 +220,8 @@
         
         .chart-container {
             position: relative;
-            height: 400px;
-            margin-top: 20px;
+            height: 320px;
+            margin-top: 16px;
         }
         
         .results-info {
@@ -226,19 +237,20 @@
         .results-count {
             font-weight: 600;
             color: #153D33;
-            font-size: 16px;
+            font-size: 13px;
         }
         
         .download-csv-btn {
             background: #28a745;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: background 0.3s;
+            height: 32px;
         }
         
         .download-csv-btn:hover {
@@ -262,10 +274,11 @@
             background: white;
             border: 1px solid #3D7F4B;
             border-radius: 4px;
-            padding: 8px 12px;
-            margin: 5px;
+            padding: 6px 10px;
+            margin: 4px;
             cursor: pointer;
             transition: all 0.3s;
+            font-size: 12px;
         }
         
         .saved-search-item:hover {
@@ -304,9 +317,10 @@
             border: none;
             padding: 8px 16px;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 12px;
             cursor: pointer;
             margin-left: 10px;
+            height: 32px;
         }
         
         .save-search-btn:hover {
@@ -359,12 +373,12 @@
             gap: 10px;
             align-items: center;
             margin-bottom: 8px;
-            font-size: 13px;
+            font-size: 12px;
         }
         
         .blend-filter-row select, .blend-filter-row input {
             height: 32px;
-            font-size: 13px;
+            font-size: 12px;
             padding: 6px;
         }
         
@@ -433,9 +447,9 @@
             background: #666;
             color: white;
             border: none;
-            padding: 6px 14px;
+            padding: 6px 12px;
             border-radius: 4px;
-            font-size: 13px;
+            font-size: 12px;
             cursor: pointer;
             height: 32px;
             transition: background 0.3s;
@@ -457,9 +471,9 @@
         }
         
         .date-range-custom input {
-            width: 140px;
+            width: 120px;
             height: 32px;
-            font-size: 13px;
+            font-size: 12px;
         }
         
         .date-range-custom.show {
@@ -481,11 +495,12 @@
             background: #666;
             color: white;
             border: none;
-            padding: 6px 14px;
+            padding: 6px 12px;
             border-radius: 4px;
-            font-size: 13px;
+            font-size: 12px;
             cursor: pointer;
             transition: background 0.3s;
+            height: 32px;
         }
         
         .hide-btn:hover {
@@ -504,6 +519,83 @@
             padding: 0;
         }
         
+        /* Tooltip styles */
+        .help-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #9C4DB5;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: help;
+            margin-left: 6px;
+            position: relative;
+            vertical-align: middle;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        
+        .help-icon:hover {
+            background: #7B1FA2;
+            opacity: 1;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: #f5f0e8;
+            color: #333;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.6;
+            width: 360px;
+            max-width: 90vw;
+            left: 24px;
+            bottom: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            border: 1px solid #d4c5a9;
+            display: none;
+            font-weight: normal;
+            pointer-events: none;
+        }
+        
+        .help-icon:hover .tooltip,
+        .tooltip:hover {
+            display: block;
+            pointer-events: auto;
+        }
+        
+        .help-icon:hover .tooltip {
+            pointer-events: auto;
+        }
+        
+        .tooltip strong {
+            color: #3D7F4B;
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        
+        .tooltip strong:first-child {
+            margin-top: 0;
+        }
+        
+        .tooltip code {
+            background: rgba(61, 127, 75, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #153D33;
+            border: 1px solid rgba(61, 127, 75, 0.2);
+        }
+        
         .table-container {
             overflow-x: auto;
             max-height: 600px;
@@ -515,7 +607,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: 11px;
         }
         
         thead {
@@ -527,7 +619,7 @@
         }
         
         th, td {
-            padding: 12px;
+            padding: 10px;
             text-align: left;
             border-bottom: 1px solid #eee;
         }
@@ -571,17 +663,18 @@
         
         .loading {
             text-align: center;
-            padding: 40px;
+            padding: 32px;
             color: #666;
-            font-size: 16px;
+            font-size: 13px;
         }
         
         .error {
             background: #ffebee;
             color: #c62828;
-            padding: 15px;
+            padding: 12px;
             border-radius: 4px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
+            font-size: 12px;
         }
         
         .grid-2 {
@@ -618,13 +711,13 @@
         
         <div class="saved-searches-section" id="savedSearchesSection" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin: 0; color: #153D33; font-size: 16px;">Saved Searches</h3>
+                <h3 style="margin: 0; color: #153D33; font-size: 13px;">Saved Searches</h3>
             </div>
             <div id="savedSearchesList"></div>
         </div>
         
         <div class="search-section">
-            <h2 style="margin-bottom: 20px; color: #153D33; font-size: 20px;">Search Wool Auctions</h2>
+            <h2 style="margin-bottom: 16px; color: #153D33; font-size: 14px;">Search Wool Auctions</h2>
             
             <div class="search-group">
                 <label for="wool_type">Wool Type Search (ID or Type Name)</label>
@@ -646,7 +739,37 @@
         </div>
         
         <div class="search-section" style="background: #e8f5e9; border: 2px solid #3D7F4B;">
-            <h2 style="margin-bottom: 15px; color: #153D33; font-size: 20px;">🔍 Compare Wool Types</h2>
+            <h2 style="margin-bottom: 12px; color: #153D33; font-size: 14px;">
+                🔍 Compare Wool Types
+                <span class="help-icon">
+                    ?
+                    <div class="tooltip">
+                        <strong>How it works:</strong>
+                        Compare multiple wool types side-by-side to see price trends over time. Each type gets its own line on the chart.
+                        
+                        <strong>Basic Syntax:</strong>
+                        Enter wool types separated by commas<br>
+                        <code>F2N, F3D, C3G</code>
+                        
+                        <strong>Grouping Similar Types:</strong>
+                        Use parentheses to group similar types into one averaged line<br>
+                        <code>F3D, (C3G, C4G, C3D), F2E</code><br>
+                        This treats C3G, C4G, and C3D as one blended type.
+                        
+                        <strong>Advanced Blend Mode:</strong>
+                        Click "Advanced Blend Mode" to:
+                        • Assign weights to each type/group<br>
+                        • Apply custom filters per type<br>
+                        • See a weighted average line<br>
+                        • Interpolate missing data for smooth trends
+                        
+                        <strong>Examples:</strong>
+                        <code>F2N, F3D</code> - Compare 2 types<br>
+                        <code>(F2D, F3D), (C3G, C4G)</code> - Compare 2 groups<br>
+                        <code>F2N, (C3G, C2G, C4E), F4E</code> - Mix singles & groups
+                    </div>
+                </span>
+            </h2>
             <div class="search-group">
                 <label for="compareTypes">Enter wool types to compare (comma-separated, max 5)</label>
                 <div class="search-bar">
@@ -656,21 +779,21 @@
                 </div>
                 
                 <div id="blendModeSection" class="blend-mode-section">
-                    <h4 style="margin-top: 0; color: #153D33;">Weighted Blend Settings</h4>
-                    <p style="margin-bottom: 15px; color: #666; font-size: 13px;">
+                    <h4 style="margin-top: 0; color: #153D33; font-size: 13px;">Weighted Blend Settings</h4>
+                    <p style="margin-bottom: 12px; color: #666; font-size: 12px;">
                         Adjust the weight of each wool type to create a blended average line. Higher weights have more influence.
                     </p>
                     
                     <div class="date-range-buttons">
-                        <span style="font-weight: 600; color: #153D33; font-size: 14px;">Date Range:</span>
+                        <span style="font-weight: 600; color: #153D33; font-size: 12px;">Date Range:</span>
                         <button class="date-range-btn" onclick="setDateRange('6m')">6 Months</button>
                         <button class="date-range-btn" onclick="setDateRange('1y')">1 Year</button>
                         <button class="date-range-btn" onclick="setDateRange('3y')">3 Years</button>
                         <button class="date-range-btn" onclick="toggleCustomDateRange()">Custom</button>
                         <div class="date-range-custom" id="customDateRange">
-                            <label style="font-size: 13px; margin: 0;">From:</label>
+                            <label style="font-size: 12px; margin: 0;">From:</label>
                             <input type="date" id="customDateFrom" />
-                            <label style="font-size: 13px; margin: 0;">To:</label>
+                            <label style="font-size: 12px; margin: 0;">To:</label>
                             <input type="date" id="customDateTo" />
                             <button class="date-range-btn" style="background: #3D7F4B;" onclick="applyCustomDateRange()">Apply</button>
                         </div>
@@ -687,7 +810,7 @@
         
         <div class="chart-section" id="compareChartSection" style="display: none;">
             <div class="module-header">
-                <h2 style="color: #153D33; font-size: 20px;">Price Comparison</h2>
+                <h2 style="color: #153D33; font-size: 14px;">Price Comparison</h2>
                 <button class="hide-btn" onclick="toggleModule('compareChart')">Hide</button>
             </div>
             <div id="compareChartContent" class="module-content">
@@ -699,7 +822,7 @@
         
         <div class="chart-section" id="chartSection" style="display: none;">
             <div class="module-header">
-                <h2 style="color: #153D33; font-size: 20px;">Average Price Over Time</h2>
+                <h2 style="color: #153D33; font-size: 14px;">Average Price Over Time</h2>
                 <button class="hide-btn" onclick="toggleModule('priceChart')">Hide</button>
             </div>
             <div id="priceChartContent" class="module-content">
@@ -713,7 +836,7 @@
         
         <div class="chart-section" id="balesChartSection" style="display: none;">
             <div class="module-header">
-                <h2 style="color: #153D33; font-size: 20px;">Total Bales by Sale Date</h2>
+                <h2 style="color: #153D33; font-size: 14px;">Total Bales by Sale Date</h2>
                 <button class="hide-btn" onclick="toggleModule('balesChart')">Hide</button>
             </div>
             <div id="balesChartContent" class="module-content">
@@ -725,10 +848,10 @@
         
         <div id="resultsSection" style="display: none;">
             <div class="module-header" style="background: #e8f5e9; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
-                <span class="results-count" id="resultsCount" style="font-weight: 600; color: #153D33; font-size: 16px;">-</span>
+                <span class="results-count" id="resultsCount" style="font-weight: 600; color: #153D33; font-size: 13px;">-</span>
                 <div style="display: flex; gap: 15px; align-items: center;">
                     <button class="download-csv-btn" onclick="downloadCSV()" id="downloadBtn">📥 Download CSV</button>
-                    <span style="color: #666; font-size: 14px;">Showing up to 1,000 results</span>
+                    <span style="color: #666; font-size: 11px;">Showing up to 1,000 results</span>
                     <button class="hide-btn" onclick="toggleModule('resultsTable')">Hide</button>
                 </div>
             </div>
