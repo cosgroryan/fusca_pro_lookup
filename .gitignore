@@ -68,6 +68,9 @@ test_*.py
 *.tmp
 *~
 
+#logs
+*.log
+
 # Deployment secrets
 deployment/env.conf
 deployment/*.pem
