@@ -44,6 +44,7 @@
         
         .header-content {
             flex: 1;
+            text-align: right;
         }
         
         h1 {
@@ -87,12 +88,14 @@
             font-size: 14px;
         }
         
-        input[type="text"], input[type="number"], select {
+        input[type="text"], input[type="number"], select, input[type="date"] {
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 14px;
             background: white;
+            height: 40px;
+            line-height: 1;
         }
         
         .filter-row {
@@ -176,12 +179,14 @@
             background: #3D7F4B;
             color: white;
             border: none;
-            padding: 12px 30px;
+            padding: 10px 20px;
             border-radius: 4px;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
             transition: background 0.3s;
+            height: 40px;
+            line-height: 1;
         }
         
         button:hover {
@@ -243,6 +248,93 @@
             cursor: not-allowed;
         }
         
+        .saved-searches-section {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .saved-search-item {
+            display: inline-block;
+            background: white;
+            border: 1px solid #3D7F4B;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .saved-search-item:hover {
+            background: #3D7F4B;
+            color: white;
+        }
+        
+        .saved-search-item .delete-btn {
+            margin-left: 10px;
+            color: #dc3545;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .saved-search-item:hover .delete-btn {
+            color: white;
+        }
+        
+        .save-search-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .save-search-btn:hover {
+            background: #138496;
+        }
+        
+        .module-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .module-header h2, .module-header h3 {
+            margin: 0;
+        }
+        
+        .hide-btn {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .hide-btn:hover {
+            background: #444;
+        }
+        
+        .module-content {
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            overflow: hidden;
+        }
+        
+        .module-content.collapsed {
+            max-height: 0 !important;
+            opacity: 0;
+            margin: 0;
+            padding: 0;
+        }
+        
         .table-container {
             overflow-x: auto;
             max-height: 600px;
@@ -278,6 +370,34 @@
         
         tbody tr:hover {
             background: #f5f5f5;
+        }
+        
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 25px;
+        }
+        
+        th.sortable:hover {
+            background: #0f2d27;
+        }
+        
+        th.sortable::after {
+            content: '⇅';
+            position: absolute;
+            right: 8px;
+            opacity: 0.3;
+        }
+        
+        th.sortable.sort-asc::after {
+            content: '↑';
+            opacity: 1;
+        }
+        
+        th.sortable.sort-desc::after {
+            content: '↓';
+            opacity: 1;
         }
         
         .loading {
@@ -327,6 +447,13 @@
             </div>
         </div>
         
+        <div class="saved-searches-section" id="savedSearchesSection" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0; color: #153D33; font-size: 16px;">Saved Searches</h3>
+            </div>
+            <div id="savedSearchesList"></div>
+        </div>
+        
         <div class="search-section">
             <h2 style="margin-bottom: 20px; color: #153D33; font-size: 20px;">Search Wool Auctions</h2>
             
@@ -335,6 +462,7 @@
                 <div class="search-bar">
                     <input type="text" id="wool_type" placeholder="e.g. F2N, 1, MULTI... (leave blank for all)">
                     <button onclick="search()" id="searchBtn">Search</button>
+                    <button onclick="saveCurrentSearch()" class="save-search-btn">💾 Save Search</button>
                     <button onclick="resetFilters()" style="background: #666;">Reset</button>
                 </div>
             </div>
@@ -348,54 +476,90 @@
             </div>
         </div>
         
+        <div class="search-section" style="background: #e8f5e9; border: 2px solid #3D7F4B;">
+            <h2 style="margin-bottom: 15px; color: #153D33; font-size: 20px;">🔍 Compare Wool Types</h2>
+            <div class="search-group">
+                <label for="compareTypes">Enter wool types to compare (comma-separated, max 5)</label>
+                <div class="search-bar">
+                    <input type="text" id="compareTypes" placeholder="e.g. F2N, F3D, MULTI">
+                    <button onclick="compareWoolTypes()" id="compareBtn">Compare</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-section" id="compareChartSection" style="display: none;">
+            <div class="module-header">
+                <h2 style="color: #153D33; font-size: 20px;">Price Comparison</h2>
+                <button class="hide-btn" onclick="toggleModule('compareChart')">Hide</button>
+            </div>
+            <div id="compareChartContent" class="module-content">
+                <div class="chart-container">
+                    <canvas id="compareChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
         <div class="chart-section" id="chartSection" style="display: none;">
-            <h2 style="margin-bottom: 10px; color: #153D33; font-size: 20px;">Average Price Over Time</h2>
-            <div class="chart-container">
-                <canvas id="priceChart"></canvas>
+            <div class="module-header">
+                <h2 style="color: #153D33; font-size: 20px;">Average Price Over Time</h2>
+                <button class="hide-btn" onclick="toggleModule('priceChart')">Hide</button>
+            </div>
+            <div id="priceChartContent" class="module-content">
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
             </div>
         </div>
         
         <div id="errorMsg" class="error" style="display: none;"></div>
         
         <div class="chart-section" id="balesChartSection" style="display: none;">
-            <h2 style="margin-bottom: 10px; color: #153D33; font-size: 20px;">Total Bales by Sale Date</h2>
-            <div class="chart-container">
-                <canvas id="balesChart"></canvas>
+            <div class="module-header">
+                <h2 style="color: #153D33; font-size: 20px;">Total Bales by Sale Date</h2>
+                <button class="hide-btn" onclick="toggleModule('balesChart')">Hide</button>
+            </div>
+            <div id="balesChartContent" class="module-content">
+                <div class="chart-container">
+                    <canvas id="balesChart"></canvas>
+                </div>
             </div>
         </div>
         
         <div id="resultsSection" style="display: none;">
-            <div class="results-info">
-                <span class="results-count" id="resultsCount">-</span>
+            <div class="module-header" style="background: #e8f5e9; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                <span class="results-count" id="resultsCount" style="font-weight: 600; color: #153D33; font-size: 16px;">-</span>
                 <div style="display: flex; gap: 15px; align-items: center;">
                     <button class="download-csv-btn" onclick="downloadCSV()" id="downloadBtn">📥 Download CSV</button>
                     <span style="color: #666; font-size: 14px;">Showing up to 1,000 results</span>
+                    <button class="hide-btn" onclick="toggleModule('resultsTable')">Hide</button>
                 </div>
             </div>
             
-            <div class="table-container">
+            <div id="resultsTableContent" class="module-content">
+                <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th>Sale Date</th>
-                            <th>Lot Number</th>
-                            <th>Wool Type</th>
-                            <th>Price</th>
-                            <th>Bales</th>
-                            <th>KG</th>
-                            <th>Colour</th>
-                            <th>Micron</th>
-                            <th>Yield %</th>
-                            <th>VM %</th>
-                            <th>Location</th>
-                            <th>Seller</th>
-                            <th>Farm Brand</th>
-                            <th>Sold</th>
+                            <th class="sortable" data-column="sale_date" onclick="sortTable('sale_date')">Sale Date</th>
+                            <th class="sortable" data-column="lot_number" onclick="sortTable('lot_number')">Lot Number</th>
+                            <th class="sortable" data-column="type_combined" onclick="sortTable('type_combined')">Wool Type</th>
+                            <th class="sortable" data-column="price" onclick="sortTable('price')">Price</th>
+                            <th class="sortable" data-column="bales" onclick="sortTable('bales')">Bales</th>
+                            <th class="sortable" data-column="kg" onclick="sortTable('kg')">KG</th>
+                            <th class="sortable" data-column="colour" onclick="sortTable('colour')">Colour</th>
+                            <th class="sortable" data-column="micron" onclick="sortTable('micron')">Micron</th>
+                            <th class="sortable" data-column="yield" onclick="sortTable('yield')">Yield %</th>
+                            <th class="sortable" data-column="vegetable_matter" onclick="sortTable('vegetable_matter')">VM %</th>
+                            <th class="sortable" data-column="location" onclick="sortTable('location')">Location</th>
+                            <th class="sortable" data-column="seller_name" onclick="sortTable('seller_name')">Seller</th>
+                            <th class="sortable" data-column="farm_brand_name" onclick="sortTable('farm_brand_name')">Farm Brand</th>
+                            <th class="sortable" data-column="is_sold" onclick="sortTable('is_sold')">Sold</th>
                         </tr>
                     </thead>
                     <tbody id="resultsTable">
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
         
@@ -407,8 +571,11 @@
     <script>
         let priceChart = null;
         let balesChart = null;
+        let compareChart = null;
         let filterCount = 0;
         let currentResults = [];
+        let sortColumn = null;
+        let sortDirection = 'asc';
         
         const columns = [
             { name: 'price', label: 'Price', type: 'number' },
@@ -902,8 +1069,317 @@
             return str;
         }
         
+        // Comparison Chart Functions
+        async function compareWoolTypes() {
+            const input = document.getElementById('compareTypes').value.trim();
+            
+            if (!input) {
+                alert('Please enter wool types to compare');
+                return;
+            }
+            
+            // Split by comma and trim
+            const woolTypes = input.split(',').map(t => t.trim()).filter(t => t);
+            
+            if (woolTypes.length === 0) {
+                alert('Please enter at least one wool type');
+                return;
+            }
+            
+            if (woolTypes.length > 5) {
+                alert('Maximum 5 wool types for comparison');
+                return;
+            }
+            
+            // Check if user has date filters
+            const filters = getFilters();
+            const hasDateFilter = filters.column_filters && 
+                filters.column_filters.some(f => f.column === 'sale_date');
+            
+            if (!hasDateFilter) {
+                const proceed = confirm(
+                    '⚠️ No date filter detected!\n\n' +
+                    'This query will process all historical data and may take 10-30 seconds.\n\n' +
+                    'TIP: Add a date filter (e.g. "Sale Date > 2024-01-01") for faster results.\n\n' +
+                    'Continue anyway?'
+                );
+                
+                if (!proceed) return;
+            }
+            
+            document.getElementById('compareBtn').disabled = true;
+            document.getElementById('compareChartSection').style.display = 'none';
+            
+            try {
+                console.log('Comparing wool types:', woolTypes);
+                
+                const response = await fetch('/api/compare_chart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        wool_types: woolTypes,
+                        column_filters: getFilters().column_filters || []
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                displayCompareChart(data);
+                
+            } catch (error) {
+                console.error('Compare error:', error);
+                alert('Comparison failed: ' + error.message);
+            } finally {
+                document.getElementById('compareBtn').disabled = false;
+            }
+        }
+        
+        function displayCompareChart(data) {
+            document.getElementById('compareChartSection').style.display = 'block';
+            
+            const ctx = document.getElementById('compareChart').getContext('2d');
+            
+            // Destroy existing chart
+            if (compareChart) {
+                compareChart.destroy();
+            }
+            
+            compareChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: data.datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Average Price ($)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Sale Date'
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                maxTicksLimit: 20
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Saved Searches Functions
+        async function saveCurrentSearch() {
+            const filters = getFilters();
+            const name = prompt('Enter a name for this search:');
+            
+            if (!name) return;
+            
+            // Get existing saved searches
+            let savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+            
+            // Add new search
+            savedSearches.push({
+                id: Date.now(),
+                name: name,
+                filters: filters,
+                created: new Date().toISOString()
+            });
+            
+            // Save to localStorage
+            localStorage.setItem('fusca_saved_searches', JSON.stringify(savedSearches));
+            
+            // Log to server
+            try {
+                await fetch('/api/log_saved_search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, filters: filters })
+                });
+            } catch (e) {
+                console.warn('Failed to log saved search:', e);
+            }
+            
+            // Refresh display
+            renderSavedSearches();
+            
+            console.log('Search saved:', name);
+        }
+        
+        function loadSavedSearch(searchId) {
+            const savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+            const savedSearch = savedSearches.find(s => s.id === searchId);
+            
+            if (!savedSearch) return;
+            
+            // Clear current filters
+            document.getElementById('filtersList').innerHTML = '';
+            filterCount = 0;
+            
+            // Set wool type search
+            document.getElementById('wool_type').value = savedSearch.filters.wool_type_search || '';
+            
+            // Recreate column filters
+            if (savedSearch.filters.column_filters) {
+                savedSearch.filters.column_filters.forEach(filter => {
+                    addFilter();
+                    const lastFilter = document.getElementById('filtersList').lastElementChild;
+                    lastFilter.querySelector('.filter-column').value = filter.column;
+                    updateFilterOperators(lastFilter.id);
+                    lastFilter.querySelector('.filter-operator').value = filter.operator;
+                    lastFilter.querySelector('.filter-value').value = filter.value;
+                    if (filter.value2) {
+                        lastFilter.querySelector('.filter-value2').value = filter.value2;
+                        lastFilter.querySelector('.filter-value2').style.display = 'block';
+                    }
+                });
+            }
+            
+            console.log('Loaded saved search:', savedSearch.name);
+            
+            // Automatically run the search
+            search();
+        }
+        
+        function deleteSavedSearch(searchId) {
+            if (!confirm('Delete this saved search?')) return;
+            
+            let savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+            savedSearches = savedSearches.filter(s => s.id !== searchId);
+            localStorage.setItem('fusca_saved_searches', JSON.stringify(savedSearches));
+            
+            renderSavedSearches();
+        }
+        
+        function renderSavedSearches() {
+            const savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+            const container = document.getElementById('savedSearchesList');
+            const section = document.getElementById('savedSearchesSection');
+            
+            if (savedSearches.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            container.innerHTML = '';
+            
+            savedSearches.forEach(search => {
+                const item = document.createElement('div');
+                item.className = 'saved-search-item';
+                item.innerHTML = `
+                    <span onclick="loadSavedSearch(${search.id})">${search.name}</span>
+                    <span class="delete-btn" onclick="event.stopPropagation(); deleteSavedSearch(${search.id})">✕</span>
+                `;
+                container.appendChild(item);
+            });
+        }
+        
+        function sortTable(column) {
+            // Toggle sort direction if clicking same column
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+            
+            // Update header styling
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+            const header = document.querySelector(`th[data-column="${column}"]`);
+            if (header) {
+                header.classList.add(`sort-${sortDirection}`);
+            }
+            
+            // Sort the current results
+            const sorted = [...currentResults].sort((a, b) => {
+                let aVal = a[column];
+                let bVal = b[column];
+                
+                // Handle null/undefined values
+                if (aVal == null) aVal = '';
+                if (bVal == null) bVal = '';
+                
+                // Convert to number if numeric column
+                if (column === 'price' || column === 'bales' || column === 'kg' || 
+                    column === 'colour' || column === 'micron' || column === 'yield' || 
+                    column === 'vegetable_matter') {
+                    aVal = parseFloat(aVal) || 0;
+                    bVal = parseFloat(bVal) || 0;
+                }
+                
+                // Compare
+                if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            // Re-render table with sorted data
+            displayResults({ count: sorted.length, results: sorted });
+        }
+        
+        // Module Toggle (Hide/Unhide) Function
+        function toggleModule(moduleId) {
+            const content = document.getElementById(moduleId + 'Content');
+            const button = event.target;
+            
+            if (content.classList.contains('collapsed')) {
+                // Unhide
+                content.classList.remove('collapsed');
+                button.textContent = 'Hide';
+            } else {
+                // Hide
+                content.classList.add('collapsed');
+                button.textContent = 'Show';
+            }
+        }
+        
         // Page ready
         console.log('Auction search ready');
+        renderSavedSearches();
     </script>
 </body>
 </html>

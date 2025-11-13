@@ -81,18 +81,28 @@ def index():
     """Main page"""
     return render_template('auction_search.html')
 
-@app.route('/test-static')
-def test_static():
-    """Test static folder"""
-    import os
-    return jsonify({
-        'static_folder': app.static_folder,
-        'static_url_path': app.static_url_path,
-        'cwd': os.getcwd(),
-        'static_exists': os.path.exists(app.static_folder),
-        'logo_exists': os.path.exists(os.path.join(app.static_folder, 'images', 'fusca-logo.png')),
-        'files_in_static': os.listdir(app.static_folder) if os.path.exists(app.static_folder) else []
-    })
+@app.route('/api/log_saved_search', methods=['POST'])
+def log_saved_search():
+    """Log saved search activity"""
+    try:
+        data = request.json
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        log_entry = f"[{timestamp}] Saved Search: {data.get('name', 'Unnamed')}"
+        if data.get('filters'):
+            log_entry += f" | Filters: {json.dumps(data['filters'])}"
+        
+        print(log_entry)
+        
+        # Also write to a log file
+        with open('saved_searches.log', 'a') as f:
+            f.write(log_entry + '\n')
+        
+        return jsonify({'status': 'logged'})
+        
+    except Exception as e:
+        print(f"Log error: {str(e)}")
+        return jsonify({'status': 'error'}), 500
 
 @app.route('/api/filters')
 def get_filters():
@@ -317,6 +327,132 @@ def get_bales_chart():
         
     except Exception as e:
         print(f"Bales chart error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/compare_chart', methods=['POST'])
+def get_compare_chart():
+    """Get price comparison data for multiple wool types"""
+    try:
+        data = request.json
+        wool_types = data.get('wool_types', [])
+        
+        if not wool_types or len(wool_types) == 0:
+            return jsonify({'error': 'No wool types specified'}), 400
+        
+        if len(wool_types) > 5:
+            return jsonify({'error': 'Maximum 5 wool types for comparison'}), 400
+        
+        all_series = {}
+        
+        for wool_type in wool_types:
+            # Build query for this wool type
+            query = """
+                SELECT 
+                    sale_date,
+                    price
+                FROM auction_data_joined
+                WHERE price > 10
+                AND (CAST(wool_type_id AS CHAR) LIKE %s OR type_combined LIKE %s)
+            """
+            
+            params = [f"%{wool_type}%", f"%{wool_type}%"]
+            
+            # Apply additional column filters if provided
+            if data.get('column_filters'):
+                for filter_item in data['column_filters']:
+                    column = filter_item.get('column')
+                    operator = filter_item.get('operator')
+                    value = filter_item.get('value')
+                    value2 = filter_item.get('value2')
+                    
+                    if not column or not operator or not value:
+                        continue
+                    
+                    if column not in ALLOWED_COLUMNS:
+                        continue
+                    
+                    if operator == 'eq':
+                        query += f" AND {column} = %s"
+                        params.append(value)
+                    elif operator == 'ne':
+                        query += f" AND {column} != %s"
+                        params.append(value)
+                    elif operator == 'gt':
+                        query += f" AND {column} > %s"
+                        params.append(value)
+                    elif operator == 'lt':
+                        query += f" AND {column} < %s"
+                        params.append(value)
+                    elif operator == 'gte':
+                        query += f" AND {column} >= %s"
+                        params.append(value)
+                    elif operator == 'lte':
+                        query += f" AND {column} <= %s"
+                        params.append(value)
+                    elif operator == 'between' and value2:
+                        query += f" AND {column} BETWEEN %s AND %s"
+                        params.append(value)
+                        params.append(value2)
+            
+            query += " ORDER BY sale_date ASC"
+            
+            conn, tunnel = get_db()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            
+            # Group by date and calculate average
+            from collections import defaultdict
+            import statistics
+            
+            date_prices = defaultdict(list)
+            for row in results:
+                if row['sale_date'] and row['price']:
+                    date_prices[row['sale_date']].append(float(row['price']))
+            
+            # Calculate averages
+            series_data = {}
+            for sale_date in sorted(date_prices.keys()):
+                price_list = date_prices[sale_date]
+                if len(price_list) > 0:
+                    avg_price = sum(price_list) / len(price_list)
+                    avg_price_dollars = avg_price / 100
+                    date_key = sale_date.strftime('%Y-%m-%d')
+                    series_data[date_key] = round(avg_price_dollars, 2)
+            
+            all_series[wool_type] = series_data
+        
+        # Get all unique dates across all series
+        all_dates = sorted(set(date for series in all_series.values() for date in series.keys()))
+        
+        # Build datasets for Chart.js
+        datasets = []
+        colors = ['#3D7F4B', '#1976D2', '#D32F2F', '#F57C00', '#7B1FA2']
+        
+        for idx, wool_type in enumerate(wool_types):
+            series_data = all_series.get(wool_type, {})
+            data_values = [series_data.get(date, None) for date in all_dates]
+            
+            datasets.append({
+                'label': wool_type,
+                'data': data_values,
+                'borderColor': colors[idx % len(colors)],
+                'backgroundColor': colors[idx % len(colors)] + '20',
+                'borderWidth': 2,
+                'tension': 0.1,
+                'fill': False,
+                'spanGaps': True
+            })
+        
+        return jsonify({
+            'labels': all_dates,
+            'datasets': datasets
+        })
+        
+    except Exception as e:
+        print(f"Compare chart error: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
