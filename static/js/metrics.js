@@ -99,7 +99,7 @@ async function runDistributionAnalysis() {
         
         // Generate insight
         const insight = generateDistributionInsight(variable, data);
-        document.getElementById('dist-insight').innerHTML = `<strong>📊 Insight:</strong><p>${insight}</p>`;
+        document.getElementById('dist-insight').innerHTML = `<strong>Insight:</strong><p>${insight}</p>`;
         
         resultsSection.classList.add('visible');
         
@@ -229,7 +229,7 @@ async function runTimeseriesAnalysis() {
         
         // Generate insight
         const insight = generateTimeseriesInsight(data, variables);
-        document.getElementById('ts-insight').innerHTML = `<strong>📈 Insight:</strong><p>${insight}</p>`;
+        document.getElementById('ts-insight').innerHTML = `<strong>Insight:</strong><p>${insight}</p>`;
         
         resultsSection.classList.add('visible');
         
@@ -363,7 +363,7 @@ async function runRegressionAnalysis() {
         
         // Generate insight
         const insight = generateRegressionInsight(data);
-        document.getElementById('reg-insight').innerHTML = `<strong>📉 Insight:</strong><p>${insight}</p>`;
+        document.getElementById('reg-insight').innerHTML = `<strong>Insight:</strong><p>${insight}</p>`;
         
         resultsSection.classList.add('visible');
         
@@ -547,7 +547,7 @@ async function runScenarioAnalysis() {
         
         // Generate insight
         const insight = generateScenarioInsight(data);
-        document.getElementById('scenario-insight').innerHTML = `<strong>🔮 Insight:</strong><p>${insight}</p>`;
+        document.getElementById('scenario-insight').innerHTML = `<strong>Insight:</strong><p>${insight}</p>`;
         
         resultsSection.classList.add('visible');
         
@@ -658,7 +658,7 @@ async function runBenchmarkAnalysis() {
         
         // Generate insight
         const insight = generateBenchmarkInsight(data);
-        document.getElementById('bench-insight').innerHTML = `<strong>🎯 Insight:</strong><p>${insight}</p>`;
+        document.getElementById('bench-insight').innerHTML = `<strong>Insight:</strong><p>${insight}</p>`;
         
         resultsSection.classList.add('visible');
         
@@ -668,67 +668,57 @@ async function runBenchmarkAnalysis() {
     }
 }
 
+function getGradientForPercentile(percentile) {
+    // Higher percentile = better for all metrics
+    // Good (70-100%): Green gradient
+    // Average (30-70%): Yellow/orange gradient  
+    // Bad (0-30%): Red gradient
+    if (percentile >= 70) {
+        // Good: Green gradient
+        return 'linear-gradient(90deg, #3D7F4B 0%, #28a745 100%)';
+    } else if (percentile >= 30) {
+        // Average: Yellow to orange
+        return 'linear-gradient(90deg, #ffc107 0%, #ff9800 100%)';
+    } else {
+        // Bad: Red gradient
+        return 'linear-gradient(90deg, #dc3545 0%, #c82333 100%)';
+    }
+}
+
 function generatePercentileBars(ranking) {
     let html = '<div style="margin-top: 20px;"><h4 style="font-size: 13px; font-weight: 600; margin-bottom: 12px; color: #153D33;">Your Lot Percentile Rankings</h4>';
     
-    if (ranking.micron_percentile !== undefined) {
-        const percentile = ranking.micron_percentile;
-        const barWidthPercent = (percentile / 100) * (100 - 15); // Leave 15% for label
-        html += `
+    // Helper function to generate a single percentile bar
+    function createPercentileBar(label, percentile) {
+        const barWidthPercent = Math.max(percentile, 15); // Minimum 15% for label visibility
+        const gradient = getGradientForPercentile(percentile);
+        const labelText = `${percentile.toFixed(1)}th %ile`;
+        return `
             <div class="benchmark-percentile">
-                <div class="percentile-label">Micron</div>
+                <div class="percentile-label">${label}</div>
                 <div class="percentile-bar-container">
-                    <div class="percentile-bar-bg"></div>
-                    <div class="percentile-bar" style="width: ${barWidthPercent}%; position: relative; z-index: 1;"></div>
-                    <div class="percentile-value">${percentile.toFixed(1)}th %ile</div>
+                    <div class="percentile-bar" style="width: ${percentile}%; background: ${gradient};">
+                        <div class="percentile-value">${labelText}</div>
+                    </div>
                 </div>
             </div>
         `;
+    }
+    
+    if (ranking.micron_percentile !== undefined) {
+        html += createPercentileBar('Micron', ranking.micron_percentile);
     }
     
     if (ranking.colour_percentile !== undefined) {
-        const percentile = ranking.colour_percentile;
-        const barWidthPercent = (percentile / 100) * (100 - 15);
-        html += `
-            <div class="benchmark-percentile">
-                <div class="percentile-label">Colour (better)</div>
-                <div class="percentile-bar-container">
-                    <div class="percentile-bar-bg"></div>
-                    <div class="percentile-bar" style="width: ${barWidthPercent}%; position: relative; z-index: 1;"></div>
-                    <div class="percentile-value">${percentile.toFixed(1)}th %ile</div>
-                </div>
-            </div>
-        `;
+        html += createPercentileBar('Colour (better)', ranking.colour_percentile);
     }
     
     if (ranking.length_percentile !== undefined) {
-        const percentile = ranking.length_percentile;
-        const barWidthPercent = (percentile / 100) * (100 - 15);
-        html += `
-            <div class="benchmark-percentile">
-                <div class="percentile-label">Length (longer)</div>
-                <div class="percentile-bar-container">
-                    <div class="percentile-bar-bg"></div>
-                    <div class="percentile-bar" style="width: ${barWidthPercent}%; position: relative; z-index: 1;"></div>
-                    <div class="percentile-value">${percentile.toFixed(1)}th %ile</div>
-                </div>
-            </div>
-        `;
+        html += createPercentileBar('Length (longer)', ranking.length_percentile);
     }
     
     if (ranking.vm_percentile !== undefined) {
-        const percentile = ranking.vm_percentile;
-        const barWidthPercent = (percentile / 100) * (100 - 15);
-        html += `
-            <div class="benchmark-percentile">
-                <div class="percentile-label">VM (cleaner)</div>
-                <div class="percentile-bar-container">
-                    <div class="percentile-bar-bg"></div>
-                    <div class="percentile-bar" style="width: ${barWidthPercent}%; position: relative; z-index: 1;"></div>
-                    <div class="percentile-value">${percentile.toFixed(1)}th %ile</div>
-                </div>
-            </div>
-        `;
+        html += createPercentileBar('VM (cleaner)', ranking.vm_percentile);
     }
     
     html += '</div>';

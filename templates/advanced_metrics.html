@@ -76,10 +76,6 @@
         margin-bottom: 16px;
     }
     
-    .control-group:last-child {
-        margin-bottom: 0;
-    }
-    
     .control-group label {
         display: block;
         font-weight: 600;
@@ -94,6 +90,15 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .control-row:last-child {
+        margin-bottom: 0;
+    }
+    
+    .control-row .control-group {
+        margin-bottom: 0;
     }
     
     .run-analysis-btn {
@@ -303,56 +308,103 @@
     .percentile-bar-container {
         flex: 1;
         height: 24px;
-        background: transparent;
+        background: #e0e0e0;
+        border-radius: 12px;
         position: relative;
-        display: flex;
-        align-items: center;
-        gap: 12px;
+        overflow: hidden;
     }
     
     .percentile-bar {
-        height: 24px;
-        background: linear-gradient(90deg, #3D7F4B 0%, #153D33 100%);
+        height: 100%;
         border-radius: 12px;
         transition: width 0.5s ease;
-    }
-    
-    .percentile-bar-bg {
-        position: absolute;
-        left: 0;
-        width: calc(100% - 80px);
-        height: 24px;
-        background: #e0e0e0;
-        border-radius: 12px;
-        z-index: 0;
+        position: relative;
     }
     
     .percentile-value {
-        flex: 0 0 70px;
-        font-size: 11px;
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 10px;
         font-weight: 700;
-        color: #153D33;
-        text-align: right;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         white-space: nowrap;
+        z-index: 2;
     }
     
     @media (max-width: 768px) {
         .analysis-tabs {
             flex-direction: column;
+            gap: 6px;
         }
         
         .analysis-tab {
             width: 100%;
             text-align: center;
+            padding: 12px 16px;
         }
         
-        .control-row,
+        .query-controls {
+            padding: 16px 12px;
+        }
+        
+        .control-group {
+            margin-bottom: 16px;
+        }
+        
+        .control-row {
+            margin-bottom: 16px;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        
+        .control-row:last-child {
+            margin-bottom: 16px;
+        }
+        
+        .control-row .control-group {
+            margin-bottom: 0;
+        }
+        
         .scenario-inputs {
             grid-template-columns: 1fr;
+            gap: 16px;
         }
         
         .stats-grid {
             grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .scenario-column {
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        
+        .benchmark-percentile {
+            padding: 14px 10px;
+            margin-bottom: 12px;
+        }
+        
+        .percentile-label {
+            flex: 0 0 100px;
+            font-size: 10px;
+        }
+        
+        .run-analysis-btn {
+            padding: 14px 24px;
+            margin-top: 8px;
+        }
+        
+        .metrics-intro {
+            padding: 16px 18px;
+            margin-bottom: 16px;
+        }
+        
+        .results-section {
+            padding: 14px 12px;
         }
     }
 </style>
@@ -360,16 +412,16 @@
 
 {% block content %}
 <div class="metrics-intro">
-    <h1>🔬 Advanced Metrics & Statistical Analysis</h1>
+    <h1>Advanced Metrics & Statistical Analysis</h1>
     <p>Analyze NZ strong wool auction data (2012-2024) to understand clip profiles, value drivers, and market dynamics. Use OLS regression to quantify the impact of micron, colour, length, and VM on pricing.</p>
 </div>
 
 <div class="analysis-tabs">
-    <div class="analysis-tab active" data-tab="distribution">📊 Distribution Analysis</div>
-    <div class="analysis-tab" data-tab="timeseries">📈 Time Series</div>
-    <div class="analysis-tab" data-tab="regression">📉 Value Drivers (Regression)</div>
-    <div class="analysis-tab" data-tab="scenario">🔮 What-If Scenario</div>
-    <div class="analysis-tab" data-tab="benchmark">🎯 Benchmark Your Lot</div>
+    <div class="analysis-tab active" data-tab="distribution">Distribution Analysis</div>
+    <div class="analysis-tab" data-tab="timeseries">Time Series</div>
+    <div class="analysis-tab" data-tab="regression">Value Drivers (Regression)</div>
+    <div class="analysis-tab" data-tab="scenario">What-If Scenario</div>
+    <div class="analysis-tab" data-tab="benchmark">Benchmark Your Lot</div>
 </div>
 
 <!-- Distribution Analysis -->
@@ -524,7 +576,7 @@
 <div class="analysis-panel" id="panel-scenario">
     <div class="query-controls">
         <div style="background: #fff3cd; border-left: 4px solid #F57C00; padding: 12px; margin-bottom: 16px; border-radius: 4px;">
-            <strong style="color: #F57C00; font-size: 11px;">⚠️ STRONG WOOL ONLY</strong>
+            <strong style="color: #F57C00; font-size: 11px;">STRONG WOOL ONLY</strong>
             <p style="font-size: 11px; color: #333; margin: 4px 0 0 0;">This tool is calibrated for strong wool (28-45 micron). Uses regression coefficients from the last 6 months.</p>
         </div>
         <p style="font-size: 12px; color: #666; margin-bottom: 16px;">Compare a baseline wool spec against a what-if scenario.</p>
@@ -650,6 +702,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/metrics.js') }}?v=1.5"></script>
+<script src="{{ url_for('static', filename='js/metrics.js') }}?v=1.7"></script>
 {% endblock %}
 
