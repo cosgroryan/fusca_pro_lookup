@@ -218,23 +218,23 @@ function formatStats(stats) {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-top: 12px; padding: 12px; background: white; border-radius: 4px; border: 1px solid #e0e0e0;">
             <div style="text-align: center;">
                 <div style="font-size: 10px; color: #666; margin-bottom: 4px;">MIN</div>
-                <div style="font-size: 14px; font-weight: 600; color: #D32F2F;">$${stats.min}</div>
+                <div style="font-size: 14px; font-weight: 600; color: #D32F2F;">$${stats.min.toFixed(2)}/kg</div>
             </div>
             <div style="text-align: center;">
                 <div style="font-size: 10px; color: #666; margin-bottom: 4px;">MAX</div>
-                <div style="font-size: 14px; font-weight: 600; color: #28a745;">$${stats.max}</div>
+                <div style="font-size: 14px; font-weight: 600; color: #28a745;">$${stats.max.toFixed(2)}/kg</div>
             </div>
             <div style="text-align: center;">
                 <div style="font-size: 10px; color: #666; margin-bottom: 4px;">MEDIAN</div>
-                <div style="font-size: 14px; font-weight: 600; color: #3D7F4B;">$${stats.median}</div>
+                <div style="font-size: 14px; font-weight: 600; color: #3D7F4B;">$${stats.median.toFixed(2)}/kg</div>
             </div>
             <div style="text-align: center;">
                 <div style="font-size: 10px; color: #666; margin-bottom: 4px;">AVG (VWAP)</div>
-                <div style="font-size: 14px; font-weight: 600; color: #1976D2;">$${stats.mean}</div>
+                <div style="font-size: 14px; font-weight: 600; color: #1976D2;">$${stats.mean.toFixed(2)}/kg</div>
             </div>
             <div style="text-align: center;">
                 <div style="font-size: 10px; color: #666; margin-bottom: 4px;">STD DEV</div>
-                <div style="font-size: 14px; font-weight: 600; color: #666;">$${stats.std_dev}</div>
+                <div style="font-size: 14px; font-weight: 600; color: #666;">$${stats.std_dev.toFixed(2)}/kg</div>
             </div>
             <div style="text-align: center;">
                 <div style="font-size: 10px; color: #666; margin-bottom: 4px;">RECORDS</div>
