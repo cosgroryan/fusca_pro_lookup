@@ -1,0 +1,655 @@
+{% extends "base.html" %}
+
+{% block title %}Advanced Metrics - Fusca Pro Lookup{% endblock %}
+
+{% block styles %}
+<style>
+    .metrics-intro {
+        background: linear-gradient(135deg, #153D33 0%, #3D7F4B 100%);
+        color: white;
+        padding: 20px 24px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+    
+    .metrics-intro h1 {
+        font-size: 18px;
+        margin-bottom: 8px;
+        color: white;
+    }
+    
+    .metrics-intro p {
+        font-size: 12px;
+        opacity: 0.95;
+        line-height: 1.6;
+        margin: 0;
+        color: white;
+    }
+    
+    .analysis-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .analysis-tab {
+        padding: 10px 20px;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        color: #153D33;
+        transition: all 0.2s;
+    }
+    
+    .analysis-tab:hover {
+        background: #e8f4ea;
+        border-color: #3D7F4B;
+    }
+    
+    .analysis-tab.active {
+        background: #3D7F4B;
+        color: white;
+        border-color: #3D7F4B;
+    }
+    
+    .analysis-panel {
+        display: none;
+    }
+    
+    .analysis-panel.active {
+        display: block;
+    }
+    
+    .query-controls {
+        background: white;
+        padding: 16px;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+        margin-bottom: 20px;
+    }
+    
+    .control-group {
+        margin-bottom: 16px;
+    }
+    
+    .control-group:last-child {
+        margin-bottom: 0;
+    }
+    
+    .control-group label {
+        display: block;
+        font-weight: 600;
+        font-size: 10px;
+        color: #153D33;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    
+    .control-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    
+    .run-analysis-btn {
+        background: #3D7F4B;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        transition: background 0.2s;
+    }
+    
+    .run-analysis-btn:hover {
+        background: #2d5f39;
+    }
+    
+    .run-analysis-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    
+    .results-section {
+        background: white;
+        padding: 16px;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+        margin-top: 20px;
+        display: none;
+    }
+    
+    .results-section.visible {
+        display: block;
+    }
+    
+    .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #3D7F4B;
+    }
+    
+    .results-header h3 {
+        font-size: 14px;
+        color: #153D33;
+        margin: 0;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    
+    .stat-card {
+        background: #f9f9f9;
+        padding: 12px;
+        border-radius: 4px;
+        text-align: center;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .stat-label {
+        font-size: 10px;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }
+    
+    .stat-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #153D33;
+    }
+    
+    .insight-box {
+        background: #f5f0e8;
+        border-left: 4px solid #3D7F4B;
+        padding: 12px 16px;
+        margin-top: 16px;
+        border-radius: 4px;
+    }
+    
+    .insight-box strong {
+        color: #153D33;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .insight-box p {
+        margin: 6px 0 0 0;
+        font-size: 12px;
+        line-height: 1.6;
+        color: #333;
+    }
+    
+    .chart-wrapper {
+        margin-top: 20px;
+        background: white;
+        padding: 16px;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .chart-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #153D33;
+        margin-bottom: 12px;
+        text-align: center;
+    }
+    
+    .scenario-inputs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    
+    .scenario-column {
+        background: #f9f9f9;
+        padding: 16px;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .scenario-column h4 {
+        font-size: 12px;
+        font-weight: 600;
+        color: #153D33;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+    }
+    
+    .impact-card {
+        background: linear-gradient(135deg, #3D7F4B 0%, #153D33 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 6px;
+        text-align: center;
+        margin-top: 16px;
+    }
+    
+    .impact-card .big-number {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+    
+    .impact-card .label {
+        font-size: 11px;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .breakdown-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-top: 16px;
+    }
+    
+    .breakdown-item {
+        background: #f9f9f9;
+        padding: 10px;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 11px;
+    }
+    
+    .breakdown-item .factor {
+        font-weight: 600;
+        color: #153D33;
+    }
+    
+    .breakdown-item .value {
+        font-weight: 700;
+        color: #3D7F4B;
+    }
+    
+    .benchmark-percentile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 12px 12px 12px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        margin-bottom: 8px;
+    }
+    
+    .percentile-label {
+        flex: 0 0 120px;
+        font-weight: 600;
+        font-size: 11px;
+        color: #153D33;
+    }
+    
+    .percentile-bar-container {
+        flex: 1;
+        height: 24px;
+        background: transparent;
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .percentile-bar {
+        height: 24px;
+        background: linear-gradient(90deg, #3D7F4B 0%, #153D33 100%);
+        border-radius: 12px;
+        transition: width 0.5s ease;
+    }
+    
+    .percentile-bar-bg {
+        position: absolute;
+        left: 0;
+        width: calc(100% - 80px);
+        height: 24px;
+        background: #e0e0e0;
+        border-radius: 12px;
+        z-index: 0;
+    }
+    
+    .percentile-value {
+        flex: 0 0 70px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #153D33;
+        text-align: right;
+        white-space: nowrap;
+    }
+    
+    @media (max-width: 768px) {
+        .analysis-tabs {
+            flex-direction: column;
+        }
+        
+        .analysis-tab {
+            width: 100%;
+            text-align: center;
+        }
+        
+        .control-row,
+        .scenario-inputs {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="metrics-intro">
+    <h1>🔬 Advanced Metrics & Statistical Analysis</h1>
+    <p>Analyze NZ strong wool auction data (2012-2024) to understand clip profiles, value drivers, and market dynamics. Use OLS regression to quantify the impact of micron, colour, length, and VM on pricing.</p>
+</div>
+
+<div class="analysis-tabs">
+    <div class="analysis-tab active" data-tab="distribution">📊 Distribution Analysis</div>
+    <div class="analysis-tab" data-tab="timeseries">📈 Time Series</div>
+    <div class="analysis-tab" data-tab="regression">📉 Value Drivers (Regression)</div>
+    <div class="analysis-tab" data-tab="scenario">🔮 What-If Scenario</div>
+    <div class="analysis-tab" data-tab="benchmark">🎯 Benchmark Your Lot</div>
+</div>
+
+<!-- Distribution Analysis -->
+<div class="analysis-panel active" id="panel-distribution">
+    <div class="query-controls">
+        <div class="control-group">
+            <label>Select Variable to Analyze</label>
+            <select id="dist-variable" style="width: 100%; padding: 12px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; height: 44px; line-height: 1.5;">
+                <option value="micron">Micron</option>
+                <option value="colour">Colour (Y-Z)</option>
+                <option value="vegetable_matter">Vegetable Matter (%)</option>
+                <option value="yield">Yield (%)</option>
+            </select>
+        </div>
+        
+        <div class="control-row">
+            <div class="control-group">
+                <label>Start Date (Optional)</label>
+                <input type="date" id="dist-start-date" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+            <div class="control-group">
+                <label>End Date (Optional)</label>
+                <input type="date" id="dist-end-date" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+        </div>
+        
+        <button class="run-analysis-btn" onclick="runDistributionAnalysis()">Run Distribution Analysis</button>
+    </div>
+    
+    <div class="results-section" id="dist-results">
+        <div class="results-header">
+            <h3 id="dist-results-title">Distribution Results</h3>
+        </div>
+        <div class="stats-grid" id="dist-stats"></div>
+        <div class="chart-wrapper">
+            <canvas id="dist-chart"></canvas>
+        </div>
+        <div class="insight-box" id="dist-insight"></div>
+    </div>
+</div>
+
+<!-- Time Series Analysis -->
+<div class="analysis-panel" id="panel-timeseries">
+    <div class="query-controls">
+        <div class="control-group">
+            <label>Select Variables (Hold Ctrl/Cmd to select multiple)</label>
+            <select id="ts-variables" multiple style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; min-height: 100px;">
+                <option value="micron" selected>Micron</option>
+                <option value="colour" selected>Colour (Y-Z)</option>
+                <option value="vegetable_matter" selected>Vegetable Matter (%)</option>
+                <option value="yield">Yield (%)</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label>Aggregation Level</label>
+            <select id="ts-aggregation" style="width: 100%; padding: 12px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; height: 44px; line-height: 1.5;">
+                <option value="monthly" selected>Monthly</option>
+                <option value="weekly">Weekly</option>
+            </select>
+        </div>
+        
+        <div class="control-row">
+            <div class="control-group">
+                <label>Start Date (Default: 2012-07-01)</label>
+                <input type="date" id="ts-start-date" value="2012-07-01" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+            <div class="control-group">
+                <label>End Date (Optional)</label>
+                <input type="date" id="ts-end-date" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+        </div>
+        
+        <p style="font-size: 11px; color: #666; margin: 12px 0 8px 0;"><strong>Optional Filters:</strong></p>
+        <div class="control-row">
+            <div class="control-group">
+                <label>Min Micron</label>
+                <input type="number" id="ts-min-micron" placeholder="e.g. 28" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+            <div class="control-group">
+                <label>Max Micron</label>
+                <input type="number" id="ts-max-micron" placeholder="e.g. 45" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+        </div>
+        
+        <button class="run-analysis-btn" onclick="runTimeseriesAnalysis()">Run Time Series Analysis</button>
+    </div>
+    
+    <div class="results-section" id="ts-results">
+        <div class="results-header">
+            <h3>Time Series Results</h3>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="ts-chart"></canvas>
+        </div>
+        <div class="insight-box" id="ts-insight"></div>
+    </div>
+</div>
+
+<!-- Regression Analysis -->
+<div class="analysis-panel" id="panel-regression">
+    <div class="query-controls">
+        <div class="control-row">
+            <div class="control-group">
+                <label>Start Date (Default: 2012-07-01)</label>
+                <input type="date" id="reg-start-date" value="2012-07-01" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+            <div class="control-group">
+                <label>End Date (Optional)</label>
+                <input type="date" id="reg-end-date" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+        </div>
+        
+        <p style="font-size: 11px; color: #666; margin: 12px 0 8px 0;"><strong>Optional Filters:</strong></p>
+        <div class="control-row">
+            <div class="control-group">
+                <label>Min Micron</label>
+                <input type="number" id="reg-min-micron" placeholder="e.g. 28" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+            <div class="control-group">
+                <label>Max Micron</label>
+                <input type="number" id="reg-max-micron" placeholder="e.g. 45" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Smoothing Window (weeks)</label>
+            <input type="number" id="reg-smooth" value="5" min="1" max="20" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+        </div>
+        
+        <button class="run-analysis-btn" onclick="runRegressionAnalysis()">Run Regression Analysis</button>
+    </div>
+    
+    <div class="results-section" id="reg-results">
+        <div class="results-header">
+            <h3>OLS Regression: Value Drivers Over Time</h3>
+        </div>
+        <div class="stats-grid" id="reg-stats"></div>
+        <div class="chart-wrapper">
+            <div class="chart-title">Model Fit (Adjusted R²) Over Time</div>
+            <canvas id="reg-chart-rsq"></canvas>
+        </div>
+        <div class="chart-wrapper">
+            <div class="chart-title">Coefficient Trends (Smoothed)</div>
+            <canvas id="reg-chart-coef"></canvas>
+        </div>
+        <div class="insight-box" id="reg-insight"></div>
+    </div>
+</div>
+
+<!-- Scenario Analysis -->
+<div class="analysis-panel" id="panel-scenario">
+    <div class="query-controls">
+        <div style="background: #fff3cd; border-left: 4px solid #F57C00; padding: 12px; margin-bottom: 16px; border-radius: 4px;">
+            <strong style="color: #F57C00; font-size: 11px;">⚠️ STRONG WOOL ONLY</strong>
+            <p style="font-size: 11px; color: #333; margin: 4px 0 0 0;">This tool is calibrated for strong wool (28-45 micron). Uses regression coefficients from the last 6 months.</p>
+        </div>
+        <p style="font-size: 12px; color: #666; margin-bottom: 16px;">Compare a baseline wool spec against a what-if scenario.</p>
+        
+        <div class="scenario-inputs">
+            <div class="scenario-column">
+                <h4>Baseline Spec</h4>
+                <div class="control-group">
+                    <label>Micron</label>
+                    <input type="number" id="base-micron" value="36" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+                <div class="control-group">
+                    <label>Colour (Y-Z)</label>
+                    <input type="number" id="base-colour" value="3.0" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+                <div class="control-group">
+                    <label>Length (A-Z, A=longest)</label>
+                    <input type="text" id="base-length" value="D" maxlength="1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; text-transform: uppercase;">
+                </div>
+                <div class="control-group">
+                    <label>Vegetable Matter (%)</label>
+                    <input type="number" id="base-vm" value="0.3" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+            </div>
+            
+            <div class="scenario-column">
+                <h4>What-If Scenario</h4>
+                <div class="control-group">
+                    <label>Micron</label>
+                    <input type="number" id="scenario-micron" value="36" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+                <div class="control-group">
+                    <label>Colour (Y-Z)</label>
+                    <input type="number" id="scenario-colour" value="2.0" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+                <div class="control-group">
+                    <label>Length (A-Z, A=longest)</label>
+                    <input type="text" id="scenario-length" value="D" maxlength="1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; text-transform: uppercase;">
+                </div>
+                <div class="control-group">
+                    <label>Vegetable Matter (%)</label>
+                    <input type="number" id="scenario-vm" value="0.1" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                </div>
+            </div>
+        </div>
+        
+        <button class="run-analysis-btn" onclick="runScenarioAnalysis()" style="margin-top: 16px;">Calculate Impact</button>
+    </div>
+    
+    <div class="results-section" id="scenario-results">
+        <div class="results-header">
+            <h3>Scenario Impact Analysis</h3>
+        </div>
+        <div class="impact-card" id="scenario-impact"></div>
+        <div class="breakdown-grid" id="scenario-breakdown"></div>
+        <div class="insight-box" id="scenario-insight"></div>
+    </div>
+</div>
+
+<!-- Benchmark Analysis -->
+<div class="analysis-panel" id="panel-benchmark">
+    <div class="query-controls">
+        <div class="control-group">
+            <label>Time Period</label>
+            <select id="bench-period" style="width: 100%; padding: 12px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; height: 44px; line-height: 1.5;">
+                <option value="recent">Recent (Last 6 Months)</option>
+                <option value="year">Last Year</option>
+                <option value="custom">Custom Range</option>
+            </select>
+        </div>
+        
+        <div class="control-row" id="bench-custom-dates" style="display: none;">
+            <div class="control-group">
+                <label>Start Date</label>
+                <input type="date" id="bench-start-date" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+            <div class="control-group">
+                <label>End Date</label>
+                <input type="date" id="bench-end-date" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+        </div>
+        
+        <p style="font-size: 12px; color: #666; margin: 16px 0 8px 0;"><strong>Your Lot Specs (Optional):</strong> Enter values to see percentile ranking</p>
+        
+        <div class="control-row">
+            <div class="control-group">
+                <label>Micron</label>
+                <input type="number" id="bench-micron" step="0.1" placeholder="e.g. 36" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+            <div class="control-group">
+                <label>Colour (Y-Z)</label>
+                <input type="number" id="bench-colour" step="0.1" placeholder="e.g. 3.0" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+        </div>
+        
+        <div class="control-row">
+            <div class="control-group">
+                <label>Vegetable Matter (%)</label>
+                <input type="number" id="bench-vm" step="0.1" placeholder="e.g. 0.3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            </div>
+            <div class="control-group">
+                <label>Length (A-Z, A=longest)</label>
+                <input type="text" id="bench-length" maxlength="1" placeholder="e.g. D" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; text-transform: uppercase;">
+            </div>
+        </div>
+        
+        <button class="run-analysis-btn" onclick="runBenchmarkAnalysis()">Run Benchmark Analysis</button>
+    </div>
+    
+    <div class="results-section" id="bench-results">
+        <div class="results-header">
+            <h3>Benchmark Results</h3>
+        </div>
+        <div class="stats-grid" id="bench-stats"></div>
+        <div id="bench-percentiles"></div>
+        <div class="insight-box" id="bench-insight"></div>
+    </div>
+</div>
+
+<div id="errorMsg" class="error" style="display: none;"></div>
+<div id="loading" class="loading" style="display: none;">Analyzing data...</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/metrics.js') }}?v=1.5"></script>
+{% endblock %}
+
