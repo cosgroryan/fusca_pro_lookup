@@ -600,15 +600,20 @@
     <div class="results-section" id="reg-results">
         <div class="results-header">
             <h3>OLS Regression: Value Drivers Over Time</h3>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button onclick="exportRegressionPDF()" class="run-analysis-btn" style="background: #D32F2F; font-size: 11px; padding: 8px 12px;">Export PDF</button>
+                <button onclick="downloadChartPNG('reg-chart-rsq')" class="run-analysis-btn" style="background: #666; font-size: 11px; padding: 8px 12px;">Export R² Chart</button>
+                <button onclick="downloadChartPNG('reg-chart-coef')" class="run-analysis-btn" style="background: #666; font-size: 11px; padding: 8px 12px;">Export Coef Chart</button>
+            </div>
         </div>
         <div class="stats-grid" id="reg-stats"></div>
         <div class="chart-wrapper">
-            <div class="chart-title">Model Fit (Adjusted R²) Over Time</div>
-            <canvas id="reg-chart-rsq"></canvas>
-        </div>
-        <div class="chart-wrapper">
             <div class="chart-title">Coefficient Trends (Smoothed)</div>
             <canvas id="reg-chart-coef"></canvas>
+        </div>
+        <div class="chart-wrapper">
+            <div class="chart-title">Model Fit (Adjusted R²) Over Time</div>
+            <canvas id="reg-chart-rsq"></canvas>
         </div>
         <div class="insight-box" id="reg-insight"></div>
     </div>

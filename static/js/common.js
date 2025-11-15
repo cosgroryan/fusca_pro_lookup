@@ -105,6 +105,114 @@ function escapeCSV(str) {
     return str;
 }
 
+// Excel export functionality
+async function downloadExcel(results) {
+    if (!results || results.length === 0) {
+        alert('No results to export');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/export/excel', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ results: results })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Export failed');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        link.download = `auction_data_${timestamp}.xlsx`;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        console.log(`Exported ${results.length} results to Excel`);
+    } catch (error) {
+        console.error('Excel export error:', error);
+        alert('Error exporting to Excel: ' + error.message);
+    }
+}
+
+// Chart PNG export functionality
+function downloadChartPNG(chartId, filename = null) {
+    const canvas = document.getElementById(chartId);
+    if (!canvas) {
+        alert('Chart not found');
+        return;
+    }
+    
+    if (!filename) {
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        filename = `chart_${chartId}_${timestamp}.png`;
+    }
+    
+    // Convert canvas to blob and download
+    canvas.toBlob(function(blob) {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    });
+}
+
+// Regression PDF export functionality
+async function downloadRegressionPDF(regressionData) {
+    if (!regressionData) {
+        alert('No regression data to export');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/export/regression-pdf', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ regression_data: regressionData })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'PDF export failed');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        link.download = `regression_analysis_${timestamp}.pdf`;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        console.log('Regression analysis exported to PDF');
+    } catch (error) {
+        console.error('PDF export error:', error);
+        alert('Error exporting to PDF: ' + error.message);
+    }
+}
+
 // Date range helper functions
 function getDateRangeFilter(range) {
     const today = new Date();

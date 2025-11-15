@@ -4,7 +4,7 @@ Auction Data Search GUI
 A Flask web app for searching and visualizing auction data
 """
 
-from flask import Flask, render_template, request, jsonify, g
+from flask import Flask, render_template, request, jsonify, g, send_file, make_response
 from db_connector import get_db_connection
 from datetime import datetime, timedelta
 import json
@@ -16,13 +16,50 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from scipy import stats as scipy_stats
+from io import BytesIO
+try:
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
 
 app = Flask(__name__)
 
 # Configure log file path (outside git repo to avoid conflicts)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Place log in parent directory (outside git repo)
-LOG_FILE = os.path.join(os.path.dirname(BASE_DIR), 'saved_searches.log')
+LOG_FILE = os.path.join(os.path.dirname(BASE_DIR), 'fusca_activity.log')
+
+def log_activity(endpoint, tool_name, data=None, result_count=None, error=None):
+    """Log all API activity for analytics"""
+    try:
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        log_entry = {
+            'timestamp': timestamp,
+            'endpoint': endpoint,
+            'tool': tool_name,
+            'data': data or {},
+            'result_count': result_count,
+            'error': error
+        }
+        
+        # Ensure directory exists
+        log_dir = os.path.dirname(LOG_FILE)
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir, exist_ok=True)
+        
+        # Write as JSON line for easy parsing (append mode creates file if it doesn't exist)
+        with open(LOG_FILE, 'a') as f:
+            f.write(json.dumps(log_entry) + '\n')
+            
+    except Exception as e:
+        print(f"Logging error: {str(e)}")
 
 # Lock to prevent simultaneous tunnel creation across workers
 _tunnel_lock = threading.Lock()
@@ -150,6 +187,121 @@ def advanced_metrics_iframe():
     """Advanced metrics iframe version (no header/nav)"""
     return render_template('advanced_metrics_iframe.html')
 
+@app.route('/admin')
+def admin_dashboard():
+    """Admin dashboard for search analytics"""
+    return render_template('admin_dashboard.html', page='admin')
+
+@app.route('/api/admin/analytics')
+def get_analytics():
+    """Get analytics data from log file"""
+    try:
+        if not os.path.exists(LOG_FILE):
+            return jsonify({
+                'total_searches': 0,
+                'by_tool': {},
+                'by_endpoint': {},
+                'recent_searches': [],
+                'top_searches': [],
+                'errors': []
+            })
+        
+        # Read and parse log file
+        activities = []
+        with open(LOG_FILE, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        activities.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        # Skip malformed lines (old format)
+                        continue
+        
+        # Calculate statistics
+        total_searches = len(activities)
+        
+        # Group by tool
+        by_tool = {}
+        for activity in activities:
+            tool = activity.get('tool', 'Unknown')
+            by_tool[tool] = by_tool.get(tool, 0) + 1
+        
+        # Group by endpoint
+        by_endpoint = {}
+        for activity in activities:
+            endpoint = activity.get('endpoint', 'Unknown')
+            by_endpoint[endpoint] = by_endpoint.get(endpoint, 0) + 1
+        
+        # Get recent searches (last 50)
+        recent_searches = sorted(activities, key=lambda x: x.get('timestamp', ''), reverse=True)[:50]
+        
+        # Get top searches by wool type (from data.wool_type)
+        wool_type_counts = {}
+        for activity in activities:
+            data = activity.get('data', {})
+            wool_type = data.get('wool_type')
+            if wool_type:
+                wool_type_counts[wool_type] = wool_type_counts.get(wool_type, 0) + 1
+        
+        top_searches = sorted(wool_type_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+        
+        # Get errors
+        errors = [a for a in activities if a.get('error')]
+        
+        # Time-based stats (last 24 hours, 7 days, 30 days)
+        now = datetime.now()
+        last_24h = [a for a in activities if a.get('timestamp') and 
+                   (now - datetime.strptime(a['timestamp'], '%Y-%m-%d %H:%M:%S')).total_seconds() < 86400]
+        last_7d = [a for a in activities if a.get('timestamp') and 
+                  (now - datetime.strptime(a['timestamp'], '%Y-%m-%d %H:%M:%S')).total_seconds() < 604800]
+        last_30d = [a for a in activities if a.get('timestamp') and 
+                   (now - datetime.strptime(a['timestamp'], '%Y-%m-%d %H:%M:%S')).total_seconds() < 2592000]
+        
+        return jsonify({
+            'total_searches': total_searches,
+            'by_tool': by_tool,
+            'by_endpoint': by_endpoint,
+            'recent_searches': recent_searches[:20],  # Limit to 20 for response size
+            'top_searches': [{'wool_type': k, 'count': v} for k, v in top_searches],
+            'errors': errors[-20:],  # Last 20 errors
+            'time_stats': {
+                'last_24h': len(last_24h),
+                'last_7d': len(last_7d),
+                'last_30d': len(last_30d)
+            }
+        })
+        
+    except Exception as e:
+        print(f"Analytics error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/raw-logs')
+def get_raw_logs():
+    """Get raw log file content"""
+    try:
+        if not os.path.exists(LOG_FILE):
+            return jsonify({'logs': '', 'line_count': 0})
+        
+        # Read last 1000 lines to avoid huge responses
+        with open(LOG_FILE, 'r') as f:
+            lines = f.readlines()
+            # Get last 1000 lines
+            recent_lines = lines[-1000:] if len(lines) > 1000 else lines
+            log_content = ''.join(recent_lines)
+        
+        return jsonify({
+            'logs': log_content,
+            'line_count': len(lines),
+            'showing_lines': len(recent_lines)
+        })
+        
+    except Exception as e:
+        print(f"Raw logs error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 # ==================== ADVANCED METRICS API ENDPOINTS ====================
 
 @app.route('/api/metrics/distribution', methods=['POST'])
@@ -161,6 +313,10 @@ def get_distribution():
     try:
         data = request.get_json()
         variable = data.get('variable', 'micron')  # micron, colour, vegetable_matter, yield
+        log_activity('/api/metrics/distribution', 'Advanced Metrics', {
+            'variable': variable,
+            'date_range': data.get('date_range')
+        })
         bin_size = float(data.get('bin_size', 0.5))  # bin width
         filters = data.get('filters', {})
         
@@ -262,6 +418,10 @@ def get_timeseries():
         variables = data.get('variables', ['micron', 'colour', 'vegetable_matter'])
         aggregation = data.get('aggregation', 'monthly')  # weekly or monthly
         filters = data.get('filters', {})
+        log_activity('/api/metrics/timeseries', 'Advanced Metrics', {
+            'variables': variables,
+            'aggregation': aggregation
+        })
         
         # Validate variables
         variables = [v for v in variables if v in ALLOWED_COLUMNS]
@@ -372,6 +532,9 @@ def get_regression():
         data = request.get_json()
         filters = data.get('filters', {})
         smooth_window = int(data.get('smooth_window', 5))  # weeks to smooth coefficients
+        log_activity('/api/metrics/regression', 'Advanced Metrics', {
+            'smooth_window': smooth_window
+        })
         
         # Build query
         query = """
@@ -507,6 +670,10 @@ def get_scenario():
         data = request.get_json()
         baseline = data.get('baseline', {})  # baseline characteristics
         scenario = data.get('scenario', {})  # changed characteristics
+        log_activity('/api/metrics/scenario', 'Advanced Metrics', {
+            'has_baseline': bool(baseline),
+            'has_scenario': bool(scenario)
+        })
         
         # Get most recent regression coefficients - STRONG WOOL ONLY
         query = """
@@ -621,6 +788,10 @@ def get_benchmark():
         data = request.get_json()
         lot_specs = data.get('specs', {})
         time_period = data.get('time_period', 'recent')  # recent, year, all
+        log_activity('/api/metrics/benchmark', 'Advanced Metrics', {
+            'time_period': time_period,
+            'has_specs': bool(lot_specs)
+        })
         
         # Build query based on time period
         query = """
@@ -723,18 +894,11 @@ def log_saved_search():
     """Log saved search activity"""
     try:
         data = request.json
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        log_entry = f"[{timestamp}] Saved Search: {data.get('name', 'Unnamed')}"
-        if data.get('filters'):
-            log_entry += f" | Filters: {json.dumps(data['filters'])}"
-        
-        print(log_entry)
-        
-        # Also write to a log file
-        with open(LOG_FILE, 'a') as f:
-            f.write(log_entry + '\n')
-        
+        log_activity('/api/log_saved_search', 'Saved Search', {
+            'name': data.get('name', 'Unnamed'),
+            'type': data.get('type', 'search'),
+            'filters': data.get('filters', {})
+        })
         return jsonify({'status': 'logged'})
         
     except Exception as e:
@@ -777,6 +941,10 @@ def search_auctions():
     """Search auctions with filters"""
     try:
         data = request.json
+        log_activity('/api/search', 'Simple Search', {
+            'wool_type': data.get('wool_type_search'),
+            'filter_count': len(data.get('column_filters', []))
+        })
         
         # Build query with filters
         query = """
@@ -858,8 +1026,11 @@ def search_auctions():
             if row['sale_date']:
                 row['sale_date'] = row['sale_date'].strftime('%Y-%m-%d')
         
+        result_count = len(results)
+        log_activity('/api/search', 'Simple Search', result_count=result_count)
+        
         return jsonify({
-            'count': len(results),
+            'count': result_count,
             'results': results
         })
         
@@ -867,6 +1038,7 @@ def search_auctions():
         print(f"Search error: {str(e)}")
         import traceback
         traceback.print_exc()
+        log_activity('/api/search', 'Simple Search', error=str(e))
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/bales_chart', methods=['POST'])
@@ -874,6 +1046,10 @@ def get_bales_chart():
     """Get bales data grouped by sale_date for chart"""
     try:
         data = request.json
+        log_activity('/api/bales_chart', 'Simple Search', {
+            'wool_type': data.get('wool_type_search'),
+            'filter_count': len(data.get('column_filters', []))
+        })
         
         # Build query with filters - get bales grouped by date
         query = """
@@ -1009,6 +1185,10 @@ def get_compare_chart_blend():
         data = request.json
         entries = data.get('entries', [])
         date_filter = data.get('date_filter')
+        log_activity('/api/compare_chart_blend', 'Advanced Blends', {
+            'entry_count': len(entries),
+            'has_date_filter': bool(date_filter)
+        })
         
         if not entries or len(entries) == 0:
             return jsonify({'error': 'No entries specified'}), 400
@@ -1221,6 +1401,10 @@ def get_compare_chart():
     try:
         data = request.json
         wool_types = data.get('wool_types', [])
+        log_activity('/api/compare_chart', 'Compare Types', {
+            'wool_type_count': len(wool_types),
+            'wool_types': wool_types[:5]  # Log first 5 to avoid huge logs
+        })
         
         if not wool_types or len(wool_types) == 0:
             return jsonify({'error': 'No wool types specified'}), 400
@@ -1373,6 +1557,10 @@ def get_price_chart():
     """Get price data grouped by sale_date for chart"""
     try:
         data = request.json
+        log_activity('/api/price_chart', 'Simple Search', {
+            'wool_type': data.get('wool_type_search'),
+            'filter_count': len(data.get('column_filters', []))
+        })
         
         # Build query with filters - get price AND bales for volume-weighted averages
         query = """
@@ -1518,6 +1706,267 @@ def get_price_chart():
         
     except Exception as e:
         print(f"Price chart error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/export/excel', methods=['POST'])
+def export_excel():
+    """Export search results to Excel format"""
+    try:
+        data = request.json
+        results = data.get('results', [])
+        
+        if not results:
+            return jsonify({'error': 'No data to export'}), 400
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(results)
+        
+        # Convert price from cents to dollars
+        if 'price' in df.columns:
+            df['price'] = df['price'] / 100
+        
+        # Rename columns for better readability
+        column_mapping = {
+            'sale_date': 'Sale Date',
+            'lot_number': 'Lot Number',
+            'wool_type_id': 'Wool Type ID',
+            'type_combined': 'Type Combined',
+            'price': 'Price ($)',
+            'bales': 'Bales',
+            'kg': 'KG',
+            'colour': 'Colour',
+            'micron': 'Micron',
+            'yield': 'Yield %',
+            'vegetable_matter': 'VM %',
+            'location': 'Location',
+            'seller_name': 'Seller',
+            'farm_brand_name': 'Farm Brand',
+            'is_sold': 'Sold'
+        }
+        
+        # Select and rename columns
+        df_export = df.rename(columns=column_mapping)
+        available_cols = [col for col in column_mapping.values() if col in df_export.columns]
+        df_export = df_export[available_cols]
+        
+        # Create Excel file in memory
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df_export.to_excel(writer, index=False, sheet_name='Auction Data')
+        
+        output.seek(0)
+        
+        # Generate filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'auction_data_{timestamp}.xlsx'
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openpyxl-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        print(f"Excel export error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/export/regression-pdf', methods=['POST'])
+def export_regression_pdf():
+    """Export regression analysis to PDF"""
+    if not REPORTLAB_AVAILABLE:
+        return jsonify({'error': 'PDF export not available. Install reportlab: pip install reportlab'}), 500
+    
+    try:
+        data = request.json
+        regression_data = data.get('regression_data', {})
+        
+        # Create PDF in memory
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
+        
+        # Container for the 'Flowable' objects
+        elements = []
+        
+        # Define styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=18,
+            textColor=colors.HexColor('#153D33'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=14,
+            textColor=colors.HexColor('#153D33'),
+            spaceAfter=12
+        )
+        
+        # Title
+        elements.append(Paragraph("Regression Analysis Report", title_style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Summary section
+        if regression_data.get('summary'):
+            summary = regression_data['summary']
+            elements.append(Paragraph("Summary Statistics", heading_style))
+            
+            # Calculate date range from weekly_results if not provided
+            date_range = regression_data.get('date_range', 'N/A')
+            if date_range == 'N/A' and regression_data.get('weekly_results'):
+                weekly_results = regression_data['weekly_results']
+                if weekly_results:
+                    dates = []
+                    for result in weekly_results:
+                        week_str = result.get('week', '')
+                        # Handle different week formats
+                        if '/' in week_str:
+                            # Format: "YYYY-MM-DD/YYYY-MM-DD"
+                            parts = week_str.split('/')
+                            if len(parts) == 2:
+                                dates.extend([d.strip() for d in parts])
+                        elif 'W' in week_str:
+                            # Format: "2025-W32" - convert to date range
+                            try:
+                                from pandas import Period
+                                period = Period(week_str)
+                                # Get start and end of week
+                                start = period.start_time.strftime('%Y-%m-%d')
+                                end = period.end_time.strftime('%Y-%m-%d')
+                                dates.extend([start, end])
+                            except:
+                                pass
+                    
+                    if dates:
+                        # Find min and max dates
+                        try:
+                            date_objs = [datetime.strptime(d.strip(), '%Y-%m-%d') for d in dates if d.strip()]
+                            if date_objs:
+                                min_date = min(date_objs).strftime('%Y-%m-%d')
+                                max_date = max(date_objs).strftime('%Y-%m-%d')
+                                date_range = f"{min_date} to {max_date}"
+                        except Exception as e:
+                            print(f"Error parsing dates: {e}")
+                            pass
+            
+            summary_data = [
+                ['Metric', 'Value'],
+                ['Average R²', f"{summary.get('avg_r_squared', 0):.4f}"],
+                ['Average Adjusted R²', f"{summary.get('avg_adj_r_squared', 0):.4f}"],
+                ['Date Range', date_range],
+            ]
+            
+            summary_table = Table(summary_data, colWidths=[3*inch, 2*inch])
+            summary_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#153D33')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 12),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ]))
+            elements.append(summary_table)
+            elements.append(Spacer(1, 0.3*inch))
+        
+        # Recent coefficients
+        if regression_data.get('weekly_results'):
+            elements.append(Paragraph("Recent Coefficients", heading_style))
+            
+            weekly_results = regression_data['weekly_results'][-10:]  # Last 10 weeks
+            if weekly_results:
+                coef_data = [['Week', 'Micron', 'Colour', 'Length', 'VM', 'R²', 'Adj R²']]
+                
+                for result in weekly_results:
+                    coef = result.get('coefficients', {})
+                    week_str = result.get('week', 'N/A')
+                    
+                    # Format week string for display
+                    if week_str != 'N/A':
+                        if 'W' in week_str and '/' not in week_str:
+                            # Format: "2025-W32" - convert to date range
+                            try:
+                                from pandas import Period
+                                period = Period(week_str)
+                                start = period.start_time.strftime('%Y-%m-%d')
+                                end = period.end_time.strftime('%Y-%m-%d')
+                                week_str = f"{start}/{end}"
+                            except:
+                                pass  # Keep original format if conversion fails
+                    
+                    coef_data.append([
+                        week_str,
+                        f"{coef.get('micron', 0):.2f}",
+                        f"{coef.get('colour', 0):.2f}",
+                        f"{coef.get('length_index', 0):.2f}",
+                        f"{coef.get('vegetable_matter', 0):.2f}",
+                        f"{result.get('r_squared', 0):.4f}",
+                        f"{result.get('adj_r_squared', 0):.4f}"
+                    ])
+                
+                # Adjust column widths: Week needs more space, others can be smaller
+                # Week: 2.2", others: 0.7" each (total ~6.9" fits on A4 with margins)
+                coef_table = Table(coef_data, colWidths=[2.2*inch, 0.7*inch, 0.7*inch, 0.7*inch, 0.7*inch, 0.7*inch, 0.7*inch])
+                coef_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#153D33')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Week column left-aligned
+                    ('ALIGN', (1, 0), (-1, -1), 'CENTER'),  # Other columns centered
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ]))
+                elements.append(coef_table)
+                elements.append(Spacer(1, 0.3*inch))
+        
+        # Notes
+        elements.append(Paragraph("Notes", heading_style))
+        notes_text = """
+        <b>How to Read Coefficients:</b><br/>
+        The coefficients show how price changes (in cents/kg) for each one-unit increase in each variable.
+        Negative coefficients mean decreases in value (e.g., higher colour Y-Z or VM = lower price).<br/><br/>
+        <b>VM Scaling:</b> For Vegetable Matter, one unit represents a 0.1% change (since VM mostly ranges 0.0-1.0),
+        so a coefficient of -20 means a 0.1% increase in VM decreases price by 20 cents/kg.
+        """
+        elements.append(Paragraph(notes_text, styles['Normal']))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Footer
+        elements.append(Spacer(1, 0.3*inch))
+        footer_text = f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        elements.append(Paragraph(footer_text, styles['Normal']))
+        
+        # Build PDF
+        doc.build(elements)
+        buffer.seek(0)
+        
+        # Generate filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'regression_analysis_{timestamp}.pdf'
+        
+        return send_file(
+            buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        print(f"PDF export error: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500

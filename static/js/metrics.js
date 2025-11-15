@@ -6,6 +6,9 @@ let tsChart = null;
 let regRsqChart = null;
 let regCoefChart = null;
 
+// Store regression data for export
+let currentRegressionData = null;
+
 // Helper function to detect mobile
 function isMobile() {
     return window.innerWidth <= 768;
@@ -515,6 +518,9 @@ async function runRegressionAnalysis() {
 }
 
 function displayRegressionCharts(data) {
+    // Store data for export
+    currentRegressionData = data;
+    
     // R-squared chart
     const ctxRsq = document.getElementById('reg-chart-rsq').getContext('2d');
     
@@ -645,6 +651,16 @@ function displayRegressionCharts(data) {
             }
         }
     });
+}
+
+// Export regression to PDF
+async function exportRegressionPDF() {
+    if (!currentRegressionData) {
+        alert('No regression data available. Please run regression analysis first.');
+        return;
+    }
+    
+    await downloadRegressionPDF(currentRegressionData);
 }
 
 function generateRegressionInsight(data) {
