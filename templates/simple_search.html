@@ -80,6 +80,16 @@
             </label>
         </div>
         
+        <!-- Data Quality Legend -->
+        <div style="background: #e3f2fd; border-left: 4px solid #1976d2; padding: 10px; margin-bottom: 12px; border-radius: 4px; font-size: 11px;">
+            <strong style="color: #1976d2;">Data Quality Indicators:</strong>
+            <div style="display: flex; gap: 15px; margin-top: 6px; flex-wrap: wrap;">
+                <span><span style="color: #3D7F4B; font-weight: bold;">●</span> Green: 5+ data points (Good quality)</span>
+                <span><span style="color: #F57C00; font-weight: bold;">●</span> Orange: 3-4 data points (Medium quality)</span>
+                <span><span style="color: #D32F2F; font-weight: bold;">●</span> Red: 1-2 data points (Low quality)</span>
+            </div>
+        </div>
+        
         <div class="chart-container">
             <canvas id="priceChart"></canvas>
         </div>
@@ -456,6 +466,27 @@
             priceChart.destroy();
         }
         
+        // Determine point colors based on data quality
+        let pointColors = [];
+        let pointBorderColors = [];
+        if (currentChartData.data_quality) {
+            currentChartData.data_quality.forEach(count => {
+                if (count <= 2) {
+                    // Red for 1-2 data points (low quality) - 75% opacity
+                    pointColors.push('rgba(211, 47, 47, 0.75)');
+                    pointBorderColors.push('#B71C1C');
+                } else if (count <= 4) {
+                    // Orange for 3-4 data points (medium quality) - 75% opacity
+                    pointColors.push('rgba(245, 124, 0, 0.75)');
+                    pointBorderColors.push('#E65100');
+                } else {
+                    // Green for 5+ data points (good quality) - 75% opacity
+                    pointColors.push('rgba(61, 127, 75, 0.75)');
+                    pointBorderColors.push('#2E5F3F');
+                }
+            });
+        }
+        
         const datasets = [{
             label: 'Volume-Weighted Avg Price',
             data: currentChartData.data,
@@ -464,7 +495,18 @@
             borderWidth: 2,
             tension: 0.1,
             fill: true,
-            order: 1
+            order: 1,
+            pointBackgroundColor: pointColors.length > 0 ? pointColors : 'rgba(61, 127, 75, 0.75)',
+            pointBorderColor: pointBorderColors.length > 0 ? pointBorderColors : '#2E5F3F',
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: pointColors.length > 0 ? pointColors.map(c => {
+                // Convert rgba to full opacity for hover
+                if (c.includes('211, 47, 47')) return 'rgba(211, 47, 47, 1.0)';
+                if (c.includes('245, 124, 0')) return 'rgba(245, 124, 0, 1.0)';
+                if (c.includes('61, 127, 75')) return 'rgba(61, 127, 75, 1.0)';
+                return c.replace('0.75', '1.0');
+            }) : '#3D7F4B'  // Full opacity on hover
         }];
         
         // Add moving averages if checked
@@ -526,7 +568,13 @@
                         intersect: false,
                         callbacks: {
                             label: function(context) {
-                                return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
+                                let label = context.dataset.label + ': $' + context.parsed.y.toFixed(2);
+                                // Add data quality info
+                                if (currentChartData.data_quality && context.dataIndex !== undefined) {
+                                    const count = currentChartData.data_quality[context.dataIndex];
+                                    label += ' (' + count + ' data point' + (count !== 1 ? 's' : '') + ')';
+                                }
+                                return label;
                             }
                         }
                     }

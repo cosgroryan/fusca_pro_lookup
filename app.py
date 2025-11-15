@@ -1689,6 +1689,7 @@ def get_price_chart():
         # Calculate volume-weighted filtered averages
         labels = []
         prices = []
+        data_quality = []  # Count of data points used for each average
         stats_data = []  # For statistics summary
         
         for sale_date in sorted(date_data.keys()):
@@ -1720,6 +1721,7 @@ def get_price_chart():
             
                 labels.append(sale_date.strftime('%Y-%m-%d'))
                 prices.append(round(weighted_avg_price_dollars, 2))
+                data_quality.append(len(filtered_items))  # Store count of data points
                 
                 # Store for statistics
                 stats_data.extend([item['price'] / 100 for item in filtered_items])
@@ -1739,6 +1741,7 @@ def get_price_chart():
         return jsonify({
             'labels': labels,
             'data': prices,
+            'data_quality': data_quality,  # Count of data points per date
             'statistics': statistics_summary
         })
         
@@ -1825,7 +1828,7 @@ def export_regression_pdf():
         
         # Create PDF in memory
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=120, bottomMargin=72)
         
         # Container for the 'Flowable' objects
         elements = []
@@ -1836,7 +1839,7 @@ def export_regression_pdf():
             'CustomTitle',
             parent=styles['Heading1'],
             fontSize=18,
-            textColor=colors.HexColor('#153D33'),
+            textColor=colors.white,
             spaceAfter=30,
             alignment=TA_CENTER
         )
@@ -1849,9 +1852,33 @@ def export_regression_pdf():
             spaceAfter=12
         )
         
-        # Title
-        elements.append(Paragraph("Regression Analysis Report", title_style))
-        elements.append(Spacer(1, 0.2*inch))
+        # Header with dark green strip and logo
+        logo_path = os.path.join(BASE_DIR, 'static', 'images', 'Fusca Logos Final_Fusca Logo White-OldGreen.png')
+        header_table_data = []
+        
+        if os.path.exists(logo_path):
+            try:
+                logo_img = Image(logo_path, width=1.5*inch, height=0.5*inch)
+                header_table_data.append([logo_img, Paragraph("Regression Analysis Report", title_style)])
+            except:
+                header_table_data.append(['', Paragraph("Regression Analysis Report", title_style)])
+        else:
+            header_table_data.append(['', Paragraph("Regression Analysis Report", title_style)])
+        
+        header_table = Table(header_table_data, colWidths=[2*inch, 4*inch])
+        header_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#153D33')),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (0, 0), 20),
+            ('RIGHTPADDING', (1, 0), (1, 0), 20),
+            ('TOPPADDING', (0, 0), (-1, 0), 15),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 15),
+        ]))
+        
+        elements.append(header_table)
+        elements.append(Spacer(1, 0.3*inch))
         
         # Summary section
         if regression_data.get('summary'):

@@ -600,11 +600,36 @@
     <div class="results-section" id="reg-results">
         <div class="results-header">
             <h3>OLS Regression: Value Drivers Over Time</h3>
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button onclick="exportRegressionPDF()" class="run-analysis-btn" style="background: #D32F2F; font-size: 11px; padding: 8px 12px;">Export PDF</button>
-                <button onclick="downloadChartPNG('reg-chart-rsq')" class="run-analysis-btn" style="background: #666; font-size: 11px; padding: 8px 12px;">Export R² Chart</button>
-                <button onclick="downloadChartPNG('reg-chart-coef')" class="run-analysis-btn" style="background: #666; font-size: 11px; padding: 8px 12px;">Export Coef Chart</button>
+            <div class="export-dropdown-container" style="position: relative; display: inline-block; margin-top: 10px;">
+                <button onclick="toggleExportDropdown()" class="date-range-btn active" style="font-size: 12px; padding: 8px 16px; height: 32px; display: flex; align-items: center; gap: 6px;">
+                    Save
+                    <span style="font-size: 10px;">▼</span>
+                </button>
+                <div id="exportDropdown" class="export-dropdown-menu" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 4px; background: white; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 999; min-width: 220px;">
+                    <button onclick="exportRegressionPDF(); closeExportDropdown();" class="export-dropdown-item" style="display: block; width: 100%; text-align: left; padding: 14px 20px; border: none; background: white; cursor: pointer; font-size: 12px; color: #23282d; border-bottom: 1px solid #eee;">Export PDF</button>
+                    <button onclick="downloadChartPNG('reg-chart-rsq'); closeExportDropdown();" class="export-dropdown-item" style="display: block; width: 100%; text-align: left; padding: 14px 20px; border: none; background: white; cursor: pointer; font-size: 12px; color: #23282d; border-bottom: 1px solid #eee;">Export R² Chart</button>
+                    <button onclick="downloadChartPNG('reg-chart-coef'); closeExportDropdown();" class="export-dropdown-item" style="display: block; width: 100%; text-align: left; padding: 14px 20px; border: none; background: white; cursor: pointer; font-size: 12px; color: #23282d;">Export Coef Chart</button>
+                </div>
             </div>
+            <style>
+                .export-dropdown-item:hover {
+                    background: #f5f5f5 !important;
+                }
+                @media (max-width: 768px) {
+                    .export-dropdown-container button {
+                        font-size: 11px !important;
+                        padding: 6px 12px !important;
+                        height: 28px !important;
+                    }
+                    .export-dropdown-menu {
+                        min-width: 180px !important;
+                    }
+                    .export-dropdown-item {
+                        font-size: 11px !important;
+                        padding: 12px 16px !important;
+                    }
+                }
+            </style>
         </div>
         <div class="stats-grid" id="reg-stats"></div>
         <div class="chart-wrapper">
@@ -763,5 +788,29 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/metrics.js') }}?v=1.7"></script>
+<script>
+    function toggleExportDropdown() {
+        const dropdown = document.getElementById('exportDropdown');
+        if (dropdown) {
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        }
+    }
+    
+    function closeExportDropdown() {
+        const dropdown = document.getElementById('exportDropdown');
+        if (dropdown) {
+            dropdown.style.display = 'none';
+        }
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+        const container = document.querySelector('.export-dropdown-container');
+        const dropdown = document.getElementById('exportDropdown');
+        if (container && dropdown && !container.contains(event.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+</script>
 {% endblock %}
 

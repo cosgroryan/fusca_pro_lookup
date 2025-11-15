@@ -614,15 +614,14 @@ th.sortable.sort-desc::after {
         height: 25vh !important;
         min-height: 300px !important;
         position: relative !important;
-        display: flex !important;
-        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100% !important;
     }
     
-    /* Ensure canvas respects wrapper height on mobile */
+    /* Remove height from canvas - let Chart.js handle it based on container */
     .chart-wrapper canvas {
-        height: 100% !important;
-        width: 100% !important;
-        flex: 1 !important;
+        max-width: 100% !important;
+        /* Don't set height here - Chart.js will calculate it based on container */
     }
     
     /* Also target chart-wrapper with chart-container inside (for distribution charts) */

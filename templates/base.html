@@ -6,7 +6,7 @@
     <meta name="robots" content="noindex, nofollow">
     <meta name="googlebot" content="noindex, nofollow">
     <title>{% block title %}Fusca Pro Lookup{% endblock %}</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/fusca-favicon.png') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/Fusca Logos Final_DarkGreen with OldGreen__old becacause its thr green we used before.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
@@ -33,7 +33,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             position: sticky;
             top: 0;
-            z-index: 100;
+            z-index: 10000;  /* Nav should be above everything */
         }
         
         .nav-container {
@@ -61,6 +61,7 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            margin-left: auto;  /* Push links to the right */
         }
         
         .nav-link {
@@ -107,19 +108,12 @@
                 height: 28px;
             }
             
-            .nav-title {
-                font-size: 14px;
-                width: 100%;
-                text-align: center;
-                margin-right: 0;
-                order: -1;
-            }
-            
             .nav-links {
                 width: 100%;
                 justify-content: center;
                 flex-wrap: wrap;
                 gap: 6px;
+                margin-left: 0;  /* Reset auto margin on mobile */
             }
             
             .nav-link {
@@ -145,7 +139,6 @@
     <nav class="top-nav">
         <div class="nav-container">
             <img src="{{ url_for('static', filename='images/Fusca Logos Final_Fusca Logo White-OldGreen.png') }}" alt="Fusca" class="nav-logo">
-            <div class="nav-title">Fusca Pro Lookup</div>
             <div class="nav-links">
                 <a href="/simple" class="nav-link {% if page == 'simple' %}active{% endif %}">Simple Search</a>
                 <a href="/compare" class="nav-link {% if page == 'compare' %}active{% endif %}">Compare Types</a>
