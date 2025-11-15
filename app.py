@@ -941,10 +941,11 @@ def search_auctions():
     """Search auctions with filters"""
     try:
         data = request.json
-        log_activity('/api/search', 'Simple Search', {
+        # Store initial data for logging (will be updated with result_count later)
+        log_data = {
             'wool_type': data.get('wool_type_search'),
             'filter_count': len(data.get('column_filters', []))
-        })
+        }
         
         # Build query with filters
         query = """
@@ -1027,7 +1028,8 @@ def search_auctions():
                 row['sale_date'] = row['sale_date'].strftime('%Y-%m-%d')
         
         result_count = len(results)
-        log_activity('/api/search', 'Simple Search', result_count=result_count)
+        # Log once with all data including result count
+        log_activity('/api/search', 'Simple Search', data=log_data, result_count=result_count)
         
         return jsonify({
             'count': result_count,
@@ -1038,7 +1040,8 @@ def search_auctions():
         print(f"Search error: {str(e)}")
         import traceback
         traceback.print_exc()
-        log_activity('/api/search', 'Simple Search', error=str(e))
+        # Log error with the request data if available
+        log_activity('/api/search', 'Simple Search', data=log_data if 'log_data' in locals() else {}, error=str(e))
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/bales_chart', methods=['POST'])
