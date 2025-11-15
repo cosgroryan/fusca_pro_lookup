@@ -14,8 +14,80 @@ function isMobile() {
     return window.innerWidth <= 768;
 }
 
+// Handle container resize to update charts (prevents continuous growth)
+function setupChartResizeObserver() {
+    const chartWrappers = document.querySelectorAll('.chart-wrapper');
+    const resizeTimeouts = new Map(); // Track timeouts per wrapper
+    
+    chartWrappers.forEach(wrapper => {
+        let lastWidth = 0;
+        let lastHeight = 0;
+        
+        const observer = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                const canvas = entry.target.querySelector('canvas');
+                if (!canvas) continue;
+                
+                // Get the container's actual size
+                const containerWidth = Math.floor(entry.contentRect.width);
+                const containerHeight = Math.floor(entry.contentRect.height);
+                
+                // Skip if dimensions haven't changed meaningfully (prevents infinite loops)
+                if (Math.abs(containerWidth - lastWidth) < 2 && Math.abs(containerHeight - lastHeight) < 2) {
+                    continue;
+                }
+                
+                lastWidth = containerWidth;
+                lastHeight = containerHeight;
+                
+                // Clear any pending resize for this wrapper
+                if (resizeTimeouts.has(wrapper)) {
+                    clearTimeout(resizeTimeouts.get(wrapper));
+                }
+                
+                // Debounce resize to prevent rapid updates during breakpoint transitions
+                const timeoutId = setTimeout(() => {
+                    // Explicitly set canvas size to match container
+                    canvas.style.width = containerWidth + 'px';
+                    canvas.style.height = containerHeight + 'px';
+                    
+                    // Find which chart this is and resize it
+                    const chartId = canvas.id;
+                    let chart = null;
+                    
+                    if (chartId === 'dist-chart' && distChart) {
+                        chart = distChart;
+                    } else if (chartId === 'ts-chart' && tsChart) {
+                        chart = tsChart;
+                    } else if (chartId === 'reg-chart-rsq' && regRsqChart) {
+                        chart = regRsqChart;
+                    } else if (chartId === 'reg-chart-coef' && regCoefChart) {
+                        chart = regCoefChart;
+                    }
+                    
+                    if (chart) {
+                        // Use requestAnimationFrame to ensure DOM has updated
+                        requestAnimationFrame(() => {
+                            chart.resize();
+                        });
+                    }
+                    
+                    resizeTimeouts.delete(wrapper);
+                }, 100); // 100ms debounce
+                
+                resizeTimeouts.set(wrapper, timeoutId);
+            }
+        });
+        
+        observer.observe(wrapper);
+    });
+}
+
 // Tab switching
 document.addEventListener('DOMContentLoaded', function() {
+    // Setup chart resize observers
+    setupChartResizeObserver();
+    
     const tabs = document.querySelectorAll('.analysis-tab');
     const panels = document.querySelectorAll('.analysis-panel');
     
@@ -130,6 +202,15 @@ function displayDistributionChart(data) {
     const labels = data.histogram.map(h => `${h.bin_start}-${h.bin_end}`);
     const kgValues = data.histogram.map(h => h.kg);
     
+    // Set canvas dimensions explicitly before creating chart
+    const distWrapper = ctx.canvas.closest('.chart-wrapper');
+    if (distWrapper) {
+        const wrapperWidth = distWrapper.offsetWidth;
+        const wrapperHeight = distWrapper.offsetHeight;
+        ctx.canvas.style.width = wrapperWidth + 'px';
+        ctx.canvas.style.height = wrapperHeight + 'px';
+    }
+    
     distChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -144,8 +225,8 @@ function displayDistributionChart(data) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: !isMobile(),  // Disable on mobile to use CSS height
-            aspectRatio: isMobile() ? undefined : 2.5,
+            maintainAspectRatio: false,  // Always false to prevent continuous growth
+            aspectRatio: undefined,  // Let container control dimensions
             layout: {
                 padding: isMobile() ? {
                     left: 10,
@@ -395,6 +476,15 @@ function displayTimeseriesChart(data, variables) {
         };
     });
     
+    // Set canvas dimensions explicitly before creating chart
+    const tsWrapper = ctx.canvas.closest('.chart-wrapper');
+    if (tsWrapper) {
+        const wrapperWidth = tsWrapper.offsetWidth;
+        const wrapperHeight = tsWrapper.offsetHeight;
+        ctx.canvas.style.width = wrapperWidth + 'px';
+        ctx.canvas.style.height = wrapperHeight + 'px';
+    }
+    
     tsChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -403,8 +493,8 @@ function displayTimeseriesChart(data, variables) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: !isMobile(),  // Disable on mobile to use CSS height
-            aspectRatio: isMobile() ? undefined : 2.5,
+            maintainAspectRatio: false,  // Always false to prevent continuous growth
+            aspectRatio: undefined,  // Let container control dimensions
             layout: {
                 padding: mobile ? {
                     left: 10,
@@ -531,6 +621,15 @@ function displayRegressionCharts(data) {
     const weeks = data.weekly_results.map(r => r.week);
     const rsquared = data.weekly_results.map(r => r.adj_r_squared);
     
+    // Set canvas dimensions explicitly before creating chart
+    const rsqWrapper = ctxRsq.canvas.closest('.chart-wrapper');
+    if (rsqWrapper) {
+        const wrapperWidth = rsqWrapper.offsetWidth;
+        const wrapperHeight = rsqWrapper.offsetHeight;
+        ctxRsq.canvas.style.width = wrapperWidth + 'px';
+        ctxRsq.canvas.style.height = wrapperHeight + 'px';
+    }
+    
     regRsqChart = new Chart(ctxRsq, {
         type: 'line',
         data: {
@@ -547,8 +646,8 @@ function displayRegressionCharts(data) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: !isMobile(),  // Disable on mobile to use CSS height
-            aspectRatio: isMobile() ? undefined : 3,
+            maintainAspectRatio: false,  // Always false to prevent continuous growth
+            aspectRatio: undefined,  // Let container control dimensions
             layout: {
                 padding: isMobile() ? {
                     left: 10,
@@ -600,6 +699,15 @@ function displayRegressionCharts(data) {
     const lengthCoef = data.weekly_results.map(r => r.coefficients.length_index_smoothed || r.coefficients.length_index);
     const vmCoef = data.weekly_results.map(r => r.coefficients.vegetable_matter_smoothed || r.coefficients.vegetable_matter);
     
+    // Set canvas dimensions explicitly before creating chart
+    const coefWrapper = ctxCoef.canvas.closest('.chart-wrapper');
+    if (coefWrapper) {
+        const wrapperWidth = coefWrapper.offsetWidth;
+        const wrapperHeight = coefWrapper.offsetHeight;
+        ctxCoef.canvas.style.width = wrapperWidth + 'px';
+        ctxCoef.canvas.style.height = wrapperHeight + 'px';
+    }
+    
     regCoefChart = new Chart(ctxCoef, {
         type: 'line',
         data: {
@@ -613,8 +721,8 @@ function displayRegressionCharts(data) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: !isMobile(),  // Disable on mobile to use CSS height
-            aspectRatio: isMobile() ? undefined : 3,
+            maintainAspectRatio: false,  // Always false to prevent continuous growth
+            aspectRatio: undefined,  // Let container control dimensions
             layout: {
                 padding: isMobile() ? {
                     left: 10,

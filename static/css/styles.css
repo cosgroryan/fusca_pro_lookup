@@ -613,15 +613,21 @@ th.sortable.sort-desc::after {
     .chart-wrapper {
         height: 25vh !important;
         min-height: 300px !important;
+        max-height: 25vh !important;  /* Prevent growing beyond viewport */
         position: relative !important;
         width: 100% !important;
         max-width: 100% !important;
+        min-width: 0 !important;  /* Allow flexbox items to shrink */
+        overflow: hidden !important;  /* Prevent content overflow */
     }
     
-    /* Remove height from canvas - let Chart.js handle it based on container */
+    /* Constrain canvas to container dimensions */
     .chart-wrapper canvas {
         max-width: 100% !important;
-        /* Don't set height here - Chart.js will calculate it based on container */
+        max-height: 100% !important;
+        width: 100% !important;
+        height: 100% !important;
+        display: block !important;
     }
     
     /* Also target chart-wrapper with chart-container inside (for distribution charts) */

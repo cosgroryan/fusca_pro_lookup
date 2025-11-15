@@ -215,6 +215,20 @@
         padding: 16px;
         border-radius: 4px;
         border: 1px solid #e0e0e0;
+        position: relative;
+        min-width: 0;  /* Allow flexbox items to shrink */
+        overflow: hidden;  /* Prevent content overflow */
+        max-width: 100%;  /* Prevent growing beyond container */
+        height: 400px;  /* Fixed height for desktop to prevent growth */
+        max-height: 400px;  /* Prevent growing beyond fixed height */
+    }
+    
+    .chart-wrapper canvas {
+        max-width: 100% !important;
+        max-height: 100% !important;
+        width: 100% !important;
+        height: 100% !important;
+        display: block !important;
     }
     
     .chart-title {
@@ -223,6 +237,15 @@
         color: #153D33;
         margin-bottom: 12px;
         text-align: center;
+    }
+    
+    /* Button text switching for mobile */
+    .btn-text-mobile {
+        display: none;
+    }
+    
+    .btn-text-full {
+        display: inline;
     }
     
     .scenario-inputs {
@@ -405,6 +428,15 @@
             margin-top: 8px;
         }
         
+        /* Show mobile text, hide full text on mobile */
+        .btn-text-mobile {
+            display: inline;
+        }
+        
+        .btn-text-full {
+            display: none;
+        }
+        
         .metrics-intro {
             padding: 16px 18px;
             margin-bottom: 16px;
@@ -471,7 +503,10 @@
         </div>
         
         <div style="display: flex; gap: 10px; margin-top: 16px;">
-            <button class="run-analysis-btn" onclick="runDistributionAnalysis()" id="dist-run-btn">Run Distribution Analysis</button>
+            <button class="run-analysis-btn" onclick="runDistributionAnalysis()" id="dist-run-btn">
+                <span class="btn-text-full">Run Distribution Analysis</span>
+                <span class="btn-text-mobile">Run Analysis</span>
+            </button>
             <button class="run-analysis-btn" onclick="clearDistributionForm()" style="background: #666;">Clear</button>
         </div>
     </div>
@@ -533,7 +568,10 @@
         </div>
         
         <div style="display: flex; gap: 10px; margin-top: 16px;">
-            <button class="run-analysis-btn" onclick="runTimeseriesAnalysis()" id="ts-run-btn">Run Time Series Analysis</button>
+            <button class="run-analysis-btn" onclick="runTimeseriesAnalysis()" id="ts-run-btn">
+                <span class="btn-text-full">Run Time Series Analysis</span>
+                <span class="btn-text-mobile">Run Analysis</span>
+            </button>
             <button class="run-analysis-btn" onclick="clearTimeseriesForm()" style="background: #666;">Clear</button>
         </div>
     </div>
@@ -592,7 +630,10 @@
         </div>
         
         <div style="display: flex; gap: 10px; margin-top: 16px;">
-            <button class="run-analysis-btn" onclick="runRegressionAnalysis()" id="reg-run-btn">Run Regression Analysis</button>
+            <button class="run-analysis-btn" onclick="runRegressionAnalysis()" id="reg-run-btn">
+                <span class="btn-text-full">Run Regression Analysis</span>
+                <span class="btn-text-mobile">Run Analysis</span>
+            </button>
             <button class="run-analysis-btn" onclick="clearRegressionForm()" style="background: #666;">Clear</button>
         </div>
     </div>
@@ -766,7 +807,10 @@
         </div>
         
         <div style="display: flex; gap: 10px; margin-top: 16px;">
-            <button class="run-analysis-btn" onclick="runBenchmarkAnalysis()" id="bench-run-btn">Run Benchmark Analysis</button>
+            <button class="run-analysis-btn" onclick="runBenchmarkAnalysis()" id="bench-run-btn">
+                <span class="btn-text-full">Run Benchmark Analysis</span>
+                <span class="btn-text-mobile">Run Analysis</span>
+            </button>
             <button class="run-analysis-btn" onclick="clearBenchmarkForm()" style="background: #666;">Clear</button>
         </div>
     </div>
