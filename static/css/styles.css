@@ -606,7 +606,29 @@ th.sortable.sort-desc::after {
     }
     
     .chart-container {
-        height: 240px;
+        height: 600px !important;
+    }
+    
+    /* Taller charts for time series and regression on mobile - 25% of screen height */
+    .chart-wrapper {
+        height: 25vh !important;
+        min-height: 300px !important;
+        position: relative !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    /* Ensure canvas respects wrapper height on mobile */
+    .chart-wrapper canvas {
+        height: 100% !important;
+        width: 100% !important;
+        flex: 1 !important;
+    }
+    
+    /* Also target chart-wrapper with chart-container inside (for distribution charts) */
+    .chart-wrapper .chart-container {
+        height: 25vh !important;
+        min-height: 300px !important;
     }
     
     .module-header {

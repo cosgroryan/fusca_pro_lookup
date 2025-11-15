@@ -6,6 +6,11 @@ let tsChart = null;
 let regRsqChart = null;
 let regCoefChart = null;
 
+// Helper function to detect mobile
+function isMobile() {
+    return window.innerWidth <= 768;
+}
+
 // Tab switching
 document.addEventListener('DOMContentLoaded', function() {
     const tabs = document.querySelectorAll('.analysis-tab');
@@ -136,8 +141,8 @@ function displayDistributionChart(data) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: 2.5,
+            maintainAspectRatio: !isMobile(),  // Disable on mobile to use CSS height
+            aspectRatio: isMobile() ? undefined : 2.5,
             plugins: {
                 legend: {display: false},
                 tooltip: {
@@ -344,8 +349,8 @@ function displayTimeseriesChart(data, variables) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: 2.5,
+            maintainAspectRatio: !isMobile(),  // Disable on mobile to use CSS height
+            aspectRatio: isMobile() ? undefined : 2.5,
             interaction: {
                 mode: 'index',
                 intersect: false
@@ -472,8 +477,8 @@ function displayRegressionCharts(data) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: 3,
+            maintainAspectRatio: !isMobile(),  // Disable on mobile to use CSS height
+            aspectRatio: isMobile() ? undefined : 3,
             plugins: {
                 legend: {display: false}
             },
@@ -515,8 +520,8 @@ function displayRegressionCharts(data) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: 3,
+            maintainAspectRatio: !isMobile(),  // Disable on mobile to use CSS height
+            aspectRatio: isMobile() ? undefined : 3,
             plugins: {
                 legend: {display: true, position: 'top'}
             },

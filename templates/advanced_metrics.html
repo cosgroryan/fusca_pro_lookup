@@ -413,6 +413,21 @@
         .results-section {
             padding: 14px 12px;
         }
+        
+        /* Taller charts on mobile - 25% of screen height */
+        .chart-wrapper {
+            height: 25vh !important;
+            min-height: 300px !important;
+            position: relative !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        
+        .chart-wrapper canvas {
+            height: 100% !important;
+            width: 100% !important;
+            flex: 1 !important;
+        }
     }
 </style>
 {% endblock %}
@@ -571,7 +586,7 @@
                 The coefficient chart shows how price changes (in cents/kg) for each one-unit increase in each variable. 
                 <strong>Negative coefficients mean decreases in value</strong> (e.g., higher colour Y-Z or VM = lower price). 
                 For example, if Colour shows -50, increasing colour by 1 unit decreases value by 50 cents/kg. 
-                <strong>Note:</strong> For VM (Vegetable Matter), one unit represents a 0.1% change (since VM ranges 0.0-1.0), 
+                <strong>Note:</strong> For VM (Vegetable Matter), one unit represents a 0.1% change (since VM mostly ranges 0.0-1.0), 
                 so a coefficient of -20 means a 0.1% increase in VM decreases price by 20 cents/kg.
             </p>
         </div>
