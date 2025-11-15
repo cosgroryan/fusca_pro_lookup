@@ -143,6 +143,19 @@ function displayDistributionChart(data) {
             responsive: true,
             maintainAspectRatio: !isMobile(),  // Disable on mobile to use CSS height
             aspectRatio: isMobile() ? undefined : 2.5,
+            layout: {
+                padding: isMobile() ? {
+                    left: 10,
+                    right: 10,
+                    top: 10,
+                    bottom: 10
+                } : {
+                    left: 5,
+                    right: 5,
+                    top: 5,
+                    bottom: 5
+                }
+            },
             plugins: {
                 legend: {display: false},
                 tooltip: {
@@ -156,10 +169,32 @@ function displayDistributionChart(data) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    title: {display: true, text: 'Weight (kg)'}
+                    title: {
+                        display: true,
+                        text: 'Weight (kg)',
+                        font: {size: isMobile() ? 10 : 12},
+                        padding: isMobile() ? {left: 5, right: 5, top: 0, bottom: 0} : {left: 0, right: 0, top: 0, bottom: 0}
+                    },
+                    ticks: {
+                        font: {size: isMobile() ? 8 : 10},
+                        maxTicksLimit: isMobile() ? 5 : 10,
+                        padding: isMobile() ? 4 : 8
+                    }
                 },
                 x: {
-                    title: {display: true, text: data.variable}
+                    title: {
+                        display: true,
+                        text: data.variable,
+                        font: {size: isMobile() ? 10 : 12},
+                        padding: isMobile() ? {left: 0, right: 0, top: 5, bottom: 5} : {left: 0, right: 0, top: 0, bottom: 0}
+                    },
+                    ticks: {
+                        font: {size: isMobile() ? 8 : 10},
+                        maxRotation: isMobile() ? 45 : 0,
+                        minRotation: isMobile() ? 45 : 0,
+                        maxTicksLimit: isMobile() ? 8 : 20,
+                        padding: isMobile() ? 4 : 8
+                    }
                 }
             }
         }
@@ -290,9 +325,22 @@ function displayTimeseriesChart(data, variables) {
     
     // Create scales configuration with multiple y-axes
     // Explicitly disable default 'y' axis and only use custom axes
+    const mobile = isMobile();
     const scales = {
         x: {
-            title: {display: true, text: `Time (${data.aggregation})`}
+            title: {
+                display: true,
+                text: `Time (${data.aggregation})`,
+                font: {size: mobile ? 10 : 12},
+                padding: mobile ? {left: 0, right: 0, top: 5, bottom: 5} : {left: 0, right: 0, top: 0, bottom: 0}
+            },
+            ticks: {
+                font: {size: mobile ? 8 : 10},
+                maxRotation: mobile ? 45 : 0,
+                minRotation: mobile ? 45 : 0,
+                maxTicksLimit: mobile ? 6 : 12,
+                padding: mobile ? 4 : 8
+            }
         },
         y: {
             display: false  // Disable default y-axis - we're using custom ones
@@ -323,11 +371,14 @@ function displayTimeseriesChart(data, variables) {
                 display: true,
                 text: variableNames[v],
                 color: colors[v],
-                font: {weight: 'bold', size: 12}
+                font: {weight: 'bold', size: mobile ? 10 : 12},
+                padding: mobile ? {left: 5, right: 5, top: 0, bottom: 0} : {left: 0, right: 0, top: 0, bottom: 0}
             },
             ticks: {
                 color: colors[v],
-                font: {size: 10}
+                font: {size: mobile ? 8 : 10},
+                maxTicksLimit: mobile ? 5 : 10,
+                padding: mobile ? 4 : 8
             },
             grid: {
                 color: colors[v] + '30',  // Semi-transparent grid lines
@@ -351,6 +402,19 @@ function displayTimeseriesChart(data, variables) {
             responsive: true,
             maintainAspectRatio: !isMobile(),  // Disable on mobile to use CSS height
             aspectRatio: isMobile() ? undefined : 2.5,
+            layout: {
+                padding: mobile ? {
+                    left: 10,
+                    right: 10,
+                    top: 10,
+                    bottom: 10
+                } : {
+                    left: 5,
+                    right: 5,
+                    top: 5,
+                    bottom: 5
+                }
+            },
             interaction: {
                 mode: 'index',
                 intersect: false
@@ -479,6 +543,19 @@ function displayRegressionCharts(data) {
             responsive: true,
             maintainAspectRatio: !isMobile(),  // Disable on mobile to use CSS height
             aspectRatio: isMobile() ? undefined : 3,
+            layout: {
+                padding: isMobile() ? {
+                    left: 10,
+                    right: 10,
+                    top: 10,
+                    bottom: 10
+                } : {
+                    left: 5,
+                    right: 5,
+                    top: 5,
+                    bottom: 5
+                }
+            },
             plugins: {
                 legend: {display: false}
             },
@@ -486,7 +563,17 @@ function displayRegressionCharts(data) {
                 y: {
                     beginAtZero: true,
                     max: 1,
-                    title: {display: true, text: 'Adjusted R²'}
+                    title: {
+                        display: true,
+                        text: 'Adjusted R²',
+                        font: {size: isMobile() ? 10 : 12},
+                        padding: isMobile() ? {left: 5, right: 5, top: 0, bottom: 0} : {left: 0, right: 0, top: 0, bottom: 0}
+                    },
+                    ticks: {
+                        font: {size: isMobile() ? 8 : 10},
+                        maxTicksLimit: isMobile() ? 5 : 10,
+                        padding: isMobile() ? 4 : 8
+                    }
                 },
                 x: {
                     display: false
@@ -522,12 +609,35 @@ function displayRegressionCharts(data) {
             responsive: true,
             maintainAspectRatio: !isMobile(),  // Disable on mobile to use CSS height
             aspectRatio: isMobile() ? undefined : 3,
+            layout: {
+                padding: isMobile() ? {
+                    left: 10,
+                    right: 10,
+                    top: 10,
+                    bottom: 10
+                } : {
+                    left: 5,
+                    right: 5,
+                    top: 5,
+                    bottom: 5
+                }
+            },
             plugins: {
                 legend: {display: true, position: 'top'}
             },
             scales: {
                 y: {
-                    title: {display: true, text: 'Coefficient (cents per unit)'}
+                    title: {
+                        display: true,
+                        text: 'Coefficient (cents per unit)',
+                        font: {size: isMobile() ? 10 : 12},
+                        padding: isMobile() ? {left: 5, right: 5, top: 0, bottom: 0} : {left: 0, right: 0, top: 0, bottom: 0}
+                    },
+                    ticks: {
+                        font: {size: isMobile() ? 8 : 10},
+                        maxTicksLimit: isMobile() ? 5 : 10,
+                        padding: isMobile() ? 4 : 8
+                    }
                 },
                 x: {
                     display: false
