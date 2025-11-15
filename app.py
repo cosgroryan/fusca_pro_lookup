@@ -434,6 +434,9 @@ def get_regression():
             y = week_df['price'].values
             X = week_df[['micron', 'colour', 'length_index', 'vegetable_matter']].copy()
             
+            # Scale VM by 10 so 1 unit = 0.1 change (makes regression less volatile)
+            X['vegetable_matter'] = X['vegetable_matter'] * 10
+            
             # Drop rows with missing values
             valid_mask = ~(X.isna().any(axis=1) | pd.isna(y))
             y_clean = y[valid_mask]
@@ -538,6 +541,9 @@ def get_scenario():
         y = df['price'].values
         X = df[['micron', 'colour', 'length_index', 'vegetable_matter']].copy()
         
+        # Scale VM by 10 so 1 unit = 0.1 change (makes regression less volatile)
+        X['vegetable_matter'] = X['vegetable_matter'] * 10
+        
         # Drop rows with missing values
         valid_mask = ~(X.isna().any(axis=1) | pd.isna(y))
         y_clean = y[valid_mask]
@@ -561,13 +567,13 @@ def get_scenario():
             'vegetable_matter': scenario.get('vegetable_matter', baseline_vals['vegetable_matter'])
         }
         
-        # Calculate prices
+        # Calculate prices (scale VM by 10 for regression coefficient)
         baseline_price = (
             model.params['const'] +
             model.params['micron'] * baseline_vals['micron'] +
             model.params['colour'] * baseline_vals['colour'] +
             model.params['length_index'] * baseline_vals['length_index'] +
-            model.params['vegetable_matter'] * baseline_vals['vegetable_matter']
+            model.params['vegetable_matter'] * (baseline_vals['vegetable_matter'] * 10)
         )
         
         scenario_price = (
@@ -575,17 +581,17 @@ def get_scenario():
             model.params['micron'] * scenario_vals['micron'] +
             model.params['colour'] * scenario_vals['colour'] +
             model.params['length_index'] * scenario_vals['length_index'] +
-            model.params['vegetable_matter'] * scenario_vals['vegetable_matter']
+            model.params['vegetable_matter'] * (scenario_vals['vegetable_matter'] * 10)
         )
         
         price_change = scenario_price - baseline_price
         
-        # Break down impact by factor
+        # Break down impact by factor (scale VM difference by 10 for regression coefficient)
         impact_breakdown = {
             'micron': round(float(model.params['micron'] * (scenario_vals['micron'] - baseline_vals['micron'])), 2),
             'colour': round(float(model.params['colour'] * (scenario_vals['colour'] - baseline_vals['colour'])), 2),
             'length_index': round(float(model.params['length_index'] * (scenario_vals['length_index'] - baseline_vals['length_index'])), 2),
-            'vegetable_matter': round(float(model.params['vegetable_matter'] * (scenario_vals['vegetable_matter'] - baseline_vals['vegetable_matter'])), 2)
+            'vegetable_matter': round(float(model.params['vegetable_matter'] * (scenario_vals['vegetable_matter'] - baseline_vals['vegetable_matter']) * 10), 2)
         }
         
         return jsonify({

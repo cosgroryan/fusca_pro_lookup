@@ -562,6 +562,17 @@
             <input type="number" id="reg-smooth" value="5" min="1" max="20" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
         </div>
         
+        <div style="background: #e3f2fd; border-left: 4px solid #1976d2; padding: 12px; margin-top: 16px; margin-bottom: 16px; border-radius: 4px;">
+            <strong style="color: #1976d2; font-size: 11px;">HOW TO READ THE COEFFICIENTS:</strong>
+            <p style="font-size: 11px; color: #333; margin: 6px 0 0 0; line-height: 1.6;">
+                The coefficient chart shows how price changes (in cents/kg) for each one-unit increase in each variable. 
+                <strong>Negative coefficients mean decreases in value</strong> (e.g., higher colour Y-Z or VM = lower price). 
+                For example, if Colour shows -50, increasing colour by 1 unit decreases value by 50 cents/kg. 
+                <strong>Note:</strong> For VM (Vegetable Matter), one unit represents a 0.1% change (since VM ranges 0.0-1.0), 
+                so a coefficient of -20 means a 0.1% increase in VM decreases price by 20 cents/kg.
+            </p>
+        </div>
+        
         <div style="display: flex; gap: 10px; margin-top: 16px;">
             <button class="run-analysis-btn" onclick="runRegressionAnalysis()" id="reg-run-btn">Run Regression Analysis</button>
             <button class="run-analysis-btn" onclick="clearRegressionForm()" style="background: #666;">Clear</button>
