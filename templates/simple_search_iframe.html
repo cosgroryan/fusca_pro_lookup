@@ -1,750 +1,768 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex, nofollow">
-    <title>Simple Search - Fusca Pro Lookup</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=3.0">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-</head>
-<body>
-    <div class="container" style="margin-top: 0; padding: 16px;">
-        <!-- Saved Searches -->
-        <div class="saved-searches-section" id="savedSearchesSection" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin: 0; color: #153D33; font-size: 13px;">Saved Searches</h3>
-            </div>
-            <div id="savedSearchesList"></div>
-        </div>
+{% extends "base.html" %}
 
-        <!-- Search Section -->
-        <div class="search-section">
-            <h2 style="margin-bottom: 16px; color: #153D33; font-size: 14px;">Search Wool Auctions</h2>
-            
-            <div class="search-group">
-                <label for="wool_type">Wool Type Search (ID or Type Name)</label>
-                <div class="search-bar">
-                    <input type="text" id="wool_type" placeholder="e.g. F3D or C3O">
-                    <button onclick="search()" id="searchBtn">Search</button>
-                    <button onclick="saveCurrentSearch()" class="save-search-btn">Save</button>
-                    <button onclick="resetFilters()" style="background: #666;">Reset</button>
-                </div>
-            </div>
-            
-            <!-- Date Range Buttons -->
-            <div class="search-group">
-                <label>Quick Date Range:</label>
-                <div class="date-range-buttons">
-                    <button class="date-range-btn" onclick="setDateRange('6m')">6 Months</button>
-                    <button class="date-range-btn" onclick="setDateRange('1y')">1 Year</button>
-                    <button class="date-range-btn" onclick="setDateRange('3y')">3 Years</button>
-                    <button class="date-range-btn" onclick="setDateRange('all')">All Time</button>
-                    <button class="date-range-btn" onclick="toggleCustomDateRange()">Custom</button>
-                    <div class="date-range-custom" id="customDateRange">
-                        <label style="font-size: 12px; margin: 0;">From:</label>
-                        <input type="date" id="customDateFrom" />
-                        <label style="font-size: 12px; margin: 0;">To:</label>
-                        <input type="date" id="customDateTo" />
-                        <button class="date-range-btn" style="background: #3D7F4B;" onclick="applyCustomDateRange()">Apply</button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Column Filters -->
-            <div class="filters-container" id="filtersContainer">
-                <div class="filters-header">
-                    <h3>Additional Filters</h3>
-                    <button class="add-filter-btn" onclick="addFilter()">+ Add Filter</button>
-                </div>
-                <div id="filtersList"></div>
-            </div>
-        </div>
+{% set hide_nav = True %}
 
-        <!-- Charts -->
-        <div class="chart-section" id="chartSection" style="display: none;">
-            <div class="module-header">
-                <h2 style="color: #153D33; font-size: 14px;">Average Price Over Time (Volume-Weighted)</h2>
-                <button class="hide-btn" onclick="toggleModule('priceChart')">Hide</button>
-            </div>
-            <div id="priceChartContent" class="module-content">
-                <!-- Statistics Summary -->
-                <div id="statsSection"></div>
-                
-                <!-- Moving Average Controls -->
-                <div style="display: flex; gap: 12px; align-items: center; margin: 12px 0 20px 0; padding: 12px; background: #f9f9f9; border-radius: 4px; flex-wrap: wrap;">
-                    <span style="font-weight: 600; font-size: 12px; color: #153D33;">Moving Averages:</span>
-                    <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
-                        <input type="checkbox" id="ma30" onchange="updateChart()"> 30-day
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
-                        <input type="checkbox" id="ma90" onchange="updateChart()"> 90-day
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
-                        <input type="checkbox" id="ma180" onchange="updateChart()"> 180-day
-                    </label>
-                </div>
-                
-                <div class="chart-container">
-                    <canvas id="priceChart"></canvas>
-                </div>
-            </div>
-        </div>
+{% block title %}Simple Search - Fusca Pro Lookup{% endblock %}
 
-        <div class="chart-section" id="balesChartSection" style="display: none;">
-            <div class="module-header">
-                <h2 style="color: #153D33; font-size: 14px;">Total Bales by Sale Date</h2>
-                <button class="hide-btn" onclick="toggleModule('balesChart')">Hide</button>
-            </div>
-            <div id="balesChartContent" class="module-content">
-                <div class="chart-container">
-                    <canvas id="balesChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div id="errorMsg" class="error" style="display: none;"></div>
-
-        <!-- Results Table -->
-        <div id="resultsSection" style="display: none;">
-            <div class="module-header" style="background: #e8f5e9; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
-                <span class="results-count" id="resultsCount" style="font-weight: 600; color: #153D33; font-size: 13px;">-</span>
-                <div style="display: flex; gap: 15px; align-items: center;">
-                    <button class="download-csv-btn" onclick="downloadTableCSV()" id="downloadBtn">Download CSV</button>
-                    <span style="color: #666; font-size: 11px;">Showing up to 1,000 results</span>
-                    <button class="hide-btn" onclick="toggleModule('resultsTable')">Hide</button>
-                </div>
-            </div>
-            
-            <div id="resultsTableContent" class="module-content">
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th class="sortable" data-column="sale_date" onclick="sortTable('sale_date')">Sale Date</th>
-                                <th class="sortable" data-column="lot_number" onclick="sortTable('lot_number')">Lot Number</th>
-                                <th class="sortable" data-column="type_combined" onclick="sortTable('type_combined')">Wool Type</th>
-                                <th class="sortable" data-column="price" onclick="sortTable('price')">Price</th>
-                                <th class="sortable" data-column="bales" onclick="sortTable('bales')">Bales</th>
-                                <th class="sortable" data-column="kg" onclick="sortTable('kg')">KG</th>
-                                <th class="sortable" data-column="colour" onclick="sortTable('colour')">Colour</th>
-                                <th class="sortable" data-column="micron" onclick="sortTable('micron')">Micron</th>
-                                <th class="sortable" data-column="yield" onclick="sortTable('yield')">Yield %</th>
-                                <th class="sortable" data-column="vegetable_matter" onclick="sortTable('vegetable_matter')">VM %</th>
-                                <th class="sortable" data-column="location" onclick="sortTable('location')">Location</th>
-                                <th class="sortable" data-column="seller_name" onclick="sortTable('seller_name')">Seller</th>
-                                <th class="sortable" data-column="farm_brand_name" onclick="sortTable('farm_brand_name')">Farm Brand</th>
-                                <th class="sortable" data-column="is_sold" onclick="sortTable('is_sold')">Sold</th>
-                            </tr>
-                        </thead>
-                        <tbody id="resultsTable"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="loading" class="loading" style="display: none;">Loading...</div>
+{% block content %}
+<!-- Saved Searches -->
+<div class="saved-searches-section" id="savedSearchesSection" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="margin: 0; color: #153D33; font-size: 13px;">Saved Searches</h3>
     </div>
+    <div id="savedSearchesList"></div>
+</div>
 
-    <script src="{{ url_for('static', filename='js/common.js') }}?v=2.1"></script>
-    <script>
-        // Copy all scripts from simple_search.html here
-        let priceChart = null;
-        let balesChart = null;
-        let filterCount = 0;
-        let currentResults = [];
-        let sortColumn = null;
-        let sortDirection = 'asc';
-        let currentDateFilter = null;
-        let currentChartData = null;
-        let isSearching = false;
+<!-- Search Section -->
+<div class="search-section">
+    <h2 style="margin-bottom: 16px; color: #153D33; font-size: 14px;">Search Wool Auctions</h2>
+    
+    <div class="search-group">
+        <label for="wool_type">Wool Type Search (ID or Type Name)</label>
+        <div class="search-bar">
+            <input type="text" id="wool_type" placeholder="e.g. F3D or C3O">
+            <button onclick="search()" id="searchBtn">Search</button>
+            <button onclick="saveCurrentSearch()" class="save-search-btn">Save</button>
+            <button onclick="resetFilters()" style="background: #666;">Reset</button>
+        </div>
+    </div>
+    
+    <!-- Date Range Buttons -->
+    <div class="search-group">
+        <label>Quick Date Range:</label>
+        <div class="date-range-buttons">
+            <button class="date-range-btn" onclick="setDateRange('6m')">6 Months</button>
+            <button class="date-range-btn" onclick="setDateRange('1y')">1 Year</button>
+            <button class="date-range-btn" onclick="setDateRange('3y')">3 Years</button>
+            <button class="date-range-btn" onclick="setDateRange('all')">All Time</button>
+            <button class="date-range-btn" onclick="toggleCustomDateRange()">Custom</button>
+            <div class="date-range-custom" id="customDateRange">
+                <label style="font-size: 12px; margin: 0;">From:</label>
+                <input type="date" id="customDateFrom" />
+                <label style="font-size: 12px; margin: 0;">To:</label>
+                <input type="date" id="customDateTo" />
+                <button class="date-range-btn" style="background: #3D7F4B;" onclick="applyCustomDateRange()">Apply</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Column Filters -->
+    <div class="filters-container" id="filtersContainer">
+        <div class="filters-header">
+            <h3>Additional Filters</h3>
+            <button class="add-filter-btn" onclick="addFilter()">+ Add Filter</button>
+        </div>
+        <div id="filtersList"></div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="chart-section" id="chartSection" style="display: none;">
+    <div class="module-header">
+        <h2 style="color: #153D33; font-size: 14px;">Average Price Over Time (Volume-Weighted)</h2>
+        <button class="hide-btn" onclick="toggleModule('priceChart')">Hide</button>
+    </div>
+    <div id="priceChartContent" class="module-content">
+        <!-- Statistics Summary -->
+        <div id="statsSection"></div>
         
-        function setDateRange(range) {
-            document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById('customDateRange').classList.remove('show');
-            
-            if (range === 'all') {
-                currentDateFilter = null;
-                console.log('Date range cleared: All time');
-            } else {
-                currentDateFilter = getDateRangeFilter(range);
-                console.log('Date range set:', range, currentDateFilter);
-            }
-            
-            search();
-        }
+        <!-- Moving Average Controls -->
+        <div style="display: flex; gap: 12px; align-items: center; margin: 12px 0 20px 0; padding: 12px; background: #f9f9f9; border-radius: 4px; flex-wrap: wrap;">
+            <span style="font-weight: 600; font-size: 12px; color: #153D33;">Moving Averages:</span>
+            <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
+                <input type="checkbox" id="ma30" onchange="updateChart()"> 30-day
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
+                <input type="checkbox" id="ma90" onchange="updateChart()"> 90-day
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
+                <input type="checkbox" id="ma180" onchange="updateChart()"> 180-day
+            </label>
+        </div>
         
-        function toggleCustomDateRange() {
-            const customSection = document.getElementById('customDateRange');
-            const isVisible = customSection.classList.contains('show');
-            document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
-            
-            if (!isVisible) {
-                customSection.classList.add('show');
-                event.target.classList.add('active');
-            } else {
-                customSection.classList.remove('show');
-            }
-        }
+        <div class="chart-container">
+            <canvas id="priceChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="chart-section" id="balesChartSection" style="display: none;">
+    <div class="module-header">
+        <h2 style="color: #153D33; font-size: 14px;">Total Bales by Sale Date</h2>
+        <button class="hide-btn" onclick="toggleModule('balesChart')">Hide</button>
+    </div>
+    <div id="balesChartContent" class="module-content">
+        <div class="chart-container">
+            <canvas id="balesChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div id="errorMsg" class="error" style="display: none;"></div>
+
+<!-- Results Table -->
+<div id="resultsSection" style="display: none;">
+    <div class="module-header" style="background: #e8f5e9; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+        <span class="results-count" id="resultsCount" style="font-weight: 600; color: #153D33; font-size: 13px;">-</span>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <button class="download-csv-btn" onclick="downloadTableCSV()" id="downloadBtn">Download CSV</button>
+            <span style="color: #666; font-size: 11px;">Showing up to 1,000 results</span>
+            <button class="hide-btn" onclick="toggleModule('resultsTable')">Hide</button>
+        </div>
+    </div>
+    
+    <div id="resultsTableContent" class="module-content">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="sortable" data-column="sale_date" onclick="sortTable('sale_date')">Sale Date</th>
+                        <th class="sortable" data-column="lot_number" onclick="sortTable('lot_number')">Lot Number</th>
+                        <th class="sortable" data-column="type_combined" onclick="sortTable('type_combined')">Wool Type</th>
+                        <th class="sortable" data-column="price" onclick="sortTable('price')">Price</th>
+                        <th class="sortable" data-column="bales" onclick="sortTable('bales')">Bales</th>
+                        <th class="sortable" data-column="kg" onclick="sortTable('kg')">KG</th>
+                        <th class="sortable" data-column="colour" onclick="sortTable('colour')">Colour</th>
+                        <th class="sortable" data-column="micron" onclick="sortTable('micron')">Micron</th>
+                        <th class="sortable" data-column="yield" onclick="sortTable('yield')">Yield %</th>
+                        <th class="sortable" data-column="vegetable_matter" onclick="sortTable('vegetable_matter')">VM %</th>
+                        <th class="sortable" data-column="location" onclick="sortTable('location')">Location</th>
+                        <th class="sortable" data-column="seller_name" onclick="sortTable('seller_name')">Seller</th>
+                        <th class="sortable" data-column="farm_brand_name" onclick="sortTable('farm_brand_name')">Farm Brand</th>
+                        <th class="sortable" data-column="is_sold" onclick="sortTable('is_sold')">Sold</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="loading" class="loading" style="display: none;">Loading...</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let priceChart = null;
+    let balesChart = null;
+    let filterCount = 0;
+    let currentResults = [];
+    let sortColumn = null;
+    let sortDirection = 'asc';
+    let currentDateFilter = null;
+    let currentChartData = null;  // Store chart data for MA updates
+    let isSearching = false;  // Prevent concurrent searches
+    
+    function setDateRange(range) {
+        // Clear active state
+        document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
         
-        function applyCustomDateRange() {
-            const fromDate = document.getElementById('customDateFrom').value;
-            const toDate = document.getElementById('customDateTo').value;
-            
-            if (!fromDate || !toDate) {
-                alert('Please select both start and end dates');
-                return;
-            }
-            
-            currentDateFilter = {
-                column: 'sale_date',
-                operator: 'between',
-                value: fromDate,
-                value2: toDate
-            };
-            
-            console.log('Custom date range set:', currentDateFilter);
-            search();
-        }
+        // Hide custom range
+        document.getElementById('customDateRange').classList.remove('show');
         
-        function addFilter() {
-            const filterId = `filter_${filterCount++}`;
-            const filtersList = document.getElementById('filtersList');
-            
-            const filterDiv = document.createElement('div');
-            filterDiv.className = 'filter-row';
-            filterDiv.id = filterId;
-            
-            filterDiv.innerHTML = `
-                <select class="filter-column" onchange="updateFilterOperators('${filterId}')">
-                    <option value="">Select Column</option>
-                    ${columns.map(col => `<option value="${col.name}" data-type="${col.type}">${col.label}</option>`).join('')}
-                </select>
-                <select class="filter-operator">
-                    <option value="">Select Operator</option>
-                </select>
-                <input type="text" class="filter-value" placeholder="Value">
-                <input type="text" class="filter-value2" placeholder="Value 2" style="display:none;">
-                <button class="remove-filter" onclick="removeFilter('${filterId}')">Remove</button>
-            `;
-            
-            filtersList.appendChild(filterDiv);
-        }
-        
-        function updateFilterOperators(filterId) {
-            const filterDiv = document.getElementById(filterId);
-            const columnSelect = filterDiv.querySelector('.filter-column');
-            const operatorSelect = filterDiv.querySelector('.filter-operator');
-            const valueInput = filterDiv.querySelector('.filter-value');
-            const value2Input = filterDiv.querySelector('.filter-value2');
-            
-            const selectedOption = columnSelect.options[columnSelect.selectedIndex];
-            const columnType = selectedOption.getAttribute('data-type');
-            
-            operatorSelect.innerHTML = '<option value="">Select Operator</option>';
-            value2Input.style.display = 'none';
-            
-            if (columnType && operators[columnType]) {
-                operators[columnType].forEach(op => {
-                    const option = document.createElement('option');
-                    option.value = op.value;
-                    option.textContent = op.label;
-                    operatorSelect.appendChild(option);
-                });
-            }
-            
-            if (columnType === 'number') {
-                valueInput.type = 'number';
-                valueInput.step = '0.1';
-                value2Input.type = 'number';
-                value2Input.step = '0.1';
-            } else if (columnType === 'date') {
-                valueInput.type = 'date';
-                value2Input.type = 'date';
-            } else {
-                valueInput.type = 'text';
-                value2Input.type = 'text';
-            }
-            
-            operatorSelect.onchange = function() {
-                value2Input.style.display = this.value === 'between' ? 'block' : 'none';
-            };
-        }
-        
-        function removeFilter(filterId) {
-            document.getElementById(filterId).remove();
-        }
-        
-        function getFilters() {
-            const filters = {};
-            
-            const woolType = document.getElementById('wool_type').value.trim();
-            if (woolType) filters.wool_type_search = woolType;
-            
-            filters.column_filters = [];
-            
-            if (currentDateFilter) {
-                filters.column_filters.push(currentDateFilter);
-            }
-            
-            const filterRows = document.querySelectorAll('.filter-row');
-            filterRows.forEach(row => {
-                const column = row.querySelector('.filter-column').value;
-                const operator = row.querySelector('.filter-operator').value;
-                const value = row.querySelector('.filter-value').value;
-                const value2 = row.querySelector('.filter-value2').value;
-                
-                if (column && operator && value) {
-                    filters.column_filters.push({
-                        column,
-                        operator,
-                        value,
-                        value2: operator === 'between' ? value2 : null
-                    });
-                }
-            });
-            
-            return filters;
-        }
-        
-        async function search() {
-            if (isSearching) {
-                console.log('Search already in progress, skipping...');
-                return;
-            }
-            
-            isSearching = true;
-            const filters = getFilters();
-            console.log('Searching with filters:', filters);
-            
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('resultsSection').style.display = 'none';
-            document.getElementById('chartSection').style.display = 'none';
-            document.getElementById('balesChartSection').style.display = 'none';
-            document.getElementById('errorMsg').style.display = 'none';
-            document.getElementById('searchBtn').disabled = true;
-            
-            try {
-                console.log('Fetching price chart...');
-                const chartResponse = await fetch('/api/price_chart', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(filters)
-                });
-                
-                if (chartResponse.ok) {
-                    const chartData = await chartResponse.json();
-                    if (!chartData.error) {
-                        displayChart(chartData);
-                    }
-                }
-                
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                console.log('Fetching bales chart...');
-                const balesResponse = await fetch('/api/bales_chart', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(filters)
-                });
-                
-                if (balesResponse.ok) {
-                    const balesData = await balesResponse.json();
-                    if (!balesData.error) {
-                        displayBalesChart(balesData);
-                    }
-                }
-                
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                console.log('Fetching search results...');
-                const resultsResponse = await fetch('/api/search', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(filters)
-                });
-                
-                if (!resultsResponse.ok) {
-                    throw new Error(`Server error: ${resultsResponse.status}`);
-                }
-                
-                const resultsData = await resultsResponse.json();
-                
-                if (resultsData.error) {
-                    throw new Error(resultsData.error);
-                }
-                
-                displayResults(resultsData);
-                
-            } catch (error) {
-                console.error('Search error:', error);
-                showError('Search failed: ' + error.message);
-            } finally {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('searchBtn').disabled = false;
-                isSearching = false;
-            }
-        }
-        
-        function displayResults(data) {
-            const tbody = document.getElementById('resultsTable');
-            tbody.innerHTML = '';
-            
-            currentResults = data.results;
-            
-            document.getElementById('resultsCount').textContent = `Found ${data.count} results`;
-            document.getElementById('resultsSection').style.display = 'block';
-            
-            data.results.forEach(row => {
-                const priceInDollars = row.price / 100;
-                
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${row.sale_date || '-'}</td>
-                    <td>${row.lot_number ? row.lot_number.trim() : '-'}</td>
-                    <td>${row.type_combined || '-'}</td>
-                    <td style="font-weight: 600;">$${priceInDollars.toFixed(2)}</td>
-                    <td>${row.bales}</td>
-                    <td>${row.kg.toLocaleString()}</td>
-                    <td>${row.colour ? row.colour.toFixed(1) : '-'}</td>
-                    <td>${row.micron ? row.micron.toFixed(1) : '-'}</td>
-                    <td>${row.yield ? row.yield.toFixed(1) : '-'}</td>
-                    <td>${row.vegetable_matter ? row.vegetable_matter.toFixed(1) : '-'}</td>
-                    <td>${row.location || '-'}</td>
-                    <td>${row.seller_name || '-'}</td>
-                    <td>${row.farm_brand_name || '-'}</td>
-                    <td>${row.is_sold ? '✓' : '✗'}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-        
-        function displayChart(data) {
-            document.getElementById('chartSection').style.display = 'block';
-            currentChartData = data;
-            
-            if (data.statistics) {
-                document.getElementById('statsSection').innerHTML = formatStats(data.statistics);
-            }
-            
-            updateChart();
-        }
-        
-        function updateChart() {
-            if (!currentChartData) return;
-            
-            const ctx = document.getElementById('priceChart').getContext('2d');
-            
-            if (priceChart) {
-                priceChart.destroy();
-            }
-            
-            const datasets = [{
-                label: 'Volume-Weighted Avg Price',
-                data: currentChartData.data,
-                borderColor: '#3D7F4B',
-                backgroundColor: 'rgba(61, 127, 75, 0.1)',
-                borderWidth: 2,
-                tension: 0.1,
-                fill: true,
-                order: 1
-            }];
-            
-            if (document.getElementById('ma30').checked) {
-                datasets.push({
-                    label: '30-day MA',
-                    data: calculateMovingAverage(currentChartData.data, 30),
-                    borderColor: '#FF9800',
-                    borderWidth: 1.5,
-                    borderDash: [5, 5],
-                    tension: 0.1,
-                    fill: false,
-                    order: 2,
-                    pointRadius: 0
-                });
-            }
-            
-            if (document.getElementById('ma90').checked) {
-                datasets.push({
-                    label: '90-day MA',
-                    data: calculateMovingAverage(currentChartData.data, 90),
-                    borderColor: '#9C27B0',
-                    borderWidth: 1.5,
-                    borderDash: [5, 5],
-                    tension: 0.1,
-                    fill: false,
-                    order: 3,
-                    pointRadius: 0
-                });
-            }
-            
-            if (document.getElementById('ma180').checked) {
-                datasets.push({
-                    label: '180-day MA',
-                    data: calculateMovingAverage(currentChartData.data, 180),
-                    borderColor: '#2196F3',
-                    borderWidth: 1.5,
-                    borderDash: [5, 5],
-                    tension: 0.1,
-                    fill: false,
-                    order: 4,
-                    pointRadius: 0
-                });
-            }
-            
-            priceChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: currentChartData.labels,
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: true, position: 'top' },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: function(context) {
-                                    return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'Price ($)' },
-                            ticks: { callback: function(value) { return '$' + value; } }
-                        },
-                        x: {
-                            title: { display: true, text: 'Sale Date' },
-                            ticks: { maxRotation: 45, minRotation: 45, maxTicksLimit: 20 }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function displayBalesChart(data) {
-            document.getElementById('balesChartSection').style.display = 'block';
-            
-            const ctx = document.getElementById('balesChart').getContext('2d');
-            
-            if (balesChart) {
-                balesChart.destroy();
-            }
-            
-            balesChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        label: 'Total Bales',
-                        data: data.data,
-                        backgroundColor: '#3D7F4B',
-                        borderColor: '#153D33',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: true, position: 'top' },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: function(context) {
-                                    return 'Total Bales: ' + context.parsed.y.toLocaleString();
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'Total Bales' },
-                            ticks: { callback: function(value) { return value.toLocaleString(); } }
-                        },
-                        x: {
-                            title: { display: true, text: 'Sale Date' },
-                            ticks: { maxRotation: 45, minRotation: 45, maxTicksLimit: 20 }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function resetFilters() {
-            document.getElementById('wool_type').value = '';
-            document.getElementById('filtersList').innerHTML = '';
-            filterCount = 0;
+        if (range === 'all') {
             currentDateFilter = null;
-            
-            document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('customDateRange').classList.remove('show');
-            
-            document.getElementById('resultsSection').style.display = 'none';
-            document.getElementById('chartSection').style.display = 'none';
-            document.getElementById('balesChartSection').style.display = 'none';
-            document.getElementById('errorMsg').style.display = 'none';
+            console.log('Date range cleared: All time');
+        } else {
+            currentDateFilter = getDateRangeFilter(range);
+            console.log('Date range set:', range, currentDateFilter);
         }
         
-        function showError(message) {
-            const errorDiv = document.getElementById('errorMsg');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
+        // Auto-trigger search
+        search();
+    }
+    
+    function toggleCustomDateRange() {
+        const customSection = document.getElementById('customDateRange');
+        const isVisible = customSection.classList.contains('show');
+        
+        // Clear other active states
+        document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
+        
+        if (!isVisible) {
+            customSection.classList.add('show');
+            event.target.classList.add('active');
+        } else {
+            customSection.classList.remove('show');
+        }
+    }
+    
+    function applyCustomDateRange() {
+        const fromDate = document.getElementById('customDateFrom').value;
+        const toDate = document.getElementById('customDateTo').value;
+        
+        if (!fromDate || !toDate) {
+            alert('Please select both start and end dates');
+            return;
         }
         
-        function downloadTableCSV() {
-            downloadCSV(currentResults);
-        }
+        currentDateFilter = {
+            column: 'sale_date',
+            operator: 'between',
+            value: fromDate,
+            value2: toDate
+        };
         
-        function sortTable(column) {
-            if (sortColumn === column) {
-                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortColumn = column;
-                sortDirection = 'asc';
-            }
-            
-            document.querySelectorAll('th.sortable').forEach(th => {
-                th.classList.remove('sort-asc', 'sort-desc');
+        console.log('Custom date range set:', currentDateFilter);
+        
+        // Auto-trigger search
+        search();
+    }
+    
+    function addFilter() {
+        const filterId = `filter_${filterCount++}`;
+        const filtersList = document.getElementById('filtersList');
+        
+        const filterDiv = document.createElement('div');
+        filterDiv.className = 'filter-row';
+        filterDiv.id = filterId;
+        
+        filterDiv.innerHTML = `
+            <select class="filter-column" onchange="updateFilterOperators('${filterId}')">
+                <option value="">Select Column</option>
+                ${columns.map(col => `<option value="${col.name}" data-type="${col.type}">${col.label}</option>`).join('')}
+            </select>
+            <select class="filter-operator">
+                <option value="">Select Operator</option>
+            </select>
+            <input type="text" class="filter-value" placeholder="Value">
+            <input type="text" class="filter-value2" placeholder="Value 2" style="display:none;">
+            <button class="remove-filter" onclick="removeFilter('${filterId}')">Remove</button>
+        `;
+        
+        filtersList.appendChild(filterDiv);
+    }
+    
+    function updateFilterOperators(filterId) {
+        const filterDiv = document.getElementById(filterId);
+        const columnSelect = filterDiv.querySelector('.filter-column');
+        const operatorSelect = filterDiv.querySelector('.filter-operator');
+        const valueInput = filterDiv.querySelector('.filter-value');
+        const value2Input = filterDiv.querySelector('.filter-value2');
+        
+        const selectedOption = columnSelect.options[columnSelect.selectedIndex];
+        const columnType = selectedOption.getAttribute('data-type');
+        
+        operatorSelect.innerHTML = '<option value="">Select Operator</option>';
+        value2Input.style.display = 'none';
+        
+        if (columnType && operators[columnType]) {
+            operators[columnType].forEach(op => {
+                const option = document.createElement('option');
+                option.value = op.value;
+                option.textContent = op.label;
+                operatorSelect.appendChild(option);
             });
-            const header = document.querySelector(`th[data-column="${column}"]`);
-            if (header) {
-                header.classList.add(`sort-${sortDirection}`);
-            }
-            
-            const sorted = [...currentResults].sort((a, b) => {
-                let aVal = a[column];
-                let bVal = b[column];
-                
-                if (aVal == null) aVal = '';
-                if (bVal == null) bVal = '';
-                
-                if (column === 'price' || column === 'bales' || column === 'kg' || 
-                    column === 'colour' || column === 'micron' || column === 'yield' || 
-                    column === 'vegetable_matter') {
-                    aVal = parseFloat(aVal) || 0;
-                    bVal = parseFloat(bVal) || 0;
-                }
-                
-                if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-                if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-                return 0;
-            });
-            
-            displayResults({ count: sorted.length, results: sorted });
         }
         
-        async function saveCurrentSearch() {
-            const filters = getFilters();
-            const name = prompt('Enter a name for this search:');
+        if (columnType === 'number') {
+            valueInput.type = 'number';
+            valueInput.step = '0.1';
+            value2Input.type = 'number';
+            value2Input.step = '0.1';
+        } else if (columnType === 'date') {
+            valueInput.type = 'date';
+            value2Input.type = 'date';
+        } else {
+            valueInput.type = 'text';
+            value2Input.type = 'text';
+        }
+        
+        operatorSelect.onchange = function() {
+            value2Input.style.display = this.value === 'between' ? 'block' : 'none';
+        };
+    }
+    
+    function removeFilter(filterId) {
+        document.getElementById(filterId).remove();
+    }
+    
+    function getFilters() {
+        const filters = {};
+        
+        const woolType = document.getElementById('wool_type').value.trim();
+        if (woolType) filters.wool_type_search = woolType;
+        
+        filters.column_filters = [];
+        
+        // Add date range filter if set
+        if (currentDateFilter) {
+            filters.column_filters.push(currentDateFilter);
+        }
+        
+        // Add user-defined filters
+        const filterRows = document.querySelectorAll('.filter-row');
+        filterRows.forEach(row => {
+            const column = row.querySelector('.filter-column').value;
+            const operator = row.querySelector('.filter-operator').value;
+            const value = row.querySelector('.filter-value').value;
+            const value2 = row.querySelector('.filter-value2').value;
             
-            if (!name) return;
-            
-            let savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
-            
-            savedSearches.push({
-                id: Date.now(),
-                name: name,
-                filters: filters,
-                page: 'simple',
-                created: new Date().toISOString()
-            });
-            
-            localStorage.setItem('fusca_saved_searches', JSON.stringify(savedSearches));
-            
-            try {
-                await fetch('/api/log_saved_search', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: name, filters: filters })
+            if (column && operator && value) {
+                filters.column_filters.push({
+                    column,
+                    operator,
+                    value,
+                    value2: operator === 'between' ? value2 : null
                 });
-            } catch (e) {
-                console.warn('Failed to log saved search:', e);
             }
-            
-            renderSavedSearches();
-            console.log('Search saved:', name);
+        });
+        
+        return filters;
+    }
+    
+    async function search() {
+        // Prevent concurrent searches
+        if (isSearching) {
+            console.log('Search already in progress, skipping...');
+            return;
         }
         
-        function loadSavedSearch(searchId) {
-            const savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
-            const savedSearch = savedSearches.find(s => s.id === searchId);
+        isSearching = true;
+        
+        const filters = getFilters();
+        
+        console.log('Searching with filters:', filters);
+        
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('resultsSection').style.display = 'none';
+        document.getElementById('chartSection').style.display = 'none';
+        document.getElementById('balesChartSection').style.display = 'none';
+        document.getElementById('errorMsg').style.display = 'none';
+        document.getElementById('searchBtn').disabled = true;
+        
+        try {
+            // Fetch price chart
+            console.log('Fetching price chart...');
+            const chartResponse = await fetch('/api/price_chart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(filters)
+            });
             
-            if (!savedSearch || savedSearch.page !== 'simple') return;
+            if (chartResponse.ok) {
+                const chartData = await chartResponse.json();
+                if (!chartData.error) {
+                    displayChart(chartData);
+                }
+            }
             
-            document.getElementById('filtersList').innerHTML = '';
-            filterCount = 0;
+            await new Promise(resolve => setTimeout(resolve, 500));
             
-            document.getElementById('wool_type').value = savedSearch.filters.wool_type_search || '';
+            // Fetch bales chart
+            console.log('Fetching bales chart...');
+            const balesResponse = await fetch('/api/bales_chart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(filters)
+            });
             
-            if (savedSearch.filters.column_filters) {
-                savedSearch.filters.column_filters.forEach(filter => {
-                    if (filter.column === 'sale_date') {
-                        currentDateFilter = filter;
-                    } else {
-                        addFilter();
-                        const lastFilter = document.getElementById('filtersList').lastElementChild;
-                        lastFilter.querySelector('.filter-column').value = filter.column;
-                        updateFilterOperators(lastFilter.id);
-                        lastFilter.querySelector('.filter-operator').value = filter.operator;
-                        lastFilter.querySelector('.filter-value').value = filter.value;
-                        if (filter.value2) {
-                            lastFilter.querySelector('.filter-value2').value = filter.value2;
-                            lastFilter.querySelector('.filter-value2').style.display = 'block';
+            if (balesResponse.ok) {
+                const balesData = await balesResponse.json();
+                if (!balesData.error) {
+                    displayBalesChart(balesData);
+                }
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Fetch results
+            console.log('Fetching search results...');
+            const resultsResponse = await fetch('/api/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(filters)
+            });
+            
+            if (!resultsResponse.ok) {
+                throw new Error(`Server error: ${resultsResponse.status}`);
+            }
+            
+            const resultsData = await resultsResponse.json();
+            
+            if (resultsData.error) {
+                throw new Error(resultsData.error);
+            }
+            
+            displayResults(resultsData);
+            
+        } catch (error) {
+            console.error('Search error:', error);
+            showError('Search failed: ' + error.message);
+        } finally {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('searchBtn').disabled = false;
+            isSearching = false;
+        }
+    }
+    
+    function displayResults(data) {
+        const tbody = document.getElementById('resultsTable');
+        tbody.innerHTML = '';
+        
+        currentResults = data.results;
+        
+        document.getElementById('resultsCount').textContent = `Found ${data.count} results`;
+        document.getElementById('resultsSection').style.display = 'block';
+        
+        data.results.forEach(row => {
+            const priceInDollars = row.price / 100;
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.sale_date || '-'}</td>
+                <td>${row.lot_number ? row.lot_number.trim() : '-'}</td>
+                <td>${row.type_combined || '-'}</td>
+                <td style="font-weight: 600;">$${priceInDollars.toFixed(2)}</td>
+                <td>${row.bales}</td>
+                <td>${row.kg.toLocaleString()}</td>
+                <td>${row.colour ? row.colour.toFixed(1) : '-'}</td>
+                <td>${row.micron ? row.micron.toFixed(1) : '-'}</td>
+                <td>${row.yield ? row.yield.toFixed(1) : '-'}</td>
+                <td>${row.vegetable_matter ? row.vegetable_matter.toFixed(1) : '-'}</td>
+                <td>${row.location || '-'}</td>
+                <td>${row.seller_name || '-'}</td>
+                <td>${row.farm_brand_name || '-'}</td>
+                <td>${row.is_sold ? '✓' : '✗'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+    
+    function displayChart(data) {
+        document.getElementById('chartSection').style.display = 'block';
+        
+        // Store data for MA updates
+        currentChartData = data;
+        
+        // Display statistics
+        if (data.statistics) {
+            document.getElementById('statsSection').innerHTML = formatStats(data.statistics);
+        }
+        
+        // Draw the chart
+        updateChart();
+    }
+    
+    function updateChart() {
+        if (!currentChartData) return;
+        
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        
+        if (priceChart) {
+            priceChart.destroy();
+        }
+        
+        const datasets = [{
+            label: 'Volume-Weighted Avg Price',
+            data: currentChartData.data,
+            borderColor: '#3D7F4B',
+            backgroundColor: 'rgba(61, 127, 75, 0.1)',
+            borderWidth: 2,
+            tension: 0.1,
+            fill: true,
+            order: 1
+        }];
+        
+        // Add moving averages if checked
+        if (document.getElementById('ma30').checked) {
+            datasets.push({
+                label: '30-day MA',
+                data: calculateMovingAverage(currentChartData.data, 30),
+                borderColor: '#FF9800',
+                borderWidth: 1.5,
+                borderDash: [5, 5],
+                tension: 0.1,
+                fill: false,
+                order: 2,
+                pointRadius: 0
+            });
+        }
+        
+        if (document.getElementById('ma90').checked) {
+            datasets.push({
+                label: '90-day MA',
+                data: calculateMovingAverage(currentChartData.data, 90),
+                borderColor: '#9C27B0',
+                borderWidth: 1.5,
+                borderDash: [5, 5],
+                tension: 0.1,
+                fill: false,
+                order: 3,
+                pointRadius: 0
+            });
+        }
+        
+        if (document.getElementById('ma180').checked) {
+            datasets.push({
+                label: '180-day MA',
+                data: calculateMovingAverage(currentChartData.data, 180),
+                borderColor: '#2196F3',
+                borderWidth: 1.5,
+                borderDash: [5, 5],
+                tension: 0.1,
+                fill: false,
+                order: 4,
+                pointRadius: 0
+            });
+        }
+        
+        priceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: currentChartData.labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
+                            }
                         }
                     }
-                });
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Price ($)' },
+                        ticks: { callback: function(value) { return '$' + value; } }
+                    },
+                    x: {
+                        title: { display: true, text: 'Sale Date' },
+                        ticks: { maxRotation: 45, minRotation: 45, maxTicksLimit: 20 }
+                    }
+                }
             }
-            
-            search();
+        });
+    }
+    
+    function displayBalesChart(data) {
+        document.getElementById('balesChartSection').style.display = 'block';
+        
+        const ctx = document.getElementById('balesChart').getContext('2d');
+        
+        if (balesChart) {
+            balesChart.destroy();
         }
         
-        function deleteSavedSearch(searchId) {
-            if (!confirm('Delete this saved search?')) return;
-            
-            let savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
-            savedSearches = savedSearches.filter(s => s.id !== searchId);
-            localStorage.setItem('fusca_saved_searches', JSON.stringify(savedSearches));
-            
-            renderSavedSearches();
+        balesChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Total Bales',
+                    data: data.data,
+                    backgroundColor: '#3D7F4B',
+                    borderColor: '#153D33',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Total Bales: ' + context.parsed.y.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Total Bales' },
+                        ticks: { callback: function(value) { return value.toLocaleString(); } }
+                    },
+                    x: {
+                        title: { display: true, text: 'Sale Date' },
+                        ticks: { maxRotation: 45, minRotation: 45, maxTicksLimit: 20 }
+                    }
+                }
+            }
+        });
+    }
+    
+    function resetFilters() {
+        document.getElementById('wool_type').value = '';
+        document.getElementById('filtersList').innerHTML = '';
+        filterCount = 0;
+        currentDateFilter = null;
+        
+        // Clear date range buttons
+        document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('customDateRange').classList.remove('show');
+        
+        document.getElementById('resultsSection').style.display = 'none';
+        document.getElementById('chartSection').style.display = 'none';
+        document.getElementById('balesChartSection').style.display = 'none';
+        document.getElementById('errorMsg').style.display = 'none';
+    }
+    
+    function showError(message) {
+        const errorDiv = document.getElementById('errorMsg');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+    
+    function downloadTableCSV() {
+        downloadCSV(currentResults);
+    }
+    
+    function sortTable(column) {
+        if (sortColumn === column) {
+            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortColumn = column;
+            sortDirection = 'asc';
         }
         
-        function renderSavedSearches() {
-            const savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
-            const simpleSearches = savedSearches.filter(s => s.page === 'simple' || !s.page);
-            const container = document.getElementById('savedSearchesList');
-            const section = document.getElementById('savedSearchesSection');
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc');
+        });
+        const header = document.querySelector(`th[data-column="${column}"]`);
+        if (header) {
+            header.classList.add(`sort-${sortDirection}`);
+        }
+        
+        const sorted = [...currentResults].sort((a, b) => {
+            let aVal = a[column];
+            let bVal = b[column];
             
-            if (simpleSearches.length === 0) {
-                section.style.display = 'none';
-                return;
+            if (aVal == null) aVal = '';
+            if (bVal == null) bVal = '';
+            
+            if (column === 'price' || column === 'bales' || column === 'kg' || 
+                column === 'colour' || column === 'micron' || column === 'yield' || 
+                column === 'vegetable_matter') {
+                aVal = parseFloat(aVal) || 0;
+                bVal = parseFloat(bVal) || 0;
             }
             
-            section.style.display = 'block';
-            container.innerHTML = '';
-            
-            simpleSearches.forEach(search => {
-                const item = document.createElement('div');
-                item.className = 'saved-search-item';
-                item.innerHTML = `
-                    <span onclick="loadSavedSearch(${search.id})">${search.name}</span>
-                    <span class="delete-btn" onclick="event.stopPropagation(); deleteSavedSearch(${search.id})">✕</span>
-                `;
-                container.appendChild(item);
+            if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+        
+        displayResults({ count: sorted.length, results: sorted });
+    }
+    
+    // Saved searches functionality
+    async function saveCurrentSearch() {
+        const filters = getFilters();
+        const name = prompt('Enter a name for this search:');
+        
+        if (!name) return;
+        
+        let savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+        
+        savedSearches.push({
+            id: Date.now(),
+            name: name,
+            filters: filters,
+            page: 'simple',
+            created: new Date().toISOString()
+        });
+        
+        localStorage.setItem('fusca_saved_searches', JSON.stringify(savedSearches));
+        
+        try {
+            await fetch('/api/log_saved_search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, filters: filters })
+            });
+        } catch (e) {
+            console.warn('Failed to log saved search:', e);
+        }
+        
+        renderSavedSearches();
+        console.log('Search saved:', name);
+    }
+    
+    function loadSavedSearch(searchId) {
+        const savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+        const savedSearch = savedSearches.find(s => s.id === searchId);
+        
+        if (!savedSearch || savedSearch.page !== 'simple') return;
+        
+        document.getElementById('filtersList').innerHTML = '';
+        filterCount = 0;
+        
+        document.getElementById('wool_type').value = savedSearch.filters.wool_type_search || '';
+        
+        if (savedSearch.filters.column_filters) {
+            savedSearch.filters.column_filters.forEach(filter => {
+                if (filter.column === 'sale_date') {
+                    // Set date filter
+                    currentDateFilter = filter;
+                } else {
+                    addFilter();
+                    const lastFilter = document.getElementById('filtersList').lastElementChild;
+                    lastFilter.querySelector('.filter-column').value = filter.column;
+                    updateFilterOperators(lastFilter.id);
+                    lastFilter.querySelector('.filter-operator').value = filter.operator;
+                    lastFilter.querySelector('.filter-value').value = filter.value;
+                    if (filter.value2) {
+                        lastFilter.querySelector('.filter-value2').value = filter.value2;
+                        lastFilter.querySelector('.filter-value2').style.display = 'block';
+                    }
+                }
             });
         }
         
-        console.log('Simple search ready');
+        search();
+    }
+    
+    function deleteSavedSearch(searchId) {
+        if (!confirm('Delete this saved search?')) return;
+        
+        let savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+        savedSearches = savedSearches.filter(s => s.id !== searchId);
+        localStorage.setItem('fusca_saved_searches', JSON.stringify(savedSearches));
+        
         renderSavedSearches();
-    </script>
-</body>
-</html>
+    }
+    
+    function renderSavedSearches() {
+        const savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+        const simpleSearches = savedSearches.filter(s => s.page === 'simple' || !s.page);
+        const container = document.getElementById('savedSearchesList');
+        const section = document.getElementById('savedSearchesSection');
+        
+        if (simpleSearches.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+        
+        section.style.display = 'block';
+        container.innerHTML = '';
+        
+        simpleSearches.forEach(search => {
+            const item = document.createElement('div');
+            item.className = 'saved-search-item';
+            item.innerHTML = `
+                <span onclick="loadSavedSearch(${search.id})">${search.name}</span>
+                <span class="delete-btn" onclick="event.stopPropagation(); deleteSavedSearch(${search.id})">✕</span>
+            `;
+            container.appendChild(item);
+        });
+    }
+    
+    console.log('Simple search ready');
+    renderSavedSearches();
+</script>
+{% endblock %}

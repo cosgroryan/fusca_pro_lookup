@@ -1,344 +1,348 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex, nofollow">
-    <title>Advanced Blends - Fusca Pro Lookup</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=3.0">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <style>
-        .blend-mode-section {
-            background: #f0f8f0;
-            border: 1px solid #3D7F4B;
-            border-radius: 4px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-        
+{% extends "base.html" %}
+
+{% set hide_nav = True %}
+
+{% block title %}Advanced Blends - Fusca Pro Lookup{% endblock %}
+
+{% block styles %}
+<style>
+    .blend-mode-section {
+        background: #f0f8f0;
+        border: 1px solid #3D7F4B;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .blend-item {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .blend-item-header {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .blend-item label {
+        font-weight: 600;
+        color: #153D33;
+        min-width: 100px;
+        margin-bottom: 0;
+    }
+    
+    .blend-item input[type="number"] {
+        width: 80px;
+    }
+    
+    .blend-filters {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #ddd;
+    }
+    
+    .blend-filter-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 12px;
+    }
+    
+    .blend-filter-row select, .blend-filter-row input {
+        height: 32px;
+        font-size: 12px;
+        padding: 6px;
+    }
+    
+    .add-blend-filter-btn {
+        background: #17a2b8;
+        color: white;
+        border: none;
+        padding: 5px 12px;
+        border-radius: 3px;
+        font-size: 12px;
+        cursor: pointer;
+        height: 28px;
+    }
+    
+    .add-blend-filter-btn:hover {
+        background: #138496;
+    }
+    
+    .remove-blend-filter-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        font-size: 12px;
+        cursor: pointer;
+        height: 28px;
+    }
+    
+    .remove-blend-filter-btn:hover {
+        background: #c82333;
+    }
+    
+    .apply-to-all-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        font-size: 12px;
+        cursor: pointer;
+        height: 28px;
+    }
+    
+    .apply-to-all-btn:hover {
+        background: #218838;
+    }
+    
+    .help-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #9C4DB5;
+        color: white;
+        font-size: 11px;
+        font-weight: bold;
+        cursor: help;
+        margin-left: 6px;
+        position: relative;
+        vertical-align: middle;
+        opacity: 0.5;
+        transition: opacity 0.2s;
+    }
+    
+    .help-icon:hover {
+        background: #7B1FA2;
+        opacity: 1;
+    }
+    
+    .tooltip {
+        position: absolute;
+        background: #f5f0e8;
+        color: #333;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        line-height: 1.6;
+        width: 360px;
+        max-width: 90vw;
+        left: 24px;
+        top: 100%;
+        margin-top: 8px;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        border: 1px solid #d4c5a9;
+        display: none;
+        font-weight: normal;
+        pointer-events: none;
+    }
+    
+    .help-icon:hover .tooltip,
+    .tooltip:hover {
+        display: block;
+        pointer-events: auto;
+    }
+    
+    .help-icon:hover .tooltip {
+        pointer-events: auto;
+    }
+    
+    .tooltip strong {
+        color: #3D7F4B;
+        display: block;
+        margin-top: 10px;
+        margin-bottom: 4px;
+        font-weight: 600;
+    }
+    
+    .tooltip strong:first-child {
+        margin-top: 0;
+    }
+    
+    .tooltip code {
+        background: rgba(61, 127, 75, 0.1);
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        color: #153D33;
+        border: 1px solid rgba(61, 127, 75, 0.2);
+    }
+    
+    /* Mobile */
+    @media (max-width: 768px) {
         .blend-item {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        
-        .blend-item-header {
-            display: flex;
-            gap: 10px;
-            align-items: center;
+            padding: 10px;
             margin-bottom: 10px;
         }
         
+        .blend-item-header {
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
         .blend-item label {
-            font-weight: 600;
-            color: #153D33;
-            min-width: 100px;
-            margin-bottom: 0;
+            min-width: auto;
+            width: 100%;
         }
         
         .blend-item input[type="number"] {
-            width: 80px;
-        }
-        
-        .blend-filters {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid #ddd;
+            width: 100%;
+            box-sizing: border-box;
         }
         
         .blend-filter-row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 8px;
-            font-size: 12px;
+            flex-direction: column;
+            gap: 6px;
+            align-items: stretch;
         }
         
-        .blend-filter-row select, .blend-filter-row input {
-            height: 32px;
-            font-size: 12px;
-            padding: 6px;
+        .blend-filter-row select,
+        .blend-filter-row input,
+        .blend-filter-row button {
+            width: 100%;
+            margin: 0;
+            box-sizing: border-box;
         }
         
         .add-blend-filter-btn {
-            background: #17a2b8;
-            color: white;
-            border: none;
-            padding: 5px 12px;
-            border-radius: 3px;
-            font-size: 12px;
-            cursor: pointer;
-            height: 28px;
+            width: 100%;
         }
         
-        .add-blend-filter-btn:hover {
-            background: #138496;
-        }
-        
-        .remove-blend-filter-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 12px;
-            cursor: pointer;
-            height: 28px;
-        }
-        
-        .remove-blend-filter-btn:hover {
-            background: #c82333;
-        }
-        
-        .apply-to-all-btn {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 12px;
-            cursor: pointer;
-            height: 28px;
-        }
-        
-        .apply-to-all-btn:hover {
-            background: #218838;
-        }
-        
+        /* Tooltip mobile fix */
         .help-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: #9C4DB5;
-            color: white;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: help;
-            margin-left: 6px;
-            position: relative;
-            vertical-align: middle;
-            opacity: 0.5;
-            transition: opacity 0.2s;
-        }
-        
-        .help-icon:hover {
-            background: #7B1FA2;
-            opacity: 1;
+            width: 14px;
+            height: 14px;
+            font-size: 10px;
         }
         
         .tooltip {
-            position: absolute;
-            background: #f5f0e8;
-            color: #333;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            line-height: 1.6;
-            width: 360px;
-            max-width: 90vw;
-            left: 24px;
-            top: 100%;
-            margin-top: 8px;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-            border: 1px solid #d4c5a9;
-            display: none;
-            font-weight: normal;
-            pointer-events: none;
-        }
-        
-        .help-icon:hover .tooltip,
-        .tooltip:hover {
-            display: block;
-            pointer-events: auto;
-        }
-        
-        .tooltip strong {
-            color: #3D7F4B;
-            display: block;
-            margin-top: 10px;
-            margin-bottom: 4px;
-            font-weight: 600;
-        }
-        
-        .tooltip strong:first-child {
-            margin-top: 0;
+            position: fixed;
+            left: 10px !important;
+            right: 10px !important;
+            bottom: auto !important;
+            top: 50% !important;
+            transform: translateY(-50%);
+            width: auto !important;
+            max-width: none;
+            font-size: 11px;
+            padding: 10px;
         }
         
         .tooltip code {
-            background: rgba(61, 127, 75, 0.1);
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            color: #153D33;
-            border: 1px solid rgba(61, 127, 75, 0.2);
+            font-size: 10px;
         }
-        
-        @media (max-width: 768px) {
-            .blend-item {
-                padding: 10px;
-                margin-bottom: 10px;
-            }
-            
-            .blend-item-header {
-                flex-wrap: wrap;
-                gap: 6px;
-            }
-            
-            .blend-item label {
-                min-width: auto;
-                width: 100%;
-            }
-            
-            .blend-item input[type="number"] {
-                width: 100%;
-                box-sizing: border-box;
-            }
-            
-            .blend-filter-row {
-                flex-direction: column;
-                gap: 6px;
-                align-items: stretch;
-            }
-            
-            .blend-filter-row select,
-            .blend-filter-row input,
-            .blend-filter-row button {
-                width: 100%;
-                margin: 0;
-                box-sizing: border-box;
-            }
-            
-            .add-blend-filter-btn {
-                width: 100%;
-            }
-            
-            .help-icon {
-                width: 14px;
-                height: 14px;
-                font-size: 10px;
-            }
-            
-            .tooltip {
-                position: fixed;
-                left: 10px !important;
-                right: 10px !important;
-                bottom: auto !important;
-                top: 50% !important;
-                transform: translateY(-50%);
-                width: auto !important;
-                max-width: none;
-                font-size: 11px;
-                padding: 10px;
-            }
-            
-            .tooltip code {
-                font-size: 10px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container" style="margin-top: 0; padding: 16px;">
-        <!-- Saved Blend Searches -->
-        <div class="saved-searches-section" id="savedSearchesSection" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin: 0; color: #153D33; font-size: 13px;">Saved Blends</h3>
-            </div>
-            <div id="savedSearchesList"></div>
-        </div>
+    }
+</style>
+{% endblock %}
 
-        <!-- Blend Setup -->
-        <div class="search-section" style="background: #e8f5e9; border: 2px solid #3D7F4B;">
-            <h2 style="margin-bottom: 12px; color: #153D33; font-size: 14px;">
-                Create Advanced Blend
-                <span class="help-icon">
-                    ?
-                    <div class="tooltip">
-                        <strong>How it works:</strong>
-                        Create weighted averages of multiple wool types with custom filters for each.
-                        
-                        <strong>Basic Syntax:</strong>
-                        Enter wool types separated by commas<br>
-                        <code>F2N, F3D, C3G</code>
-                        
-                        <strong>Grouping Similar Types:</strong>
-                        Use parentheses to group types into one averaged line<br>
-                        <code>F3D, (C3G, C4G, C3D), F2E</code><br>
-                        Groups C3G, C4G, and C3D as one blended type.
-                        
-                        <strong>Examples:</strong>
-                        <code>F2N, F3D</code> - Blend 2 types<br>
-                        <code>(F2D, F3D), (C3G, C4G)</code> - Blend 2 groups<br>
-                        <code>F2N, (C3G, C2G, C4E), F4E</code> - Mix singles & groups
-                    </div>
-                </span>
-            </h2>
-            
-            <div class="search-group">
-                <label for="compareTypes">Enter wool types or groups (comma-separated)</label>
-                <div class="search-bar">
-                    <input type="text" id="compareTypes" placeholder="e.g. F2N, (C3G, C4G), F3D">
-                    <button onclick="setupBlend()" style="background: #7B1FA2;">Setup Blend</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Blend Configuration -->
-        <div class="blend-mode-section" id="blendModeSection" style="display: none;">
-            <h3 style="margin-top: 0; color: #153D33; font-size: 13px;">Weighted Blend Settings</h3>
-            <p style="margin-bottom: 12px; color: #666; font-size: 12px;">
-                Adjust weights and add custom filters for each entry. The final chart shows a weighted average plus individual lines.
-            </p>
-            
-            <!-- Date Range -->
-            <div class="date-range-buttons">
-                <span style="font-weight: 600; color: #153D33; font-size: 12px;">Date Range:</span>
-                <button class="date-range-btn" onclick="setDateRange('6m')">6 Months</button>
-                <button class="date-range-btn" onclick="setDateRange('1y')">1 Year</button>
-                <button class="date-range-btn" onclick="setDateRange('3y')">3 Years</button>
-                <button class="date-range-btn" onclick="toggleCustomDateRange()">Custom</button>
-                <div class="date-range-custom" id="customDateRange">
-                    <label style="font-size: 12px; margin: 0;">From:</label>
-                    <input type="date" id="customDateFrom" />
-                    <label style="font-size: 12px; margin: 0;">To:</label>
-                    <input type="date" id="customDateTo" />
-                    <button class="date-range-btn" style="background: #3D7F4B;" onclick="applyCustomDateRange()">Apply</button>
-                </div>
-            </div>
-            
-            <div id="blendWeights"></div>
-            
-            <div style="display: flex; justify-content: space-between; margin-top: 15px;">
-                <button onclick="applyBlendedCompare()" style="background: #7B1FA2;">Apply Blend</button>
-                <button onclick="saveBlendSearch()" style="background: #7B1FA2;">Save Blend</button>
-            </div>
-        </div>
-
-        <!-- Blend Chart -->
-        <div class="chart-section" id="compareChartSection" style="display: none;">
-            <div class="module-header">
-                <h2 style="color: #153D33; font-size: 14px;">Blended Price Comparison (Volume-Weighted)</h2>
-                <button class="hide-btn" onclick="toggleModule('compareChart')">Hide</button>
-            </div>
-            <div id="compareChartContent" class="module-content">
-                <div class="chart-container">
-                    <canvas id="compareChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div id="errorMsg" class="error" style="display: none;"></div>
-        <div id="loading" class="loading" style="display: none;">Loading...</div>
+{% block content %}
+<!-- Saved Blend Searches -->
+<div class="saved-searches-section" id="savedSearchesSection" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="margin: 0; color: #153D33; font-size: 13px;">Saved Blends</h3>
     </div>
+    <div id="savedSearchesList"></div>
+</div>
 
-    <script src="{{ url_for('static', filename='js/common.js') }}?v=2.1"></script>
-    <script src="{{ url_for('static', filename='js/blends.js') }}?v=2.0"></script>
-</body>
-</html>
+<!-- Blend Setup -->
+<div class="search-section" style="background: #e8f5e9; border: 2px solid #3D7F4B;">
+    <h2 style="margin-bottom: 12px; color: #153D33; font-size: 14px;">
+        ✨ Create Advanced Blend
+        <span class="help-icon">
+            ?
+            <div class="tooltip">
+                <strong>How it works:</strong>
+                Create weighted averages of multiple wool types with custom filters for each.
+                
+                <strong>Basic Syntax:</strong>
+                Enter wool types separated by commas<br>
+                <code>F2N, F3D, C3G</code>
+                
+                <strong>Grouping Similar Types:</strong>
+                Use parentheses to group types into one averaged line<br>
+                <code>F3D, (C3G, C4G, C3D), F2E</code><br>
+                Groups C3G, C4G, and C3D as one blended type.
+                
+                <strong>Examples:</strong>
+                <code>F2N, F3D</code> - Blend 2 types<br>
+                <code>(F2D, F3D), (C3G, C4G)</code> - Blend 2 groups<br>
+                <code>F2N, (C3G, C2G, C4E), F4E</code> - Mix singles & groups
+            </div>
+        </span>
+    </h2>
+    
+    <div class="search-group">
+        <label for="compareTypes">Enter wool types or groups (comma-separated)</label>
+        <div class="search-bar">
+            <input type="text" id="compareTypes" placeholder="e.g. F2N, (C3G, C4G), F3D">
+            <button onclick="setupBlend()" style="background: #7B1FA2;">Setup Blend</button>
+        </div>
+    </div>
+</div>
+
+<!-- Blend Configuration -->
+<div class="blend-mode-section" id="blendModeSection" style="display: none;">
+    <h3 style="margin-top: 0; color: #153D33; font-size: 13px;">Weighted Blend Settings</h3>
+    <p style="margin-bottom: 12px; color: #666; font-size: 12px;">
+        Adjust weights and add custom filters for each entry. The final chart shows a weighted average plus individual lines.
+    </p>
+    
+    <!-- Date Range -->
+    <div class="date-range-buttons">
+        <span style="font-weight: 600; color: #153D33; font-size: 12px;">Date Range:</span>
+        <button class="date-range-btn" onclick="setDateRange('6m')">6 Months</button>
+        <button class="date-range-btn" onclick="setDateRange('1y')">1 Year</button>
+        <button class="date-range-btn" onclick="setDateRange('3y')">3 Years</button>
+        <button class="date-range-btn" onclick="toggleCustomDateRange()">Custom</button>
+        <div class="date-range-custom" id="customDateRange">
+            <label style="font-size: 12px; margin: 0;">From:</label>
+            <input type="date" id="customDateFrom" />
+            <label style="font-size: 12px; margin: 0;">To:</label>
+            <input type="date" id="customDateTo" />
+            <button class="date-range-btn" style="background: #3D7F4B;" onclick="applyCustomDateRange()">Apply</button>
+        </div>
+    </div>
+    
+    <div id="blendWeights"></div>
+    
+    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+        <button onclick="applyBlendedCompare()" style="background: #7B1FA2;">Apply Blend</button>
+        <button onclick="saveBlendSearch()" style="background: #7B1FA2;">Save Blend</button>
+    </div>
+</div>
+
+<!-- Blend Chart -->
+<div class="chart-section" id="compareChartSection" style="display: none;">
+    <div class="module-header">
+        <h2 style="color: #153D33; font-size: 14px;">Blended Price Comparison (Volume-Weighted)</h2>
+        <button class="hide-btn" onclick="toggleModule('compareChart')">Hide</button>
+    </div>
+    <div id="compareChartContent" class="module-content">
+        <div class="chart-container">
+            <canvas id="compareChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div id="errorMsg" class="error" style="display: none;"></div>
+<div id="loading" class="loading" style="display: none;">Loading...</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/blends.js') }}?v=2.0"></script>
+{% endblock %}
