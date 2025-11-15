@@ -455,13 +455,7 @@
             transition: background 0.3s;
         }
         
-        .date-range-btn:hover {
-            background: #444;
-        }
-        
-        .date-range-btn.active {
-            background: #3D7F4B;
-        }
+        /* Date range button styles moved to styles.css */
         
         .date-range-custom {
             display: none;
@@ -1107,7 +1101,7 @@
                 <div class="search-bar">
                     <input type="text" id="wool_type" placeholder="e.g. F2N, 1, MULTI... (leave blank for all)">
                     <button onclick="search()" id="searchBtn">Search</button>
-                    <button onclick="saveCurrentSearch()" class="save-search-btn">💾 Save Search</button>
+                    <button onclick="saveCurrentSearch()" class="save-search-btn">Save Search</button>
                     <button onclick="resetFilters()" style="background: #666;">Reset</button>
                 </div>
             </div>
@@ -1123,7 +1117,7 @@
         
         <div class="search-section" style="background: #e8f5e9; border: 2px solid #3D7F4B;">
             <h2 style="margin-bottom: 12px; color: #153D33; font-size: 14px;">
-                🔍 Compare Wool Types
+                Compare Wool Types
                 <span class="help-icon">
                     ?
                     <div class="tooltip">
@@ -1185,7 +1179,7 @@
                     <div id="blendWeights"></div>
                     <div style="display: flex; justify-content: space-between; margin-top: 15px;">
                         <button onclick="applyBlendedCompare()" style="background: #7B1FA2;">Apply Blend</button>
-                        <button onclick="saveBlendSearch()" style="background: #7B1FA2;">💾 Save Blend</button>
+                        <button onclick="saveBlendSearch()" style="background: #7B1FA2;">Save Blend</button>
                     </div>
                 </div>
             </div>
@@ -1233,7 +1227,7 @@
             <div class="module-header" style="background: #e8f5e9; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
                 <span class="results-count" id="resultsCount" style="font-weight: 600; color: #153D33; font-size: 13px;">-</span>
                 <div style="display: flex; gap: 15px; align-items: center;">
-                    <button class="download-csv-btn" onclick="downloadCSV()" id="downloadBtn">📥 Download CSV</button>
+                    <button class="download-csv-btn" onclick="downloadCSV()" id="downloadBtn">Download CSV</button>
                     <span style="color: #666; font-size: 11px;">Showing up to 1,000 results</span>
                     <button class="hide-btn" onclick="toggleModule('resultsTable')">Hide</button>
                 </div>

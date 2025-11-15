@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // ==================== DISTRIBUTION ANALYSIS ====================
 
 async function runDistributionAnalysis() {
+    setButtonLoading('dist-run-btn', true);
     const variable = document.getElementById('dist-variable').value;
     const startDate = document.getElementById('dist-start-date').value;
     const endDate = document.getElementById('dist-end-date').value;
@@ -68,6 +69,7 @@ async function runDistributionAnalysis() {
         
         const data = await response.json();
         loading.style.display = 'none';
+        setButtonLoading('dist-run-btn', false);
         
         if (data.error) {
             showError(data.error);
@@ -105,6 +107,7 @@ async function runDistributionAnalysis() {
         
     } catch (error) {
         loading.style.display = 'none';
+        setButtonLoading('dist-run-btn', false);
         showError('Failed to run distribution analysis: ' + error.message);
     }
 }
@@ -178,6 +181,7 @@ function generateDistributionInsight(variable, data) {
 // ==================== TIME SERIES ANALYSIS ====================
 
 async function runTimeseriesAnalysis() {
+    setButtonLoading('ts-run-btn', true);
     const select = document.getElementById('ts-variables');
     const variables = Array.from(select.selectedOptions).map(opt => opt.value);
     const aggregation = document.getElementById('ts-aggregation').value;
@@ -187,6 +191,7 @@ async function runTimeseriesAnalysis() {
     const maxMicron = document.getElementById('ts-max-micron').value;
     
     if (variables.length === 0) {
+        setButtonLoading('ts-run-btn', false);
         showError('Please select at least one variable');
         return;
     }
@@ -218,6 +223,7 @@ async function runTimeseriesAnalysis() {
         
         const data = await response.json();
         loading.style.display = 'none';
+        setButtonLoading('ts-run-btn', false);
         
         if (data.error) {
             showError(data.error);
@@ -235,6 +241,7 @@ async function runTimeseriesAnalysis() {
         
     } catch (error) {
         loading.style.display = 'none';
+        setButtonLoading('ts-run-btn', false);
         showError('Failed to run time series analysis: ' + error.message);
     }
 }
@@ -260,8 +267,10 @@ function displayTimeseriesChart(data, variables) {
         'yield': 'Yield (%)'
     };
     
-    const datasets = variables.map(v => {
+    // Create datasets with yAxisID assignments
+    const datasets = variables.map((v, index) => {
         const series = data.series[v];
+        const yAxisID = `y-axis-${index}`;  // Use more explicit ID format
         return {
             label: variableNames[v],
             data: series.values,
@@ -269,7 +278,61 @@ function displayTimeseriesChart(data, variables) {
             backgroundColor: colors[v] + '20',
             borderWidth: 2,
             fill: false,
-            tension: 0.1
+            tension: 0.1,
+            yAxisID: yAxisID  // Assign each dataset to its own axis
+        };
+    });
+    
+    // Create scales configuration with multiple y-axes
+    // Explicitly disable default 'y' axis and only use custom axes
+    const scales = {
+        x: {
+            title: {display: true, text: `Time (${data.aggregation})`}
+        },
+        y: {
+            display: false  // Disable default y-axis - we're using custom ones
+        }
+    };
+    
+    // Track which sides are used to avoid overcrowding
+    let leftCount = 0;
+    let rightCount = 0;
+    
+    // Add a y-axis for each variable, colored to match the series
+    variables.forEach((v, index) => {
+        const yAxisID = `y-axis-${index}`;
+        // Alternate left/right, but limit to 2 per side if we have many variables
+        let position;
+        if (variables.length <= 2) {
+            position = index % 2 === 0 ? 'left' : 'right';
+        } else {
+            // For 3+ variables, alternate but start with left
+            position = index % 2 === 0 ? 'left' : 'right';
+        }
+        
+        scales[yAxisID] = {
+            type: 'linear',
+            position: position,
+            beginAtZero: false,
+            title: {
+                display: true,
+                text: variableNames[v],
+                color: colors[v],
+                font: {weight: 'bold', size: 12}
+            },
+            ticks: {
+                color: colors[v],
+                font: {size: 10}
+            },
+            grid: {
+                color: colors[v] + '30',  // Semi-transparent grid lines
+                drawBorder: true,
+                borderColor: colors[v],
+                borderWidth: 2,
+                lineWidth: 1
+            },
+            // Ensure independent scaling
+            stacked: false
         };
     });
     
@@ -283,19 +346,25 @@ function displayTimeseriesChart(data, variables) {
             responsive: true,
             maintainAspectRatio: true,
             aspectRatio: 2.5,
-            plugins: {
-                legend: {display: true, position: 'top'},
-                tooltip: {mode: 'index', intersect: false}
+            interaction: {
+                mode: 'index',
+                intersect: false
             },
-            scales: {
-                y: {
-                    beginAtZero: false,
-                    title: {display: true, text: 'Value'}
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15
+                    }
                 },
-                x: {
-                    title: {display: true, text: `Time (${data.aggregation})`}
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
                 }
-            }
+            },
+            scales: scales
         }
     });
 }
@@ -307,6 +376,7 @@ function generateTimeseriesInsight(data, variables) {
 // ==================== REGRESSION ANALYSIS ====================
 
 async function runRegressionAnalysis() {
+    setButtonLoading('reg-run-btn', true);
     const startDate = document.getElementById('reg-start-date').value;
     const endDate = document.getElementById('reg-end-date').value;
     const smoothWindow = parseInt(document.getElementById('reg-smooth').value);
@@ -339,6 +409,7 @@ async function runRegressionAnalysis() {
         
         const data = await response.json();
         loading.style.display = 'none';
+        setButtonLoading('reg-run-btn', false);
         
         if (data.error) {
             showError(data.error);
@@ -348,7 +419,7 @@ async function runRegressionAnalysis() {
         // Display summary statistics
         const statsHtml = `
             <div class="stat-card">
-                <div class="stat-label">Weeks Analyzed</div>
+                <div class="stat-label">Weeks Analysed</div>
                 <div class="stat-value">${data.summary.weeks_analyzed}</div>
             </div>
             <div class="stat-card">
@@ -369,6 +440,7 @@ async function runRegressionAnalysis() {
         
     } catch (error) {
         loading.style.display = 'none';
+        setButtonLoading('reg-run-btn', false);
         showError('Failed to run regression analysis: ' + error.message);
     }
 }
@@ -485,6 +557,7 @@ function generateRegressionInsight(data) {
 // ==================== SCENARIO ANALYSIS ====================
 
 async function runScenarioAnalysis() {
+    setButtonLoading('scenario-run-btn', true);
     // Helper function to convert letter to index
     const letterToIndex = (letter) => {
         if (!letter) return 4; // Default to D
@@ -492,17 +565,39 @@ async function runScenarioAnalysis() {
     };
     
     const baseline = {
-        micron: parseFloat(document.getElementById('base-micron').value),
-        colour: parseFloat(document.getElementById('base-colour').value),
-        length_index: letterToIndex(document.getElementById('base-length').value),
-        vegetable_matter: parseFloat(document.getElementById('base-vm').value)
+        micron: document.getElementById('base-micron').value,
+        colour: document.getElementById('base-colour').value,
+        length: document.getElementById('base-length').value,
+        vegetable_matter: document.getElementById('base-vm').value
     };
     
     const scenario = {
-        micron: parseFloat(document.getElementById('scenario-micron').value),
-        colour: parseFloat(document.getElementById('scenario-colour').value),
-        length_index: letterToIndex(document.getElementById('scenario-length').value),
-        vegetable_matter: parseFloat(document.getElementById('scenario-vm').value)
+        micron: document.getElementById('scenario-micron').value,
+        colour: document.getElementById('scenario-colour').value,
+        length: document.getElementById('scenario-length').value,
+        vegetable_matter: document.getElementById('scenario-vm').value
+    };
+    
+    // Validate all fields are filled
+    if (!baseline.micron || !baseline.colour || !baseline.length || !baseline.vegetable_matter ||
+        !scenario.micron || !scenario.colour || !scenario.length || !scenario.vegetable_matter) {
+        showError('Please fill in all fields for both baseline and scenario');
+        setButtonLoading('scenario-run-btn', false);
+        return;
+    }
+    
+    const baselineParsed = {
+        micron: parseFloat(baseline.micron),
+        colour: parseFloat(baseline.colour),
+        length_index: letterToIndex(baseline.length),
+        vegetable_matter: parseFloat(baseline.vegetable_matter)
+    };
+    
+    const scenarioParsed = {
+        micron: parseFloat(scenario.micron),
+        colour: parseFloat(scenario.colour),
+        length_index: letterToIndex(scenario.length),
+        vegetable_matter: parseFloat(scenario.vegetable_matter)
     };
     
     const loading = document.getElementById('loading');
@@ -517,11 +612,12 @@ async function runScenarioAnalysis() {
         const response = await fetch('/api/metrics/scenario', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({baseline, scenario})
+            body: JSON.stringify({baseline: baselineParsed, scenario: scenarioParsed})
         });
         
         const data = await response.json();
         loading.style.display = 'none';
+        setButtonLoading('scenario-run-btn', false);
         
         if (data.error) {
             showError(data.error);
@@ -531,7 +627,7 @@ async function runScenarioAnalysis() {
         // Display impact
         const impactHtml = `
             <div class="big-number">${data.price_change_cents > 0 ? '+' : ''}${data.price_change_cents} ¢/kg</div>
-            <div class="label">Price Impact (${data.price_change_cents > 0 ? '+' : ''}$${data.price_change_dollars}/kg)</div>
+            <div class="label">${data.price_change_cents > 0 ? '+' : ''}$${data.price_change_dollars}/kg</div>
         `;
         document.getElementById('scenario-impact').innerHTML = impactHtml;
         
@@ -553,6 +649,7 @@ async function runScenarioAnalysis() {
         
     } catch (error) {
         loading.style.display = 'none';
+        setButtonLoading('scenario-run-btn', false);
         showError('Failed to run scenario analysis: ' + error.message);
     }
 }
@@ -585,6 +682,7 @@ function generateScenarioInsight(data) {
 // ==================== BENCHMARK ANALYSIS ====================
 
 async function runBenchmarkAnalysis() {
+    setButtonLoading('bench-run-btn', true);
     const timePeriod = document.getElementById('bench-period').value;
     const startDate = document.getElementById('bench-start-date').value;
     const endDate = document.getElementById('bench-end-date').value;
@@ -606,6 +704,7 @@ async function runBenchmarkAnalysis() {
     if (timePeriod === 'custom') {
         if (!startDate) {
             loading.style.display = 'none';
+            setButtonLoading('bench-run-btn', false);
             showError('Please select a start date for custom range');
             return;
         }
@@ -630,6 +729,7 @@ async function runBenchmarkAnalysis() {
         
         const data = await response.json();
         loading.style.display = 'none';
+        setButtonLoading('bench-run-btn', false);
         
         if (data.error) {
             showError(data.error);
@@ -638,9 +738,11 @@ async function runBenchmarkAnalysis() {
         
         // Display national statistics
         const stats = data.national_stats;
+        const avgPriceDollars = (stats.price.mean / 100).toFixed(2);
+        const medianPriceDollars = (stats.price.median / 100).toFixed(2);
         const statsHtml = `
-            <div class="stat-card"><div class="stat-label">Avg Price</div><div class="stat-value">${stats.price.mean}¢</div></div>
-            <div class="stat-card"><div class="stat-label">Median Price</div><div class="stat-value">${stats.price.median}¢</div></div>
+            <div class="stat-card"><div class="stat-label">Avg Price</div><div class="stat-value">$${avgPriceDollars}/kg</div></div>
+            <div class="stat-card"><div class="stat-label">Median Price</div><div class="stat-value">$${medianPriceDollars}/kg</div></div>
             <div class="stat-card"><div class="stat-label">Avg Micron</div><div class="stat-value">${stats.micron.mean}μm</div></div>
             <div class="stat-card"><div class="stat-label">Avg Colour</div><div class="stat-value">${stats.colour.mean}</div></div>
             <div class="stat-card"><div class="stat-label">Avg VM</div><div class="stat-value">${stats.vegetable_matter.mean}%</div></div>
@@ -664,6 +766,7 @@ async function runBenchmarkAnalysis() {
         
     } catch (error) {
         loading.style.display = 'none';
+        setButtonLoading('bench-run-btn', false);
         showError('Failed to run benchmark analysis: ' + error.message);
     }
 }
@@ -758,5 +861,71 @@ function showError(message) {
     setTimeout(() => {
         errorMsg.style.display = 'none';
     }, 5000);
+}
+
+// Button disable/enable functions
+function setButtonLoading(buttonId, isLoading) {
+    const btn = document.getElementById(buttonId);
+    if (btn) {
+        btn.disabled = isLoading;
+        if (isLoading) {
+            btn.style.opacity = '0.6';
+            btn.style.cursor = 'not-allowed';
+        } else {
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        }
+    }
+}
+
+// Clear form functions
+function clearDistributionForm() {
+    document.getElementById('dist-variable').value = 'micron';
+    document.getElementById('dist-start-date').value = '';
+    document.getElementById('dist-end-date').value = '';
+    document.getElementById('dist-results').classList.remove('visible');
+}
+
+function clearTimeseriesForm() {
+    document.getElementById('ts-variables').selectedIndex = 0;
+    document.getElementById('ts-aggregation').value = 'monthly';
+    document.getElementById('ts-start-date').value = '2012-07-01';
+    document.getElementById('ts-end-date').value = '';
+    document.getElementById('ts-min-micron').value = '';
+    document.getElementById('ts-max-micron').value = '';
+    document.getElementById('ts-results').classList.remove('visible');
+}
+
+function clearRegressionForm() {
+    document.getElementById('reg-start-date').value = '2012-07-01';
+    document.getElementById('reg-end-date').value = '';
+    document.getElementById('reg-min-micron').value = '';
+    document.getElementById('reg-max-micron').value = '';
+    document.getElementById('reg-smooth').value = '5';
+    document.getElementById('reg-results').classList.remove('visible');
+}
+
+function clearScenarioForm() {
+    document.getElementById('base-micron').value = '36';
+    document.getElementById('base-colour').value = '3.0';
+    document.getElementById('base-length').value = 'D';
+    document.getElementById('base-vm').value = '0.3';
+    document.getElementById('scenario-micron').value = '36';
+    document.getElementById('scenario-colour').value = '2.0';
+    document.getElementById('scenario-length').value = 'D';
+    document.getElementById('scenario-vm').value = '0.1';
+    document.getElementById('scenario-results').classList.remove('visible');
+}
+
+function clearBenchmarkForm() {
+    document.getElementById('bench-period').value = 'recent';
+    document.getElementById('bench-custom-dates').style.display = 'none';
+    document.getElementById('bench-start-date').value = '';
+    document.getElementById('bench-end-date').value = '';
+    document.getElementById('bench-micron').value = '';
+    document.getElementById('bench-colour').value = '';
+    document.getElementById('bench-vm').value = '';
+    document.getElementById('bench-length').value = '';
+    document.getElementById('bench-results').classList.remove('visible');
 }
 

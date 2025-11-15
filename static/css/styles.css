@@ -1,9 +1,24 @@
 /* Common styles for all pages */
 
+/* Design System Colors - Based on SCSS guidelines */
+:root {
+    --primary-colour: #1A4C41;        /* primaryColour - dark green */
+    --deep-green: #153D33;            /* deepGreen - darker green for hover */
+    --leaf-green: #3D7F4B;            /* leafGreen - medium green (secondary) */
+    --light-green: #5A9F6F;           /* lightGreen - lighter green for nav */
+    --green-brand-100: #3D7F4B;       /* greenBrand-100 - active state */
+    --green-brand-200: #5A9F6F;       /* greenBrand-200 - inactive state */
+    --green-brand-30: #8FC19F;        /* greenBrand-30 - lighter state */
+    --accent-colour: #F57C00;         /* accentColour - orange */
+    --drop-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --space-s: 16px;
+}
+
 .search-section {
-    background: #f9f9f9;
-    padding: 16px;
-    border-radius: 6px;
+    background: white;
+    padding: var(--space-s);
+    border-radius: 12px;             /* rounded-xl equivalent */
+    box-shadow: var(--drop-shadow);
     margin-bottom: 24px;
 }
 
@@ -14,11 +29,25 @@
 .search-bar {
     display: flex;
     gap: 8px;
-    align-items: center;
+    align-items: center;             /* Center align items vertically */
+}
+
+.search-bar input,
+.search-bar button {
+    height: 32px;                    /* Ensure all have same height */
+    box-sizing: border-box;
+    margin: 0;                       /* Remove any margins */
+    vertical-align: middle;          /* Additional vertical alignment */
 }
 
 .search-bar input {
     flex: 1;
+}
+
+/* Remove any margins from buttons in search-bar */
+.search-bar button {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
 }
 
 label {
@@ -62,38 +91,53 @@ input[type="text"], input[type="number"], select, input[type="date"] {
     background: #dc3545;
     color: white;
     border: none;
-    padding: 8px 12px;
+    padding: 8px 16px;               /* Match input field height (32px total) */
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
-    height: 32px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    height: 32px;                    /* Match input field height exactly */
+    box-sizing: border-box;
+    transition: all 0.3s;
 }
 
 .remove-filter:hover {
     background: #c82333;
 }
 
-.add-filter-btn {
-    background: #17a2b8;
+.add-filter-btn, .save-search-btn {
+    background: var(--leaf-green);   /* Using leafGreen for secondary actions */
     color: white;
     border: none;
-    padding: 8px 16px;
+    padding: 8px 16px;               /* Match input field height (32px total) */
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
-    margin-top: 10px;
-    height: 32px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 0.3s;
+    height: 32px;                    /* Match input field height exactly */
+    box-sizing: border-box;
 }
 
-.add-filter-btn:hover {
-    background: #138496;
+/* Remove margin-top when save-search-btn is in search-bar */
+.search-bar .save-search-btn {
+    margin-top: 0;
 }
 
-.filters-container {
+.add-filter-btn:hover, .save-search-btn:hover {
+    background: var(--deep-green);
+}
+
+.filters-container, .indicators {
     background: white;
     border: 1px solid #ddd;
     padding: 15px;
-    border-radius: 4px;
+    border-radius: 12px;             /* rounded-xl */
+    box-shadow: var(--drop-shadow);
     margin-bottom: 20px;
 }
 
@@ -106,52 +150,110 @@ input[type="text"], input[type="number"], select, input[type="date"] {
 
 .filters-header h3 {
     margin: 0;
-    color: #153D33;
+    color: var(--primary-colour);
     font-size: 13px;
 }
 
 h1 {
-    color: #153D33;
+    color: var(--primary-colour);
     margin: 0;
     font-size: 18px;
+    font-weight: 600;
 }
 
 h2 {
     font-size: 14px;
+    font-weight: 600;
+    color: var(--primary-colour);
 }
 
 h3 {
     font-size: 13px;
+    font-weight: 600;
+    color: var(--primary-colour);
 }
 
-button {
-    background: #3D7F4B;
+/* Button styles - matching SCSS design system */
+button, .button {
+    background: var(--primary-colour);
     color: white;
     border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 600;
+    padding: 8px 16px;               /* Match input field height (32px total) */
+    border-radius: 4px;              /* rounded-[4px] */
+    font-size: 12px;                 /* text-xs */
+    font-weight: 600;                /* font-semibold */
+    text-transform: uppercase;       /* uppercase */
+    letter-spacing: 0.1em;           /* tracking-widest */
     cursor: pointer;
-    transition: background 0.3s;
-    height: 32px;
-    line-height: 1;
+    transition: all 0.3s;
+    line-height: 1;                  /* leading-none */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    appearance: none;
+    outline: none;
+    height: 32px;                    /* Match input field height exactly */
+    box-sizing: border-box;
 }
 
-button:hover {
-    background: #153D33;
+button:hover:not(:disabled), .button:hover:not(:disabled) {
+    background: var(--deep-green);
 }
 
-button:disabled {
+button:disabled, .button:disabled {
     background: #ccc;
     cursor: not-allowed;
+    opacity: 0.3;
 }
 
-.chart-section {
+button:focus, .button:focus {
+    outline: none;
+    border: 1px solid #333;
+}
+
+/* Secondary button */
+button.button--secondary, .button--secondary {
+    background: var(--leaf-green);
+}
+
+button.button--secondary:hover:not(:disabled), .button--secondary:hover:not(:disabled) {
+    background: var(--deep-green);
+}
+
+/* Hollow button */
+button.hollow, .button.hollow {
+    background: transparent;
+    color: #666;
+    border: 1px solid #666;
+}
+
+button.hollow:hover, .button.hollow:hover {
+    color: var(--primary-colour);
+    border-color: var(--primary-colour);
+}
+
+/* Large screen button padding - keep same height for consistency */
+@media (min-width: 1024px) {
+    button, .button {
+        height: 32px;                /* Keep same height on large screens */
+        padding: 8px 16px;
+    }
+    
+    .add-filter-btn, .save-search-btn, .download-csv-btn, .hide-btn, .remove-filter, .date-range-btn {
+        height: 32px;                /* Keep same height on large screens */
+    }
+}
+
+.chart-section, .tile {
     margin-bottom: 30px;
-    padding: 20px;
-    background: #f9f9f9;
-    border-radius: 8px;
+    padding: var(--space-s);
+    background: white;
+    border-radius: 12px;             /* rounded-xl */
+    box-shadow: var(--drop-shadow);
+}
+
+.tile__no-padding {
+    padding: 0;
 }
 
 .chart-container {
@@ -175,12 +277,16 @@ button:disabled {
     background: #666;
     color: white;
     border: none;
-    padding: 6px 12px;
+    padding: 8px 16px;               /* Match input field height (32px total) */
     border-radius: 4px;
     font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     cursor: pointer;
-    transition: background 0.3s;
-    height: 32px;
+    transition: all 0.3s;
+    height: 32px;                    /* Match input field height exactly */
+    box-sizing: border-box;
 }
 
 .hide-btn:hover {
@@ -216,7 +322,7 @@ table {
 thead {
     position: sticky;
     top: 0;
-    background: #153D33;
+    background: var(--primary-colour);
     color: white;
     z-index: 10;
 }
@@ -244,7 +350,7 @@ th.sortable {
 }
 
 th.sortable:hover {
-    background: #0f2d27;
+    background: var(--deep-green);
 }
 
 th.sortable::after {
@@ -281,33 +387,37 @@ th.sortable.sort-desc::after {
 }
 
 .download-csv-btn {
-    background: #28a745;
+    background: var(--leaf-green);   /* Using leafGreen for success actions */
     color: white;
     border: none;
-    padding: 8px 16px;
+    padding: 8px 16px;               /* Match input field height (32px total) */
     border-radius: 4px;
     font-size: 12px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     cursor: pointer;
-    transition: background 0.3s;
-    height: 32px;
+    transition: all 0.3s;
+    height: 32px;                    /* Match input field height exactly */
+    box-sizing: border-box;
 }
 
 .download-csv-btn:hover {
-    background: #218838;
+    background: var(--deep-green);
 }
 
 .saved-searches-section {
-    background: #e8f5e9;
-    padding: 15px;
-    border-radius: 4px;
+    background: white;
+    padding: var(--space-s);
+    border-radius: 12px;             /* rounded-xl */
+    box-shadow: var(--drop-shadow);
     margin-bottom: 20px;
 }
 
 .saved-search-item {
     display: inline-block;
     background: white;
-    border: 1px solid #3D7F4B;
+    border: 1px solid var(--leaf-green);
     border-radius: 4px;
     padding: 6px 10px;
     margin: 4px;
@@ -317,7 +427,7 @@ th.sortable.sort-desc::after {
 }
 
 .saved-search-item:hover {
-    background: #3D7F4B;
+    background: var(--leaf-green);
     color: white;
 }
 
@@ -332,49 +442,59 @@ th.sortable.sort-desc::after {
     color: white;
 }
 
-.save-search-btn {
-    background: #17a2b8;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    font-size: 12px;
-    cursor: pointer;
-    margin-left: 10px;
-    height: 32px;
-}
+/* .save-search-btn is now styled with .add-filter-btn above */
 
-.save-search-btn:hover {
-    background: #138496;
-}
-
-/* Date range buttons - used across pages */
-.date-range-buttons {
-    display: flex;
-    gap: 10px;
+/* Date filter buttons - segmented control style with shared background */
+.date-range-buttons, .date-filter {
+    display: inline-flex;
+    flex-direction: row;
+    justify-content: center;
     align-items: center;
+    gap: 0;                          /* No gap between buttons */
     margin-bottom: 15px;
     flex-wrap: wrap;
+    background: #eeedef;             /* Custom background color */
+    padding: 4px;                    /* Padding around buttons */
+    border-radius: 8px;              /* Rounded container */
 }
 
 .date-range-btn {
-    background: #666;
-    color: white;
+    font-weight: 900;                /* font-black */
+    color: #bfc5cd !important;       /* Custom text color for unselected */
+    background: transparent !important;
     border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 12px;
+    padding: 8px 16px;               /* Match input field height (32px total) */
+    border-radius: 6px;              /* Slightly rounded individual buttons */
+    font-size: 12px;                 /* text-sm */
     cursor: pointer;
-    height: 32px;
-    transition: background 0.3s;
+    transition: all 0.2s ease-in-out;
+    height: 32px;                    /* Match input field height exactly */
+    box-sizing: border-box;
+    white-space: nowrap;
 }
 
-.date-range-btn:hover {
-    background: #444;
+.date-range-btn:hover:not(.active) {
+    color: #bfc5cd !important;       /* Keep same text color as unselected */
+    background: #fbfbfb !important;  /* Custom hover background color */
 }
 
 .date-range-btn.active {
-    background: #3D7F4B;
+    color: #23282d !important;       /* Custom text color for selected */
+    background: #ffffff !important;  /* White background for selected */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Slight shadow for depth */
+}
+
+/* Large screen date filter padding - keep same style */
+@media (min-width: 640px) {
+    .date-range-buttons, .date-filter {
+        gap: 0;                      /* Still no gap between buttons */
+        padding: 4px;                /* Same padding */
+    }
+    
+    .date-range-btn {
+        padding: 8px 16px;           /* Same padding */
+        font-size: 12px;             /* Keep consistent font size */
+    }
 }
 
 .date-range-custom {

@@ -20,9 +20,9 @@
     <div class="search-group">
         <label for="wool_type">Wool Type Search (ID or Type Name)</label>
         <div class="search-bar">
-            <input type="text" id="wool_type" placeholder="e.g. F2N, 1, MULTI... (leave blank for all)">
+            <input type="text" id="wool_type" placeholder="e.g. F3D or C3O">
             <button onclick="search()" id="searchBtn">Search</button>
-            <button onclick="saveCurrentSearch()" class="save-search-btn">💾 Save</button>
+            <button onclick="saveCurrentSearch()" class="save-search-btn">Save</button>
             <button onclick="resetFilters()" style="background: #666;">Reset</button>
         </div>
     </div>
@@ -105,7 +105,7 @@
     <div class="module-header" style="background: #e8f5e9; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
         <span class="results-count" id="resultsCount" style="font-weight: 600; color: #153D33; font-size: 13px;">-</span>
         <div style="display: flex; gap: 15px; align-items: center;">
-            <button class="download-csv-btn" onclick="downloadTableCSV()" id="downloadBtn">📥 Download CSV</button>
+            <button class="download-csv-btn" onclick="downloadTableCSV()" id="downloadBtn">Download CSV</button>
             <span style="color: #666; font-size: 11px;">Showing up to 1,000 results</span>
             <button class="hide-btn" onclick="toggleModule('resultsTable')">Hide</button>
         </div>

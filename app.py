@@ -128,6 +128,28 @@ def advanced_metrics():
     """Advanced metrics page"""
     return render_template('advanced_metrics.html', page='metrics')
 
+# ==================== IFRAME ROUTES ====================
+
+@app.route('/simple-iframe')
+def simple_search_iframe():
+    """Simple search iframe version (no header/nav)"""
+    return render_template('simple_search_iframe.html')
+
+@app.route('/compare-iframe')
+def compare_types_iframe():
+    """Compare types iframe version (no header/nav)"""
+    return render_template('compare_types_iframe.html')
+
+@app.route('/blends-iframe')
+def advanced_blends_iframe():
+    """Advanced blends iframe version (no header/nav)"""
+    return render_template('advanced_blends_iframe.html')
+
+@app.route('/metrics-iframe')
+def advanced_metrics_iframe():
+    """Advanced metrics iframe version (no header/nav)"""
+    return render_template('advanced_metrics_iframe.html')
+
 # ==================== ADVANCED METRICS API ENDPOINTS ====================
 
 @app.route('/api/metrics/distribution', methods=['POST'])
@@ -144,13 +166,17 @@ def get_distribution():
         
         # Build query - with micron floor for distribution analysis
         query = """
-            SELECT {variable}, bales, kg
+            SELECT {variable}, bales, kg, micron
             FROM auction_data_joined
             WHERE price > 0
             AND micron >= 10.0
         """.format(variable=variable if variable in ALLOWED_COLUMNS else 'micron')
         
         params = []
+        
+        # For colour distribution, exclude micron < 25
+        if variable == 'colour':
+            query += " AND micron >= 25.0"
         
         # Apply date range filter if provided
         if filters.get('start_date'):
@@ -423,6 +449,10 @@ def get_regression():
                 # Fit OLS model
                 model = sm.OLS(y_clean, X_clean).fit()
                 
+                # Skip weeks where r^2 < 0.4
+                if float(model.rsquared) < 0.4:
+                    continue
+                
                 weekly_results.append({
                     'week': str(week),
                     'r_squared': round(float(model.rsquared), 4),
@@ -455,7 +485,7 @@ def get_regression():
         return jsonify({
             'weekly_results': weekly_results,
             'summary': {
-                'weeks_analyzed': len(weekly_results),
+                'weeks_analyzed': len(weekly_results),  # Note: using American spelling in data key for consistency
                 'avg_r_squared': round(float(np.mean([r['adj_r_squared'] for r in weekly_results])), 4)
             }
         })

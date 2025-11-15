@@ -104,14 +104,21 @@
     .run-analysis-btn {
         background: #3D7F4B;
         color: white;
-        padding: 12px 24px;
+        padding: 8px 16px;           /* Match input field height (32px total) */
         border: none;
         border-radius: 4px;
         font-size: 12px;
         font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
         cursor: pointer;
         width: 100%;
-        transition: background 0.2s;
+        transition: all 0.3s;
+        height: 32px;                /* Match input field height exactly */
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
     
     .run-analysis-btn:hover {
@@ -413,12 +420,12 @@
 {% block content %}
 <div class="metrics-intro">
     <h1>Advanced Metrics & Statistical Analysis</h1>
-    <p>Analyze NZ strong wool auction data (2012-2024) to understand clip profiles, value drivers, and market dynamics. Use OLS regression to quantify the impact of micron, colour, length, and VM on pricing.</p>
+    <p>Analyse NZ strong wool auction data (2012-2024) to understand clip profiles, value drivers, and market dynamics. Use OLS regression to quantify the impact of micron, colour, length, and VM on pricing.</p>
 </div>
 
 <div class="analysis-tabs">
     <div class="analysis-tab active" data-tab="distribution">Distribution Analysis</div>
-    <div class="analysis-tab" data-tab="timeseries">Time Series</div>
+    <div class="analysis-tab" data-tab="timeseries">Time Series Analysis</div>
     <div class="analysis-tab" data-tab="regression">Value Drivers (Regression)</div>
     <div class="analysis-tab" data-tab="scenario">What-If Scenario</div>
     <div class="analysis-tab" data-tab="benchmark">Benchmark Your Lot</div>
@@ -428,7 +435,7 @@
 <div class="analysis-panel active" id="panel-distribution">
     <div class="query-controls">
         <div class="control-group">
-            <label>Select Variable to Analyze</label>
+            <label>Select Variable to Analyse</label>
             <select id="dist-variable" style="width: 100%; padding: 12px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; height: 44px; line-height: 1.5;">
                 <option value="micron">Micron</option>
                 <option value="colour">Colour (Y-Z)</option>
@@ -439,16 +446,19 @@
         
         <div class="control-row">
             <div class="control-group">
-                <label>Start Date (Optional)</label>
+                <label>Start Date <span style="color: #999; font-weight: normal;">(Optional)</span></label>
                 <input type="date" id="dist-start-date" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
             </div>
             <div class="control-group">
-                <label>End Date (Optional)</label>
+                <label>End Date <span style="color: #999; font-weight: normal;">(Optional)</span></label>
                 <input type="date" id="dist-end-date" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
             </div>
         </div>
         
-        <button class="run-analysis-btn" onclick="runDistributionAnalysis()">Run Distribution Analysis</button>
+        <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button class="run-analysis-btn" onclick="runDistributionAnalysis()" id="dist-run-btn">Run Distribution Analysis</button>
+            <button class="run-analysis-btn" onclick="clearDistributionForm()" style="background: #666;">Clear</button>
+        </div>
     </div>
     
     <div class="results-section" id="dist-results">
@@ -486,11 +496,11 @@
         
         <div class="control-row">
             <div class="control-group">
-                <label>Start Date (Default: 2012-07-01)</label>
+                <label>Start Date <span style="color: #999; font-weight: normal;">(Default: 2012-07-01)</span></label>
                 <input type="date" id="ts-start-date" value="2012-07-01" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
             </div>
             <div class="control-group">
-                <label>End Date (Optional)</label>
+                <label>End Date <span style="color: #999; font-weight: normal;">(Optional)</span></label>
                 <input type="date" id="ts-end-date" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
             </div>
         </div>
@@ -498,16 +508,19 @@
         <p style="font-size: 11px; color: #666; margin: 12px 0 8px 0;"><strong>Optional Filters:</strong></p>
         <div class="control-row">
             <div class="control-group">
-                <label>Min Micron</label>
+                <label>Min Micron <span style="color: #999; font-weight: normal;">(Optional)</span></label>
                 <input type="number" id="ts-min-micron" placeholder="e.g. 28" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
             </div>
             <div class="control-group">
-                <label>Max Micron</label>
+                <label>Max Micron <span style="color: #999; font-weight: normal;">(Optional)</span></label>
                 <input type="number" id="ts-max-micron" placeholder="e.g. 45" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
             </div>
         </div>
         
-        <button class="run-analysis-btn" onclick="runTimeseriesAnalysis()">Run Time Series Analysis</button>
+        <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button class="run-analysis-btn" onclick="runTimeseriesAnalysis()" id="ts-run-btn">Run Time Series Analysis</button>
+            <button class="run-analysis-btn" onclick="clearTimeseriesForm()" style="background: #666;">Clear</button>
+        </div>
     </div>
     
     <div class="results-section" id="ts-results">
@@ -526,11 +539,11 @@
     <div class="query-controls">
         <div class="control-row">
             <div class="control-group">
-                <label>Start Date (Default: 2012-07-01)</label>
+                <label>Start Date <span style="color: #999; font-weight: normal;">(Default: 2012-07-01)</span></label>
                 <input type="date" id="reg-start-date" value="2012-07-01" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
             </div>
             <div class="control-group">
-                <label>End Date (Optional)</label>
+                <label>End Date <span style="color: #999; font-weight: normal;">(Optional)</span></label>
                 <input type="date" id="reg-end-date" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
             </div>
         </div>
@@ -538,21 +551,24 @@
         <p style="font-size: 11px; color: #666; margin: 12px 0 8px 0;"><strong>Optional Filters:</strong></p>
         <div class="control-row">
             <div class="control-group">
-                <label>Min Micron</label>
+                <label>Min Micron <span style="color: #999; font-weight: normal;">(Optional)</span></label>
                 <input type="number" id="reg-min-micron" placeholder="e.g. 28" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
             </div>
             <div class="control-group">
-                <label>Max Micron</label>
+                <label>Max Micron <span style="color: #999; font-weight: normal;">(Optional)</span></label>
                 <input type="number" id="reg-max-micron" placeholder="e.g. 45" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
             </div>
         </div>
         
         <div class="control-group">
-            <label>Smoothing Window (weeks)</label>
-            <input type="number" id="reg-smooth" value="5" min="1" max="20" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+            <label>Smoothing Window (weeks) <span style="color: #d32f2f;">*</span></label>
+            <input type="number" id="reg-smooth" value="5" min="1" max="20" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
         </div>
         
-        <button class="run-analysis-btn" onclick="runRegressionAnalysis()">Run Regression Analysis</button>
+        <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button class="run-analysis-btn" onclick="runRegressionAnalysis()" id="reg-run-btn">Run Regression Analysis</button>
+            <button class="run-analysis-btn" onclick="clearRegressionForm()" style="background: #666;">Clear</button>
+        </div>
     </div>
     
     <div class="results-section" id="reg-results">
@@ -579,7 +595,14 @@
             <strong style="color: #F57C00; font-size: 11px;">STRONG WOOL ONLY</strong>
             <p style="font-size: 11px; color: #333; margin: 4px 0 0 0;">This tool is calibrated for strong wool (28-45 micron). Uses regression coefficients from the last 6 months.</p>
         </div>
-        <p style="font-size: 12px; color: #666; margin-bottom: 16px;">Compare a baseline wool spec against a what-if scenario.</p>
+        <div style="background: #e3f2fd; border-left: 4px solid #1976d2; padding: 12px; margin-bottom: 16px; border-radius: 4px;">
+            <strong style="color: #1976d2; font-size: 11px;">HOW TO USE:</strong>
+            <ol style="font-size: 11px; color: #333; margin: 8px 0 0 0; padding-left: 20px;">
+                <li style="margin-bottom: 4px;">Enter your baseline wool specifications (current lot)</li>
+                <li style="margin-bottom: 4px;">Enter your what-if scenario (improved spec)</li>
+                <li>Click "Calculate Impact" to see the expected price difference</li>
+            </ol>
+        </div>
         
         <div class="scenario-inputs">
             <div class="scenario-column">
@@ -623,7 +646,10 @@
             </div>
         </div>
         
-        <button class="run-analysis-btn" onclick="runScenarioAnalysis()" style="margin-top: 16px;">Calculate Impact</button>
+        <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button class="run-analysis-btn" onclick="runScenarioAnalysis()" id="scenario-run-btn">Calculate Impact</button>
+            <button class="run-analysis-btn" onclick="clearScenarioForm()" style="background: #666;">Clear</button>
+        </div>
     </div>
     
     <div class="results-section" id="scenario-results">
@@ -683,7 +709,10 @@
             </div>
         </div>
         
-        <button class="run-analysis-btn" onclick="runBenchmarkAnalysis()">Run Benchmark Analysis</button>
+        <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button class="run-analysis-btn" onclick="runBenchmarkAnalysis()" id="bench-run-btn">Run Benchmark Analysis</button>
+            <button class="run-analysis-btn" onclick="clearBenchmarkForm()" style="background: #666;">Clear</button>
+        </div>
     </div>
     
     <div class="results-section" id="bench-results">

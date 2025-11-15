@@ -7,7 +7,7 @@
     <meta name="googlebot" content="noindex, nofollow">
     <title>{% block title %}Fusca Pro Lookup{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/fusca-favicon.png') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=2.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=3.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
     <style>
@@ -24,9 +24,9 @@
             font-size: 12px;
         }
         
-        /* Navigation */
+        /* Navigation - matching SCSS design system */
         .top-nav {
-            background: #153D33;
+            background: var(--primary-colour, #1A4C41);
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             position: sticky;
             top: 0;
@@ -63,31 +63,30 @@
         .nav-link {
             color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 4px;
+            padding: 12px 16px;          /* py-3 equivalent */
             font-size: 12px;
             font-weight: 500;
-            transition: all 0.2s;
-            border: 1px solid transparent;
+            transition: all 0.35s;
+            border-bottom: 4px solid transparent;  /* border-b-4 */
+            display: inline-block;
         }
         
         .nav-link:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
+            color: #8FC19F;              /* hover:text-lightGreen (greenBrand-30) */
+            border-bottom-color: #8FC19F; /* hover:border-lightGreen */
         }
         
-        .nav-link.active {
-            background: #3D7F4B;
-            color: white;
-            border-color: #3D7F4B;
+        .nav-link.active, .nav-link--current {
+            color: #8FC19F;              /* text-lightGreen (greenBrand-30) */
+            border-bottom-color: #8FC19F; /* border-lightGreen */
         }
         
         .container {
             max-width: 1120px;
             margin: 0 auto;
             background: white;
-            border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 12px;       /* rounded-xl */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);  /* var(--drop-shadow) */
             padding: 24px;
             margin-top: 16px;
             margin-bottom: 16px;
