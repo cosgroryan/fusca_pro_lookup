@@ -288,8 +288,10 @@ def get_raw_logs():
         # Read last 1000 lines to avoid huge responses
         with open(LOG_FILE, 'r') as f:
             lines = f.readlines()
-            # Get last 1000 lines
+            # Get last 1000 lines (most recent)
             recent_lines = lines[-1000:] if len(lines) > 1000 else lines
+            # Reverse to show most recent at top
+            recent_lines.reverse()
             log_content = ''.join(recent_lines)
         
         return jsonify({
@@ -300,6 +302,39 @@ def get_raw_logs():
         
     except Exception as e:
         print(f"Raw logs error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/clear-logs', methods=['POST'])
+def clear_logs():
+    """Archive current log file and create a new empty one"""
+    try:
+        if not os.path.exists(LOG_FILE):
+            return jsonify({'status': 'success', 'message': 'No log file to archive'})
+        
+        # Generate archive filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        log_dir = os.path.dirname(LOG_FILE)
+        archive_filename = f"fusca_activity_{timestamp}.log"
+        archive_path = os.path.join(log_dir, archive_filename)
+        
+        # Copy current log to archive
+        import shutil
+        shutil.copy2(LOG_FILE, archive_path)
+        
+        # Create new empty log file
+        with open(LOG_FILE, 'w') as f:
+            f.write('')  # Empty file
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Logs archived to {archive_filename}',
+            'archive_file': archive_filename
+        })
+        
+    except Exception as e:
+        print(f"Clear logs error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 # ==================== ADVANCED METRICS API ENDPOINTS ====================
