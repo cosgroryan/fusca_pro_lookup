@@ -17,6 +17,10 @@ import pandas as pd
 import statsmodels.api as sm
 from scipy import stats as scipy_stats
 from io import BytesIO
+from export_data_loader import (
+    get_available_files, load_export_data, categorize_wool_data,
+    get_data_summary, aggregate_by_category, aggregate_by_country, aggregate_by_month
+)
 try:
     from reportlab.lib.pagesizes import letter, A4
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -186,6 +190,16 @@ def advanced_blends_iframe():
 def advanced_metrics_iframe():
     """Advanced metrics iframe version (no header/nav)"""
     return render_template('advanced_metrics_iframe.html')
+
+@app.route('/export-data')
+def export_data():
+    """Export Data analysis page"""
+    return render_template('export_data.html', page='export-data')
+
+@app.route('/export-data-iframe')
+def export_data_iframe():
+    """Export Data analysis page (iframe version)"""
+    return render_template('export_data_iframe.html', page='export-data')
 
 @app.route('/admin')
 def admin_dashboard():
@@ -2034,6 +2048,166 @@ def export_regression_pdf():
         print(f"PDF export error: {str(e)}")
         import traceback
         traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+# ==================== EXPORT DATA API ====================
+
+@app.route('/api/export-data/files', methods=['GET'])
+def get_export_data_files():
+    """Get list of available export data files"""
+    try:
+        files = get_available_files()
+        log_activity('/api/export-data/files', 'Export Data', {'file_count': len(files)})
+        return jsonify({'files': files})
+    except Exception as e:
+        print(f"Error getting export data files: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/export-data/load', methods=['POST'])
+def load_export_data_api():
+    """Load export data with filters"""
+    try:
+        data = request.json
+        filenames = data.get('filenames', None)
+        wool_only = data.get('wool_only', True)
+        date_range = data.get('date_range', None)  # [start_date, end_date] in YYYYMM
+        countries = data.get('countries', None)
+        wool_categories = data.get('wool_categories', None)
+        
+        log_activity('/api/export-data/load', 'Export Data', {
+            'filenames': filenames,
+            'wool_only': wool_only,
+            'date_range': date_range,
+            'country_count': len(countries) if countries else 0,
+            'category_count': len(wool_categories) if wool_categories else 0
+        })
+        
+        # Load data
+        df = load_export_data(
+            filenames=filenames,
+            wool_only=wool_only,
+            date_range=tuple(date_range) if date_range else None,
+            countries=countries,
+            wool_categories=wool_categories
+        )
+        
+        if df.empty:
+            return jsonify({
+                'data': [],
+                'summary': get_data_summary(df),
+                'message': 'No data found matching criteria'
+            })
+        
+        # Categorize wool data
+        df = categorize_wool_data(df)
+        
+        # Convert to JSON-serializable format
+        records = df.to_dict('records')
+        
+        # Convert numpy types to native Python types
+        for record in records:
+            for key, value in record.items():
+                if pd.isna(value):
+                    record[key] = None
+                elif isinstance(value, (np.integer, np.int64)):
+                    record[key] = int(value)
+                elif isinstance(value, (np.floating, np.float64)):
+                    record[key] = float(value)
+        
+        summary = get_data_summary(df)
+        
+        return jsonify({
+            'data': records,
+            'summary': summary,
+            'record_count': len(records)
+        })
+        
+    except Exception as e:
+        print(f"Error loading export data: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/export-data/aggregate', methods=['POST'])
+def aggregate_export_data():
+    """Aggregate export data by category, country, or month"""
+    try:
+        data = request.json
+        filenames = data.get('filenames', None)
+        wool_only = data.get('wool_only', True)
+        date_range = data.get('date_range', None)
+        countries = data.get('countries', None)
+        wool_categories = data.get('wool_categories', None)
+        group_by = data.get('group_by', 'wool_category')  # 'wool_category', 'country', 'month', 'processing_stage', 'micron_range'
+        
+        log_activity('/api/export-data/aggregate', 'Export Data', {
+            'group_by': group_by,
+            'filenames': filenames,
+            'category_count': len(wool_categories) if wool_categories else 0
+        })
+        
+        # Load data
+        df = load_export_data(
+            filenames=filenames,
+            wool_only=wool_only,
+            date_range=tuple(date_range) if date_range else None,
+            countries=countries,
+            wool_categories=wool_categories
+        )
+        
+        if df.empty:
+            return jsonify({'data': [], 'message': 'No data found matching criteria'})
+        
+        # Categorize wool data
+        df = categorize_wool_data(df)
+        
+        # Aggregate based on group_by
+        if group_by == 'country':
+            agg_df = aggregate_by_country(df)
+        elif group_by == 'month':
+            agg_df = aggregate_by_month(df)
+        elif group_by in ['wool_category', 'processing_stage', 'micron_range']:
+            agg_df = aggregate_by_category(df, group_by=group_by)
+        else:
+            agg_df = aggregate_by_category(df, group_by='wool_category')
+        
+        # Convert to JSON-serializable format
+        records = agg_df.to_dict('records')
+        
+        # Convert numpy types to native Python types
+        for record in records:
+            for key, value in record.items():
+                if pd.isna(value):
+                    record[key] = None
+                elif isinstance(value, (np.integer, np.int64)):
+                    record[key] = int(value)
+                elif isinstance(value, (np.floating, np.float64)):
+                    record[key] = float(value)
+        
+        return jsonify({
+            'data': records,
+            'group_by': group_by,
+            'record_count': len(records)
+        })
+        
+    except Exception as e:
+        print(f"Error aggregating export data: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/export-data/countries', methods=['GET'])
+def get_export_data_countries():
+    """Get list of all countries in export data"""
+    try:
+        df = load_export_data(wool_only=True)
+        countries = sorted(df['country'].unique().tolist())
+        log_activity('/api/export-data/countries', 'Export Data', {'country_count': len(countries)})
+        return jsonify({'countries': countries})
+    except Exception as e:
+        print(f"Error getting countries: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.teardown_appcontext
