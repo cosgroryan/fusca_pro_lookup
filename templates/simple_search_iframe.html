@@ -60,38 +60,72 @@
 <div class="chart-section" id="chartSection" style="display: none;">
     <div class="module-header">
         <h2 style="color: #153D33; font-size: 14px;">Average Price Over Time (Volume-Weighted)</h2>
-        <button class="hide-btn" onclick="toggleModule('priceChart')">Hide</button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <!-- View Toggle -->
+            <div class="date-range-buttons" style="display: flex !important; gap: 4px !important; padding: 0 !important; margin: 0 !important; background: #f9f9f9 !important; border-radius: 6px !important; height: 32px !important; align-items: center !important; box-sizing: border-box !important; line-height: 32px !important; flex-wrap: nowrap !important;">
+                <button class="date-range-btn active" id="viewToggleGraph" onclick="toggleView('graph')" style="height: 32px !important; box-sizing: border-box !important; line-height: 1 !important; display: flex !important; align-items: center !important; justify-content: center !important; margin: 0 !important; padding: 8px 16px !important;">Graph</button>
+                <button class="date-range-btn" id="viewToggleTable" onclick="toggleView('table')" style="height: 32px !important; box-sizing: border-box !important; line-height: 1 !important; display: flex !important; align-items: center !important; justify-content: center !important; margin: 0 !important; padding: 8px 16px !important;">Table</button>
+            </div>
+            <button class="hide-btn" onclick="toggleModule('priceChart')" style="height: 32px !important; box-sizing: border-box !important; line-height: 1 !important; display: flex !important; align-items: center !important; justify-content: center !important; margin: 0 !important; padding: 8px 16px !important;">Hide</button>
+        </div>
     </div>
     <div id="priceChartContent" class="module-content">
         <!-- Statistics Summary -->
         <div id="statsSection"></div>
         
-        <!-- Moving Average Controls -->
-        <div style="display: flex; gap: 12px; align-items: center; margin: 12px 0 20px 0; padding: 12px; background: #f9f9f9; border-radius: 4px; flex-wrap: wrap;">
-            <span style="font-weight: 600; font-size: 12px; color: #153D33;">Moving Averages:</span>
-            <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
-                <input type="checkbox" id="ma30" onchange="updateChart()"> 30-day
-            </label>
-            <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
-                <input type="checkbox" id="ma90" onchange="updateChart()"> 90-day
-            </label>
-            <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
-                <input type="checkbox" id="ma180" onchange="updateChart()"> 180-day
-            </label>
-        </div>
-        
-        <!-- Data Quality Legend -->
-        <div style="background: #e3f2fd; border-left: 4px solid #1976d2; padding: 10px; margin-bottom: 12px; border-radius: 4px; font-size: 11px;">
-            <strong style="color: #1976d2;">Data Quality Indicators:</strong>
-            <div style="display: flex; gap: 15px; margin-top: 6px; flex-wrap: wrap;">
-                <span><span style="color: #3D7F4B; font-weight: bold;">●</span> Green: 5+ data points (Good quality)</span>
-                <span><span style="color: #F57C00; font-weight: bold;">●</span> Orange: 3-4 data points (Medium quality)</span>
-                <span><span style="color: #D32F2F; font-weight: bold;">●</span> Red: 1-2 data points (Low quality)</span>
+        <!-- Graph View -->
+        <div id="graphView">
+            <!-- Moving Average Controls -->
+            <div style="display: flex; gap: 12px; align-items: center; margin: 12px 0 20px 0; padding: 12px; background: #f9f9f9; border-radius: 4px; flex-wrap: wrap;">
+                <span style="font-weight: 600; font-size: 12px; color: #153D33;">Moving Averages:</span>
+                <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
+                    <input type="checkbox" id="ma30" onchange="updateChart()"> 30-day
+                </label>
+                <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
+                    <input type="checkbox" id="ma90" onchange="updateChart()"> 90-day
+                </label>
+                <label style="display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal;">
+                    <input type="checkbox" id="ma180" onchange="updateChart()"> 180-day
+                </label>
+            </div>
+            
+            <!-- Data Quality Legend -->
+            <div style="background: #e3f2fd; border-left: 4px solid #1976d2; padding: 10px; margin-bottom: 12px; border-radius: 4px; font-size: 11px;">
+                <strong style="color: #1976d2;">Data Quality Indicators:</strong>
+                <div style="display: flex; gap: 15px; margin-top: 6px; flex-wrap: wrap;">
+                    <span><span style="color: #3D7F4B; font-weight: bold;">●</span> Green: 5+ data points (Good quality)</span>
+                    <span><span style="color: #F57C00; font-weight: bold;">●</span> Orange: 3-4 data points (Medium quality)</span>
+                    <span><span style="color: #D32F2F; font-weight: bold;">●</span> Red: 1-2 data points (Low quality)</span>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="priceChart"></canvas>
             </div>
         </div>
         
-        <div class="chart-container">
-            <canvas id="priceChart"></canvas>
+        <!-- Table View -->
+        <div id="tableView" style="display: none;">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                <button class="date-range-btn" onclick="exportTableToCSV()" style="background: #3D7F4B; color: white;">Export to CSV</button>
+            </div>
+            <div style="overflow-x: auto;">
+                <table id="priceTable" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead>
+                        <tr style="background: #153D33; color: white;">
+                            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Date</th>
+                            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Wool Type</th>
+                            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Avg Colour</th>
+                            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Avg VM</th>
+                            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Avg Price ($)</th>
+                            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;"># of Matched Lots</th>
+                        </tr>
+                    </thead>
+                    <tbody id="priceTableBody">
+                        <!-- Table rows will be populated here -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -157,6 +191,8 @@
 <script>
     let priceChart = null;
     let balesChart = null;
+    let currentViewMode = 'graph'; // 'graph' or 'table'
+    let currentTableData = null; // Store table data for CSV export
     let filterCount = 0;
     let currentResults = [];
     let sortColumn = null;
@@ -448,13 +484,129 @@
         // Store data for MA updates
         currentChartData = data;
         
+        // Store table data
+        currentTableData = data.table_data || [];
+        
         // Display statistics
         if (data.statistics) {
             document.getElementById('statsSection').innerHTML = formatStats(data.statistics);
         }
         
-        // Draw the chart
-        updateChart();
+        // Display table if in table mode, otherwise show chart
+        if (currentViewMode === 'table') {
+            displayTable();
+        } else {
+            // Draw the chart
+            updateChart();
+        }
+    }
+    
+    // Toggle between graph and table view
+    function toggleView(mode) {
+        currentViewMode = mode;
+        
+        const graphBtn = document.getElementById('viewToggleGraph');
+        const tableBtn = document.getElementById('viewToggleTable');
+        const graphView = document.getElementById('graphView');
+        const tableView = document.getElementById('tableView');
+        
+        if (graphBtn && tableBtn) {
+            graphBtn.classList.remove('active');
+            tableBtn.classList.remove('active');
+            
+            if (mode === 'graph') {
+                graphBtn.classList.add('active');
+                graphView.style.display = 'block';
+                tableView.style.display = 'none';
+                if (currentChartData) {
+                    updateChart();
+                }
+            } else {
+                tableBtn.classList.add('active');
+                graphView.style.display = 'none';
+                tableView.style.display = 'block';
+                if (currentTableData) {
+                    displayTable();
+                }
+            }
+        }
+    }
+    
+    // Display table data
+    function displayTable() {
+        const tbody = document.getElementById('priceTableBody');
+        if (!tbody || !currentTableData) return;
+        
+        tbody.innerHTML = '';
+        
+        currentTableData.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid #ddd';
+            tr.innerHTML = `
+                <td style="padding: 8px; border: 1px solid #ddd;">${row.date || '-'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${row.wooltype || '-'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${row.avg_colour !== null && row.avg_colour !== undefined ? row.avg_colour.toFixed(2) : '-'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${row.avg_vm !== null && row.avg_vm !== undefined ? row.avg_vm.toFixed(2) : '-'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">$${row.avg_price !== null && row.avg_price !== undefined ? row.avg_price.toFixed(2) : '-'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${row.matched_lots || 0}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+    
+    // Export table to CSV
+    function exportTableToCSV() {
+        if (!currentTableData || currentTableData.length === 0) {
+            alert('No data to export');
+            return;
+        }
+        
+        // CSV headers
+        const headers = ['Date', 'Wool Type', 'Avg Colour', 'Avg VM', 'Avg Price', '# of Matched Lots'];
+        
+        // CSV rows
+        const rows = currentTableData.map(row => {
+            return [
+                row.date || '',
+                row.wooltype || '',
+                row.avg_colour !== null && row.avg_colour !== undefined ? row.avg_colour.toFixed(2) : '',
+                row.avg_vm !== null && row.avg_vm !== undefined ? row.avg_vm.toFixed(2) : '',
+                row.avg_price !== null && row.avg_price !== undefined ? row.avg_price.toFixed(2) : '',
+                row.matched_lots || 0
+            ];
+        });
+        
+        // Escape CSV values
+        function escapeCSV(value) {
+            if (value === null || value === undefined) return '';
+            const stringValue = String(value);
+            if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+                return '"' + stringValue.replace(/"/g, '""') + '"';
+            }
+            return stringValue;
+        }
+        
+        // Build CSV content
+        const csvContent = [
+            headers.map(escapeCSV).join(','),
+            ...rows.map(row => row.map(escapeCSV).join(','))
+        ].join('\n');
+        
+        // Create download link
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        
+        // Generate filename with current date
+        const now = new Date();
+        const timestamp = now.toISOString().split('T')[0];
+        link.setAttribute('download', `price_data_${timestamp}.csv`);
+        
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
     
     function updateChart() {

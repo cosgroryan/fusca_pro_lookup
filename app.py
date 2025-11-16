@@ -1614,12 +1614,15 @@ def get_price_chart():
             'filter_count': len(data.get('column_filters', []))
         })
         
-        # Build query with filters - get price AND bales for volume-weighted averages
+        # Build query with filters - get price, bales, and other fields for table view
         query = """
             SELECT 
                 sale_date,
                 price,
-                bales
+                bales,
+                type_combined,
+                colour,
+                vegetable_matter
             FROM auction_data_joined
             WHERE price > 10 AND bales > 0
         """
@@ -1697,7 +1700,10 @@ def get_price_chart():
             if row['sale_date'] and row['price'] and row['bales']:
                 date_data[row['sale_date']].append({
                     'price': float(row['price']),
-                    'bales': float(row['bales'])
+                    'bales': float(row['bales']),
+                    'type_combined': row.get('type_combined'),
+                    'colour': float(row['colour']) if row.get('colour') is not None else None,
+                    'vegetable_matter': float(row['vegetable_matter']) if row.get('vegetable_matter') is not None else None
                 })
         
         # Calculate volume-weighted filtered averages
@@ -1705,6 +1711,7 @@ def get_price_chart():
         prices = []
         data_quality = []  # Count of data points used for each average
         stats_data = []  # For statistics summary
+        table_data = []  # For table view: date, wooltype, avg colour, avg vm, avg price, # of matched lots
         
         for sale_date in sorted(date_data.keys()):
             items = date_data[sale_date]
@@ -1732,10 +1739,36 @@ def get_price_chart():
             if total_bales > 0:
                 weighted_avg_price = total_weighted_price / total_bales
                 weighted_avg_price_dollars = weighted_avg_price / 100  # Convert cents to dollars
+                
+                # Get wool type (use most common type_combined, or first if all same)
+                wool_types = [item['type_combined'] for item in filtered_items if item.get('type_combined')]
+                wool_type = wool_types[0] if wool_types else ''
+                if len(set(wool_types)) > 1:
+                    # Multiple types - use most common
+                    from collections import Counter
+                    wool_type = Counter(wool_types).most_common(1)[0][0]
+                
+                # Calculate average colour (simple average, not weighted)
+                colours = [item['colour'] for item in filtered_items if item.get('colour') is not None]
+                avg_colour = round(statistics.mean(colours), 2) if colours else None
+                
+                # Calculate average VM (simple average, not weighted)
+                vms = [item['vegetable_matter'] for item in filtered_items if item.get('vegetable_matter') is not None]
+                avg_vm = round(statistics.mean(vms), 2) if vms else None
             
                 labels.append(sale_date.strftime('%Y-%m-%d'))
                 prices.append(round(weighted_avg_price_dollars, 2))
                 data_quality.append(len(filtered_items))  # Store count of data points
+                
+                # Store for table view
+                table_data.append({
+                    'date': sale_date.strftime('%Y-%m-%d'),
+                    'wooltype': wool_type,
+                    'avg_colour': avg_colour,
+                    'avg_vm': avg_vm,
+                    'avg_price': round(weighted_avg_price_dollars, 2),
+                    'matched_lots': len(filtered_items)
+                })
                 
                 # Store for statistics
                 stats_data.extend([item['price'] / 100 for item in filtered_items])
@@ -1756,7 +1789,8 @@ def get_price_chart():
             'labels': labels,
             'data': prices,
             'data_quality': data_quality,  # Count of data points per date
-            'statistics': statistics_summary
+            'statistics': statistics_summary,
+            'table_data': table_data  # For table view
         })
         
     except Exception as e:

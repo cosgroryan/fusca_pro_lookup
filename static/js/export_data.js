@@ -14,6 +14,17 @@ let isSettingDateProgrammatically = false; // Flag to prevent auto-switch when s
 const VOLUME_COLOR = 'rgba(21, 61, 51, 1)'; // Dark green for volume/quantity
 const VALUE_COLOR = 'rgba(0, 102, 204, 1)'; // Blue for value (more contrasting)
 
+// Country name mapping for display (full name -> display name)
+const COUNTRY_DISPLAY_NAMES = {
+    "China, People's Republic of": "China",
+    "Hong Kong (Special Administrative Region)": "Hong Kong"
+};
+
+// Get display name for country (returns display name if mapped, otherwise original)
+function getCountryDisplayName(country) {
+    return COUNTRY_DISPLAY_NAMES[country] || country;
+}
+
 // Wool categories mapping
 const WOOL_CATEGORIES = {
     'greasy_fine': 'Greasy Wool - Fine (< 24.5μm)',
@@ -99,10 +110,7 @@ function toggleCategoryMode(mode) {
         }
     }
     
-    // Redraw chart if data exists
-    if (currentData && exportChart) {
-        displayChart(currentData, document.getElementById('groupBy').value);
-    }
+    // Don't regenerate chart - wait for "Load Data" to be clicked
 }
 
 // Quick date range selector
@@ -297,10 +305,7 @@ function toggleChartDisplay(mode) {
         }
     }
     
-    // Redraw chart if data exists
-    if (currentData && exportChart) {
-        displayChart(currentData, document.getElementById('groupBy').value);
-    }
+    // Don't regenerate chart - wait for "Load Data" to be clicked
 }
 
 // Initialize on page load
@@ -455,8 +460,8 @@ function renderCountrySelector() {
     select.innerHTML = '<option value="">All Countries</option>';
     availableCountries.forEach(country => {
         const option = document.createElement('option');
-        option.value = country;
-        option.textContent = country;
+        option.value = country; // Keep full name as value for data processing
+        option.textContent = getCountryDisplayName(country); // Display simplified name
         select.appendChild(option);
     });
 }
@@ -532,6 +537,19 @@ async function loadExportData() {
     const loadBtn = document.getElementById('loadBtn');
     const loading = document.getElementById('loading');
     const errorMsg = document.getElementById('errorMsg');
+    
+    // Clear existing chart while loading
+    if (exportChart) {
+        exportChart.destroy();
+        exportChart = null;
+    }
+    const ctx = document.getElementById('exportChart');
+    if (ctx) {
+        const chartTitle = document.getElementById('chartTitle');
+        if (chartTitle) {
+            chartTitle.textContent = 'Loading...';
+        }
+    }
     
     // Get filters
     const startDate = document.getElementById('startDate').value;
@@ -914,7 +932,7 @@ function displayChart(data, groupBy) {
                 label = WOOL_CATEGORIES[category] || category;
             } else if (groupBy === 'wool_category' || groupBy === 'processing_stage' || groupBy === 'micron_range') {
                 // When grouping by category-related field, use country as label
-                label = country;
+                label = getCountryDisplayName(country);
             } else {
                 label = item[groupBy] || 'Unknown';
             }
@@ -966,7 +984,7 @@ function displayChart(data, groupBy) {
                 const combinationKey = `${country}::${category}`;
                 if (combinationData[combinationKey] && Object.keys(combinationData[combinationKey]).length > 0) {
                     const categoryLabel = WOOL_CATEGORIES[category] || category;
-                    const seriesLabel = `${country} - ${categoryLabel}`;
+                    const seriesLabel = `${getCountryDisplayName(country)} - ${categoryLabel}`;
                     
                     const data = labels.map(label => {
                         const comboData = combinationData[combinationKey][label];
@@ -1096,7 +1114,7 @@ function displayChart(data, groupBy) {
                 });
                 
                 datasets.push({
-                    label: country,
+                    label: getCountryDisplayName(country),
                     data: data,
                     backgroundColor: contrastingColors[colorIndex % contrastingColors.length],
                     borderColor: contrastingColors[colorIndex % contrastingColors.length].replace('0.8', '1'),
@@ -1152,7 +1170,7 @@ function displayChart(data, groupBy) {
             if (groupBy === 'month') {
                 label = formatDateDisplay(item.month);
             } else if (groupBy === 'country') {
-                label = item.country || 'Unknown';
+                label = getCountryDisplayName(item.country || 'Unknown');
             } else if (groupBy === 'processing_stage') {
                 label = item.processing_stage || 'Unknown';
             } else if (groupBy === 'micron_range') {
@@ -1467,7 +1485,12 @@ function displayChart(data, groupBy) {
                         minRotation: 45,
                         font: {
                             size: 10
-                        }
+                        },
+                        // For categorical data (country, category, etc.), always show all labels
+                        // For time-based data (month), use default behavior with auto-skip
+                        autoSkip: groupBy === 'month' ? true : false,
+                        // Show all labels for categorical data (no limit)
+                        maxTicksLimit: undefined
                     },
                     title: {
                         display: true,
