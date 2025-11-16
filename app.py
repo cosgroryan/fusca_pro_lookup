@@ -1013,9 +1013,9 @@ def search_auctions():
         if data.get('wool_type_search'):
             search_term = data['wool_type_search'].strip()
             if search_term:
-                query += " AND (CAST(wool_type_id AS CHAR) LIKE %s OR type_combined LIKE %s)"
-                params.append(f"%{search_term}%")
-                params.append(f"%{search_term}%")
+                query += " AND (CAST(wool_type_id AS CHAR) = %s OR type_combined = %s)"
+                params.append(search_term)
+                params.append(search_term)
         
         # Apply column filters
         if data.get('column_filters'):
@@ -1118,9 +1118,9 @@ def get_bales_chart():
         if data.get('wool_type_search'):
             search_term = data['wool_type_search'].strip()
             if search_term:
-                query += " AND (CAST(wool_type_id AS CHAR) LIKE %s OR type_combined LIKE %s)"
-                params.append(f"%{search_term}%")
-                params.append(f"%{search_term}%")
+                query += " AND (CAST(wool_type_id AS CHAR) = %s OR type_combined = %s)"
+                params.append(search_term)
+                params.append(search_term)
         
         # Apply column filters (same as search endpoint)
         if data.get('column_filters'):
@@ -1273,10 +1273,10 @@ def get_compare_chart_blend():
                         bales
                     FROM auction_data_joined
                     WHERE price > 10 AND bales > 0
-                    AND (CAST(wool_type_id AS CHAR) LIKE %s OR type_combined LIKE %s)
+                    AND (CAST(wool_type_id AS CHAR) = %s OR type_combined = %s)
                 """
                 
-                params = [f"%{wool_type}%", f"%{wool_type}%"]
+                params = [wool_type, wool_type]
             
                 # Apply date filter (shared across all entries)
                 if date_filter:
@@ -1475,10 +1475,10 @@ def get_compare_chart():
                     bales
                 FROM auction_data_joined
                 WHERE price > 10 AND bales > 0
-                AND (CAST(wool_type_id AS CHAR) LIKE %s OR type_combined LIKE %s)
+                AND (CAST(wool_type_id AS CHAR) = %s OR type_combined = %s)
             """
             
-            params = [f"%{wool_type}%", f"%{wool_type}%"]
+            params = [wool_type, wool_type]
             
             # Apply additional column filters if provided
             if data.get('column_filters'):
@@ -1633,9 +1633,9 @@ def get_price_chart():
         if data.get('wool_type_search'):
             search_term = data['wool_type_search'].strip()
             if search_term:
-                query += " AND (CAST(wool_type_id AS CHAR) LIKE %s OR type_combined LIKE %s)"
-                params.append(f"%{search_term}%")
-                params.append(f"%{search_term}%")
+                query += " AND (CAST(wool_type_id AS CHAR) = %s OR type_combined = %s)"
+                params.append(search_term)
+                params.append(search_term)
         
         # Apply column filters (same as search endpoint)
         if data.get('column_filters'):
