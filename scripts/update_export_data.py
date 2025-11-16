@@ -4,8 +4,10 @@ Update Export Data Script
 Checks Stats NZ website for new export data files and downloads them.
 Also checks if provisional files have been updated to final status.
 
-Run this script via cron job (e.g., daily at 2 AM):
-0 2 * * * /path/to/venv/bin/python3 /path/to/scripts/update_export_data.py
+Run this script via cron job on the server (e.g., daily at 2 AM):
+0 2 * * * cd /path/to/your/app && /path/to/your/app/venv/bin/python3 /path/to/your/app/scripts/update_export_data.py >> /path/to/your/app/logs/cron_export_update.log 2>&1
+
+Note: Replace paths with your actual server deployment paths.
 """
 
 import os
@@ -109,65 +111,71 @@ def scrape_download_links():
         
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # Find all links that point to CSV files
+        # Find the pageViewData div with JSON-encoded content
+        page_data_div = soup.find('div', {'id': 'pageViewData'})
         links = []
         
-        # Look for links containing "Exports_HS10_by_Country" or similar patterns
-        # Stats NZ typically uses direct download links or links in tables/lists
+        if page_data_div and page_data_div.get('data-value'):
+            try:
+                # Parse the JSON data
+                page_data = json.loads(page_data_div['data-value'])
+                
+                # Extract HTML content from PageBlocks
+                if 'PageBlocks' in page_data:
+                    for block in page_data['PageBlocks']:
+                        if 'Content' in block:
+                            # Parse the HTML content from the block
+                            content_html = block['Content']
+                            block_soup = BeautifulSoup(content_html, 'html.parser')
+                            
+                            # Find all links in this block
+                            for link in block_soup.find_all('a', href=True):
+                                href = link.get('href', '')
+                                
+                                # Only process Exports_HS10_by_Country CSV files
+                                if 'Exports_HS10_by_Country' in href and href.endswith('.csv'):
+                                    # Handle relative URLs
+                                    if href.startswith('/'):
+                                        full_url = f"https://www.stats.govt.nz{href}"
+                                    elif href.startswith('http'):
+                                        full_url = href
+                                    else:
+                                        # Relative URL
+                                        full_url = f"https://www.stats.govt.nz/{href.lstrip('/')}"
+                                    
+                                    # Extract filename from URL
+                                    filename = os.path.basename(href.split('?')[0])
+                                    
+                                    if filename.endswith('.csv'):
+                                        links.append({
+                                            'url': full_url,
+                                            'filename': filename,
+                                            'link_text': link.get_text(strip=True)
+                                        })
+                
+            except json.JSONDecodeError as e:
+                log_update(f"Error parsing JSON data: {str(e)}")
+        
+        # Also check for any direct links in the page (fallback)
         for link in soup.find_all('a', href=True):
             href = link.get('href', '')
-            text = link.get_text(strip=True)
-            
-            # Check if it's a CSV download link for exports
-            if 'Exports_HS10_by_Country' in href or 'Exports_HS10_by_Country' in text:
-                # Handle relative URLs
+            if 'Exports_HS10_by_Country' in href and href.endswith('.csv'):
                 if href.startswith('/'):
                     full_url = f"https://www.stats.govt.nz{href}"
                 elif href.startswith('http'):
                     full_url = href
                 else:
-                    # Relative URL from current page
-                    full_url = f"{STATS_NZ_URL.rstrip('/')}/{href.lstrip('/')}"
-                
-                # Extract filename from URL or link text
-                filename = os.path.basename(href.split('?')[0])  # Remove query params
-                if not filename.endswith('.csv'):
-                    # Try to get filename from link text or URL path
-                    if '.csv' in href:
-                        filename = href.split('/')[-1].split('?')[0]
-                    elif text and '.csv' in text:
-                        filename = text.strip()
-                    else:
-                        continue
-                
-                # Clean filename
-                filename = filename.strip()
-                if not filename.endswith('.csv'):
                     continue
                 
-                links.append({
-                    'url': full_url,
-                    'filename': filename,
-                    'link_text': text
-                })
-        
-        # Also check for download buttons or data attributes
-        for element in soup.find_all(['button', 'div', 'span'], {'data-url': True}):
-            data_url = element.get('data-url', '')
-            if 'Exports_HS10_by_Country' in data_url and data_url.endswith('.csv'):
-                if data_url.startswith('/'):
-                    full_url = f"https://www.stats.govt.nz{data_url}"
-                elif data_url.startswith('http'):
-                    full_url = data_url
-                else:
-                    continue
-                
-                filename = os.path.basename(data_url.split('?')[0])
-                links.append({
-                    'url': full_url,
-                    'filename': filename,
-                    'link_text': element.get_text(strip=True)
-                })
+                filename = os.path.basename(href.split('?')[0])
+                if filename.endswith('.csv'):
+                    # Check if we already have this link
+                    if not any(l['filename'] == filename for l in links):
+                        links.append({
+                            'url': full_url,
+                            'filename': filename,
+                            'link_text': link.get_text(strip=True)
+                        })
         
         log_update(f"Found {len(links)} potential download links on Stats NZ page")
         return links
