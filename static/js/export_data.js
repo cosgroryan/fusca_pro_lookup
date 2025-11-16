@@ -163,31 +163,56 @@ function setQuickDateRange(range) {
 
 // Update active date range button
 function updateDateRangeButton(range) {
-    document.querySelectorAll('.date-range-buttons button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    if (range === 'custom') {
-        const customBtn = document.getElementById('customDateBtn');
-        if (customBtn) customBtn.classList.add('active');
-    } else {
-        // Find button by onclick attribute
-        const buttons = document.querySelectorAll('.date-range-buttons button');
-        buttons.forEach(btn => {
-            if (btn.getAttribute('onclick') === `setQuickDateRange('${range}')`) {
-                btn.classList.add('active');
-            }
+    try {
+        const allButtons = document.querySelectorAll('.date-range-buttons button');
+        if (allButtons.length === 0) {
+            console.warn('No date range buttons found');
+            return;
+        }
+        
+        // Remove active class from all buttons
+        allButtons.forEach(btn => {
+            btn.classList.remove('active');
         });
+        
+        if (range === 'custom') {
+            const customBtn = document.getElementById('customDateBtn');
+            if (customBtn) {
+                customBtn.classList.add('active');
+            } else {
+                console.warn('Custom date button not found');
+            }
+        } else {
+            // Find button by onclick attribute
+            const buttons = document.querySelectorAll('.date-range-buttons button');
+            let found = false;
+            buttons.forEach(btn => {
+                const onclickAttr = btn.getAttribute('onclick');
+                if (onclickAttr && onclickAttr.includes(`setQuickDateRange('${range}')`)) {
+                    btn.classList.add('active');
+                    found = true;
+                }
+            });
+            if (!found) {
+                console.warn(`Button for range '${range}' not found`);
+            }
+        }
+    } catch (error) {
+        console.error('Error updating date range button:', error);
     }
 }
 
 // Set custom date range (with animation)
 function setCustomDateRange() {
-    // Update active button
-    updateDateRangeButton('custom');
-    
-    // Flash the date input fields green
-    flashDateInputs();
+    try {
+        // Update active button
+        updateDateRangeButton('custom');
+        
+        // Flash the date input fields green
+        flashDateInputs();
+    } catch (error) {
+        console.error('Error in setCustomDateRange:', error);
+    }
 }
 
 // Flash date input fields green
@@ -195,7 +220,10 @@ function flashDateInputs() {
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
     
-    if (!startDateInput || !endDateInput) return;
+    if (!startDateInput || !endDateInput) {
+        console.warn('Date inputs not found for flashing');
+        return;
+    }
     
     // Store original border color
     const originalStartBorder = window.getComputedStyle(startDateInput).borderColor;
@@ -208,10 +236,17 @@ function flashDateInputs() {
     function flash() {
         if (flashCount >= maxFlashes) {
             // Restore original border
-            startDateInput.style.transition = '';
-            endDateInput.style.transition = '';
-            startDateInput.style.borderColor = originalStartBorder;
-            endDateInput.style.borderColor = originalEndBorder;
+            if (startDateInput && endDateInput) {
+                startDateInput.style.transition = '';
+                endDateInput.style.transition = '';
+                startDateInput.style.borderColor = originalStartBorder;
+                endDateInput.style.borderColor = originalEndBorder;
+            }
+            return;
+        }
+        
+        // Check elements still exist
+        if (!startDateInput || !endDateInput) {
             return;
         }
         
@@ -292,28 +327,53 @@ document.addEventListener('DOMContentLoaded', function() {
     renderWoolCategorySelector();
     
     // Add event listeners to date inputs to auto-switch to custom
-    const startDateInput = document.getElementById('startDate');
-    const endDateInput = document.getElementById('endDate');
-    
-    if (startDateInput) {
-        startDateInput.addEventListener('input', function() {
-            // Only auto-switch if user is typing (not programmatic)
-            if (!isSettingDateProgrammatically && this.value && this.value.length > 0) {
-                // Auto-switch to custom without animation
-                updateDateRangeButton('custom');
-            }
-        });
-    }
-    
-    if (endDateInput) {
-        endDateInput.addEventListener('input', function() {
-            // Only auto-switch if user is typing (not programmatic)
-            if (!isSettingDateProgrammatically && this.value && this.value.length > 0) {
-                // Auto-switch to custom without animation
-                updateDateRangeButton('custom');
-            }
-        });
-    }
+    // Use a small delay to ensure DOM is fully ready
+    setTimeout(function() {
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        
+        if (startDateInput) {
+            // Remove any existing inline handlers and use addEventListener
+            startDateInput.oninput = null;
+            startDateInput.onchange = null;
+            
+            startDateInput.addEventListener('input', function() {
+                // Only auto-switch if user is typing (not programmatic)
+                if (!isSettingDateProgrammatically && this.value && this.value.length > 0) {
+                    // Auto-switch to custom without animation
+                    updateDateRangeButton('custom');
+                }
+            });
+            
+            // Also listen for change event as fallback
+            startDateInput.addEventListener('change', function() {
+                if (!isSettingDateProgrammatically && this.value && this.value.length > 0) {
+                    updateDateRangeButton('custom');
+                }
+            });
+        }
+        
+        if (endDateInput) {
+            // Remove any existing inline handlers and use addEventListener
+            endDateInput.oninput = null;
+            endDateInput.onchange = null;
+            
+            endDateInput.addEventListener('input', function() {
+                // Only auto-switch if user is typing (not programmatic)
+                if (!isSettingDateProgrammatically && this.value && this.value.length > 0) {
+                    // Auto-switch to custom without animation
+                    updateDateRangeButton('custom');
+                }
+            });
+            
+            // Also listen for change event as fallback
+            endDateInput.addEventListener('change', function() {
+                if (!isSettingDateProgrammatically && this.value && this.value.length > 0) {
+                    updateDateRangeButton('custom');
+                }
+            });
+        }
+    }, 100);
 });
 
 // Load available files and determine date range
