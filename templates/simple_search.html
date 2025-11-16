@@ -539,7 +539,10 @@
         
         tbody.innerHTML = '';
         
-        currentTableData.forEach(row => {
+        // Reverse the array to show most recent first
+        const reversedData = [...currentTableData].reverse();
+        
+        reversedData.forEach(row => {
             const tr = document.createElement('tr');
             tr.style.borderBottom = '1px solid #ddd';
             tr.innerHTML = `
