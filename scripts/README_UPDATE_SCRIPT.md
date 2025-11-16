@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `update_export_data.py` script automatically checks the Stats NZ website for new export data files and downloads them. It also detects when provisional files are updated to final status.
+The `update_export_loader.py` script automatically checks the Stats NZ website for new export data files and downloads them. It also detects when provisional files are updated to final status.
 
 ## Features
 
@@ -23,13 +23,13 @@ pip install requests beautifulsoup4 pandas
 ### 2. Make Script Executable
 
 ```bash
-chmod +x scripts/update_export_data.py
+chmod +x scripts/update_export_loader.py
 ```
 
 ### 3. Test Run
 
 ```bash
-python3 scripts/update_export_data.py
+python3 scripts/update_export_loader.py
 ```
 
 ## Cron Job Setup
@@ -55,7 +55,7 @@ python3 scripts/update_export_data.py
 3. **Script path**: Full path to the update script
    ```bash
    # On server:
-   /path/to/your/app/scripts/update_export_data.py
+   /var/www/fusca/fusca_pro_lookup/scripts/update_export_loader.py
    ```
 
 ### Option 1: Daily at 2 AM (Recommended)
@@ -65,20 +65,16 @@ python3 scripts/update_export_data.py
 crontab -e
 
 # Add this line:
-0 2 * * * cd /var/www/fusca/fusca_pro_lookup && /var/www/fusca/fusca_pro_lookup/venv/bin/python3 /var/www/fusca/fusca_pro_lookup/scripts/update_export_data.py >> /var/www/fusca/fusca_pro_lookup/logs/cron_export_update.log 2>&1
+0 2 * * * /var/www/fusca/fusca_pro_lookup/venv/bin/python3 /var/www/fusca/fusca_pro_lookup/scripts/update_export_loader.py >> /var/www/fusca/fusca_pro_lookup/logs/cron_export_update.log 2>&1
 ```
 
-### Option 2: Daily at 2 AM (using absolute paths only)
+**Note**: The `cd` command is not needed when using absolute paths. The script will run from wherever cron executes it, and the script uses absolute paths internally.
 
-```bash
-0 2 * * * /var/www/fusca/fusca_pro_lookup/venv/bin/python3 /var/www/fusca/fusca_pro_lookup/scripts/update_export_data.py
-```
-
-### Option 3: Multiple Times Per Day
+### Option 2: Multiple Times Per Day
 
 ```bash
 # Check at 2 AM and 2 PM
-0 2,14 * * * cd /var/www/fusca/fusca_pro_lookup && /var/www/fusca/fusca_pro_lookup/venv/bin/python3 /var/www/fusca/fusca_pro_lookup/scripts/update_export_data.py >> /var/www/fusca/fusca_pro_lookup/logs/cron_export_update.log 2>&1
+0 2,14 * * * /var/www/fusca/fusca_pro_lookup/venv/bin/python3 /var/www/fusca/fusca_pro_lookup/scripts/update_export_loader.py >> /var/www/fusca/fusca_pro_lookup/logs/cron_export_update.log 2>&1
 ```
 
 ### Verifying the Cron Job
@@ -92,8 +88,7 @@ crontab -l
 Test the script manually first:
 ```bash
 # On server:
-cd /var/www/fusca/fusca_pro_lookup
-/var/www/fusca/fusca_pro_lookup/venv/bin/python3 scripts/update_export_data.py
+/var/www/fusca/fusca_pro_lookup/venv/bin/python3 /var/www/fusca/fusca_pro_lookup/scripts/update_export_loader.py
 ```
 
 ## How It Works
@@ -138,14 +133,13 @@ You can run the script manually at any time:
 
 **On the server:**
 ```bash
-cd /var/www/fusca/fusca_pro_lookup
-/var/www/fusca/fusca_pro_lookup/venv/bin/python3 scripts/update_export_data.py
+/var/www/fusca/fusca_pro_lookup/venv/bin/python3 /var/www/fusca/fusca_pro_lookup/scripts/update_export_loader.py
 ```
 
 **Locally (for testing):**
 ```bash
 cd /Users/ryan/Dropbox/Laravel/fusca_pro_loockup
-python3 scripts/update_export_data.py
+python3 scripts/update_export_loader.py
 ```
 
 ## Troubleshooting

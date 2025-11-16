@@ -5,9 +5,14 @@ let availableFiles = [];
 let availableCountries = [];
 let currentData = null;
 let currentSummary = null;
-let chartDisplayMode = 'value'; // 'value' or 'volume'
+let chartDisplayMode = 'value'; // 'value', 'volume', or 'both'
 let categoryMode = 'combine'; // 'combine' or 'compare'
 let dateRange = { min: null, max: null }; // Store min/max dates from available files
+let isSettingDateProgrammatically = false; // Flag to prevent auto-switch when setting dates programmatically
+
+// Chart colors for value/volume display
+const VOLUME_COLOR = 'rgba(21, 61, 51, 1)'; // Dark green for volume/quantity
+const VALUE_COLOR = 'rgba(0, 102, 204, 1)'; // Blue for value (more contrasting)
 
 // Wool categories mapping
 const WOOL_CATEGORIES = {
@@ -146,14 +151,90 @@ function setQuickDateRange(range) {
         startDate = minDate;
     }
     
+    // Set flag to prevent auto-switch
+    isSettingDateProgrammatically = true;
     document.getElementById('startDate').value = startDate.toString();
     document.getElementById('endDate').value = dateRange.max;
+    isSettingDateProgrammatically = false;
     
     // Update active button
+    updateDateRangeButton(range);
+}
+
+// Update active date range button
+function updateDateRangeButton(range) {
     document.querySelectorAll('.date-range-buttons button').forEach(btn => {
         btn.classList.remove('active');
     });
-    event.target.classList.add('active');
+    
+    if (range === 'custom') {
+        const customBtn = document.getElementById('customDateBtn');
+        if (customBtn) customBtn.classList.add('active');
+    } else {
+        // Find button by onclick attribute
+        const buttons = document.querySelectorAll('.date-range-buttons button');
+        buttons.forEach(btn => {
+            if (btn.getAttribute('onclick') === `setQuickDateRange('${range}')`) {
+                btn.classList.add('active');
+            }
+        });
+    }
+}
+
+// Set custom date range (with animation)
+function setCustomDateRange() {
+    // Update active button
+    updateDateRangeButton('custom');
+    
+    // Flash the date input fields green
+    flashDateInputs();
+}
+
+// Flash date input fields green
+function flashDateInputs() {
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    
+    if (!startDateInput || !endDateInput) return;
+    
+    // Store original border color
+    const originalStartBorder = window.getComputedStyle(startDateInput).borderColor;
+    const originalEndBorder = window.getComputedStyle(endDateInput).borderColor;
+    
+    // Flash 3 times (6 total flashes: on/off x 3)
+    let flashCount = 0;
+    const maxFlashes = 6; // 3 flashes = 6 state changes (on/off)
+    
+    function flash() {
+        if (flashCount >= maxFlashes) {
+            // Restore original border
+            startDateInput.style.transition = '';
+            endDateInput.style.transition = '';
+            startDateInput.style.borderColor = originalStartBorder;
+            endDateInput.style.borderColor = originalEndBorder;
+            return;
+        }
+        
+        // Toggle green border
+        const isOn = flashCount % 2 === 0;
+        startDateInput.style.transition = 'border-color 0.3s ease';
+        endDateInput.style.transition = 'border-color 0.3s ease';
+        
+        if (isOn) {
+            startDateInput.style.borderColor = '#3D7F4B';
+            endDateInput.style.borderColor = '#3D7F4B';
+        } else {
+            startDateInput.style.borderColor = originalStartBorder;
+            endDateInput.style.borderColor = originalEndBorder;
+        }
+        
+        flashCount++;
+        
+        // Wait before next state change
+        setTimeout(flash, 300);
+    }
+    
+    flash();
 }
 
 // Chart display toggle
@@ -163,14 +244,21 @@ function toggleChartDisplay(mode) {
     // Update button states
     const valueBtn = document.getElementById('chartToggleValue');
     const volumeBtn = document.getElementById('chartToggleVolume');
+    const bothBtn = document.getElementById('chartToggleBoth');
     
-    if (valueBtn && volumeBtn) {
+    if (valueBtn && volumeBtn && bothBtn) {
+        // Remove active from all
+        valueBtn.classList.remove('active');
+        volumeBtn.classList.remove('active');
+        bothBtn.classList.remove('active');
+        
+        // Add active to selected
         if (mode === 'value') {
             valueBtn.classList.add('active');
-            volumeBtn.classList.remove('active');
-        } else {
+        } else if (mode === 'volume') {
             volumeBtn.classList.add('active');
-            valueBtn.classList.remove('active');
+        } else if (mode === 'both') {
+            bothBtn.classList.add('active');
         }
     }
     
@@ -192,12 +280,40 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAvailableFiles().then(() => {
         // Pre-fill date fields with min/max dates
         if (dateRange.min && dateRange.max) {
+            isSettingDateProgrammatically = true;
             document.getElementById('startDate').value = dateRange.min;
             document.getElementById('endDate').value = dateRange.max;
+            isSettingDateProgrammatically = false;
+            // Set "All Time" as active since we're pre-filling with full range
+            updateDateRangeButton('all');
         }
     });
     loadCountries();
     renderWoolCategorySelector();
+    
+    // Add event listeners to date inputs to auto-switch to custom
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    
+    if (startDateInput) {
+        startDateInput.addEventListener('input', function() {
+            // Only auto-switch if user is typing (not programmatic)
+            if (!isSettingDateProgrammatically && this.value && this.value.length > 0) {
+                // Auto-switch to custom without animation
+                updateDateRangeButton('custom');
+            }
+        });
+    }
+    
+    if (endDateInput) {
+        endDateInput.addEventListener('input', function() {
+            // Only auto-switch if user is typing (not programmatic)
+            if (!isSettingDateProgrammatically && this.value && this.value.length > 0) {
+                // Auto-switch to custom without animation
+                updateDateRangeButton('custom');
+            }
+        });
+    }
 });
 
 // Load available files and determine date range
@@ -684,9 +800,9 @@ function displayChart(data, groupBy) {
         if (groupBy === 'month') {
             return a.month - b.month;
         } else if (groupBy === 'country') {
-            return b.total_export_FOB - a.total_export_FOB; // Sort by value descending
+            return b.total_export_fob - a.total_export_fob; // Sort by value descending
         } else {
-            return b.total_export_FOB - a.total_export_FOB;
+            return b.total_export_fob - a.total_export_fob;
         }
     });
     
@@ -756,8 +872,8 @@ function displayChart(data, groupBy) {
                 };
             }
             
-            combinationData[combinationKey][label].value += item.total_export_FOB || 0;
-            combinationData[combinationKey][label].quantity += item.total_export_qty || 0;
+                    combinationData[combinationKey][label].value += item.total_export_fob || 0;
+                    combinationData[combinationKey][label].quantity += item.total_export_qty || 0;
         });
         
         // Get all unique labels
@@ -796,9 +912,10 @@ function displayChart(data, groupBy) {
                         const comboData = combinationData[combinationKey][label];
                         if (chartDisplayMode === 'value') {
                             return comboData ? comboData.value : 0;
-                        } else {
+                        } else if (chartDisplayMode === 'volume' || chartDisplayMode === 'both') {
                             return comboData ? comboData.quantity : 0;
                         }
+                        return 0;
                     });
                     
                     datasets.push({
@@ -807,12 +924,43 @@ function displayChart(data, groupBy) {
                         backgroundColor: contrastingColors[colorIndex % contrastingColors.length],
                         borderColor: contrastingColors[colorIndex % contrastingColors.length].replace('0.8', '1'),
                         borderWidth: 1,
-                        yAxisID: 'y'
+                        yAxisID: 'y',
+                        type: 'bar'
                     });
                     colorIndex++;
                 }
             });
         });
+        
+        // If 'both' mode, add aggregated value as a line on secondary axis
+        if (chartDisplayMode === 'both') {
+            const aggregatedValueData = labels.map(label => {
+                let totalValue = 0;
+                selectedCountries.forEach(country => {
+                    selectedCategories.forEach(category => {
+                        const combinationKey = `${country}::${category}`;
+                        if (combinationData[combinationKey] && combinationData[combinationKey][label]) {
+                            totalValue += combinationData[combinationKey][label].value || 0;
+                        }
+                    });
+                });
+                return totalValue;
+            });
+            
+            datasets.push({
+                label: 'Total Export Value (FOB)',
+                data: aggregatedValueData,
+                type: 'line',
+                borderColor: VALUE_COLOR,
+                backgroundColor: VALUE_COLOR.replace('1)', '0.1)'),
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                yAxisID: 'y1'
+            });
+        }
     } else if (shouldCompareCountries && !shouldCompareCategories) {
         // Compare countries only (no category comparison): separate series for each country
         const countryData = {};
@@ -846,7 +994,7 @@ function displayChart(data, groupBy) {
                 };
             }
             
-            countryData[country][label].value += item.total_export_FOB || 0;
+            countryData[country][label].value += item.total_export_fob || 0;
             countryData[country][label].quantity += item.total_export_qty || 0;
         });
         
@@ -881,9 +1029,10 @@ function displayChart(data, groupBy) {
                     const ctyData = countryData[country][label];
                     if (chartDisplayMode === 'value') {
                         return ctyData ? ctyData.value : 0;
-                    } else {
+                    } else if (chartDisplayMode === 'volume' || chartDisplayMode === 'both') {
                         return ctyData ? ctyData.quantity : 0;
                     }
+                    return 0;
                 });
                 
                 datasets.push({
@@ -892,11 +1041,39 @@ function displayChart(data, groupBy) {
                     backgroundColor: contrastingColors[colorIndex % contrastingColors.length],
                     borderColor: contrastingColors[colorIndex % contrastingColors.length].replace('0.8', '1'),
                     borderWidth: 1,
-                    yAxisID: 'y'
+                    yAxisID: 'y',
+                    type: 'bar'
                 });
                 colorIndex++;
             }
         });
+        
+        // If 'both' mode, add aggregated value as a line on secondary axis
+        if (chartDisplayMode === 'both') {
+            const aggregatedValueData = labels.map(label => {
+                let totalValue = 0;
+                selectedCountries.forEach(country => {
+                    if (countryData[country] && countryData[country][label]) {
+                        totalValue += countryData[country][label].value || 0;
+                    }
+                });
+                return totalValue;
+            });
+            
+            datasets.push({
+                label: 'Total Export Value (FOB)',
+                data: aggregatedValueData,
+                type: 'line',
+                borderColor: VALUE_COLOR,
+                backgroundColor: VALUE_COLOR.replace('1)', '0.1)'),
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                yAxisID: 'y1'
+            });
+        }
     } else if (shouldCompareCategories && !shouldCompareCountries) {
         // Compare mode: separate series for each category
         // Group data by category and the groupBy field
@@ -935,7 +1112,7 @@ function displayChart(data, groupBy) {
                 };
             }
             
-            categoryData[category][label].value += item.total_export_FOB || 0;
+            categoryData[category][label].value += item.total_export_fob || 0;
             categoryData[category][label].quantity += item.total_export_qty || 0;
         });
         
@@ -977,9 +1154,10 @@ function displayChart(data, groupBy) {
                     const catData = categoryData[category][label];
                     if (chartDisplayMode === 'value') {
                         return catData ? catData.value : 0;
-                    } else {
+                    } else if (chartDisplayMode === 'volume' || chartDisplayMode === 'both') {
                         return catData ? catData.quantity : 0;
                     }
+                    return 0;
                 });
                 
                 datasets.push({
@@ -988,11 +1166,39 @@ function displayChart(data, groupBy) {
                     backgroundColor: contrastingColors[colorIndex % contrastingColors.length],
                     borderColor: contrastingColors[colorIndex % contrastingColors.length].replace('0.8', '1'),
                     borderWidth: 1,
-                    yAxisID: 'y'
+                    yAxisID: 'y',
+                    type: 'bar'
                 });
                 colorIndex++;
             }
         });
+        
+        // If 'both' mode, add aggregated value as a line on secondary axis
+        if (chartDisplayMode === 'both') {
+            const aggregatedValueData = labels.map(label => {
+                let totalValue = 0;
+                selectedCategories.forEach(category => {
+                    if (categoryData[category] && categoryData[category][label]) {
+                        totalValue += categoryData[category][label].value || 0;
+                    }
+                });
+                return totalValue;
+            });
+            
+            datasets.push({
+                label: 'Total Export Value (FOB)',
+                data: aggregatedValueData,
+                type: 'line',
+                borderColor: VALUE_COLOR,
+                backgroundColor: VALUE_COLOR.replace('1)', '0.1)'),
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                yAxisID: 'y1'
+            });
+        }
     } else {
         // Combine mode: aggregate all selected categories
         const aggregated = {};
@@ -1012,7 +1218,7 @@ function displayChart(data, groupBy) {
                 };
             }
             
-            aggregated[label].value += item.total_export_FOB || 0;
+            aggregated[label].value += item.total_export_fob || 0;
             aggregated[label].quantity += item.total_export_qty || 0;
         });
         
@@ -1036,24 +1242,48 @@ function displayChart(data, groupBy) {
         const quantityData = labels.map(label => aggregated[label].quantity);
         
         // Prepare datasets based on display mode
-        if (chartDisplayMode === 'value' || chartDisplayMode === 'both') {
+        if (chartDisplayMode === 'value') {
             datasets.push({
                 label: 'Export Value (FOB)',
                 data: valueData,
-                backgroundColor: 'rgba(61, 127, 75, 0.7)',
-                borderColor: 'rgba(61, 127, 75, 1)',
+                backgroundColor: VALUE_COLOR.replace('1)', '0.7)'),
+                borderColor: VALUE_COLOR,
                 borderWidth: 1,
                 yAxisID: 'y'
             });
-        }
-        if (chartDisplayMode === 'volume' || chartDisplayMode === 'both') {
+        } else if (chartDisplayMode === 'volume') {
             datasets.push({
                 label: 'Export Quantity (kg)',
                 data: quantityData,
-                backgroundColor: 'rgba(21, 61, 51, 0.7)',
-                borderColor: 'rgba(21, 61, 51, 1)',
+                backgroundColor: VOLUME_COLOR.replace('1)', '0.7)'),
+                borderColor: VOLUME_COLOR,
                 borderWidth: 1,
-                yAxisID: chartDisplayMode === 'volume' ? 'y' : 'y1'
+                yAxisID: 'y'
+            });
+        } else if (chartDisplayMode === 'both') {
+            // Volume as bars on primary axis (left)
+            datasets.push({
+                label: 'Export Quantity (kg)',
+                data: quantityData,
+                type: 'bar',
+                backgroundColor: VOLUME_COLOR.replace('1)', '0.7)'),
+                borderColor: VOLUME_COLOR,
+                borderWidth: 1,
+                yAxisID: 'y'
+            });
+            // Value as line on secondary axis (right)
+            datasets.push({
+                label: 'Export Value (FOB)',
+                data: valueData,
+                type: 'line',
+                borderColor: VALUE_COLOR,
+                backgroundColor: VALUE_COLOR.replace('1)', '0.1)'),
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                yAxisID: 'y1'
             });
         }
     }
@@ -1073,7 +1303,7 @@ function displayChart(data, groupBy) {
     };
     chartTitle.textContent = groupByLabels[groupBy] || 'Export Data Analysis';
     
-    // Create chart
+    // Create chart (default type is 'bar', individual datasets can override with 'type' property)
     exportChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -1121,9 +1351,12 @@ function displayChart(data, groupBy) {
                     position: 'left',
                     title: {
                         display: true,
-                        text: chartDisplayMode === 'value' ? 'Export Value (FOB) - NZD' : 'Export Quantity (kg)'
+                        text: chartDisplayMode === 'value' ? 'Export Value (FOB) - NZD' : (chartDisplayMode === 'both' ? 'Export Quantity (kg)' : 'Export Quantity (kg)'),
+                        color: chartDisplayMode === 'value' ? VALUE_COLOR : (chartDisplayMode === 'both' ? VOLUME_COLOR : VOLUME_COLOR),
+                        font: { weight: 'bold', size: 12 }
                     },
                     ticks: {
+                        color: chartDisplayMode === 'value' ? VALUE_COLOR : (chartDisplayMode === 'both' ? VOLUME_COLOR : VOLUME_COLOR),
                         callback: function(value) {
                             if (chartDisplayMode === 'value') {
                                 if (value >= 1000000) {
@@ -1149,19 +1382,22 @@ function displayChart(data, groupBy) {
                     position: 'right',
                     title: {
                         display: true,
-                        text: 'Export Quantity (kg)'
+                        text: 'Export Value (FOB) - NZD',
+                        color: VALUE_COLOR,
+                        font: { weight: 'bold', size: 12 }
                     },
                     grid: {
                         drawOnChartArea: false
                     },
                     ticks: {
+                        color: VALUE_COLOR,
                         callback: function(value) {
                             if (value >= 1000000) {
-                                return (value / 1000000).toFixed(1) + 'M';
+                                return '$' + (value / 1000000).toFixed(1) + 'M';
                             } else if (value >= 1000) {
-                                return (value / 1000).toFixed(1) + 'K';
+                                return '$' + (value / 1000).toFixed(1) + 'K';
                             }
-                            return value;
+                            return '$' + value;
                         }
                     }
                 },
@@ -1310,8 +1546,8 @@ function convertToCSV(data) {
     // Order columns logically
     const columnOrder = [
         'month', 'hs', 'hs_desc', 'uom', 'country', 
-        'Export_FOB', 'Export_Qty', 'Re_export_FOB', 'Re_export_Qty',
-        'total_export_FOB', 'total_export_qty', 'status',
+        'export_fob', 'export_qty', 're_export_fob', 're_export_qty',
+        'total_export_fob', 'total_export_qty', 'status',
         'wool_category', 'processing_stage', 'micron_range'
     ];
     

@@ -314,6 +314,7 @@
                 <button class="date-range-btn" onclick="setQuickDateRange('1y')">1 Year</button>
                 <button class="date-range-btn" onclick="setQuickDateRange('3y')">3 Years</button>
                 <button class="date-range-btn" onclick="setQuickDateRange('all')">All Time</button>
+                <button class="date-range-btn" id="customDateBtn" onclick="setCustomDateRange()">Custom</button>
             </div>
         </div>
         
@@ -367,6 +368,7 @@
         <div class="date-range-buttons" style="display: flex; gap: 4px; padding: 4px; background: #f9f9f9; border-radius: 6px; width: fit-content;">
             <button class="date-range-btn active" id="chartToggleValue" onclick="toggleChartDisplay('value')">Value</button>
             <button class="date-range-btn" id="chartToggleVolume" onclick="toggleChartDisplay('volume')">Volume</button>
+            <button class="date-range-btn" id="chartToggleBoth" onclick="toggleChartDisplay('both')">Both</button>
         </div>
     </div>
     

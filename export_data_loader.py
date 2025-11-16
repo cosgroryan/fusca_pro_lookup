@@ -120,6 +120,42 @@ def load_export_data(filenames=None, wool_only=True, date_range=None, countries=
         try:
             df = pd.read_csv(filepath, low_memory=False)
             
+            # Normalize column names: lowercase and replace spaces with underscores
+            df.columns = df.columns.str.lower().str.replace(' ', '_').str.replace('(', '').str.replace(')', '').str.replace('-', '_')
+            # Remove $ signs (need to do separately as it's a special regex character)
+            df.columns = df.columns.str.replace('_$', '_', regex=False).str.replace('$', '', regex=False)
+            
+            # Map common column name variations to standard names
+            column_mapping = {
+                'harmonised_system_code': 'hs',
+                'harmonised_system_description': 'hs_desc',
+                'unit_qty': 'uom',
+                'exports_nzd_fob': 'export_fob',
+                'exports_qty': 'export_qty',
+                're_exports_nzd_fob': 're_export_fob',
+                're_exports_qty': 're_export_qty',
+                'total_exports_nzd_fob': 'total_export_fob',
+                'total_exports_qty': 'total_export_qty'
+            }
+            
+            # Rename columns if they exist
+            df = df.rename(columns=column_mapping)
+            
+            # Ensure month column is integer type for proper filtering
+            if 'month' in df.columns:
+                df['month'] = df['month'].astype(int)
+            
+            # Convert numeric columns to proper types
+            # First, convert any string values with commas to numeric strings
+            numeric_columns = ['export_fob', 'export_qty', 're_export_fob', 're_export_qty', 
+                             'total_export_fob', 'total_export_qty']
+            for col in numeric_columns:
+                if col in df.columns:
+                    # If the column contains strings with commas, remove them first
+                    if df[col].dtype == 'object':
+                        df[col] = df[col].astype(str).str.replace(',', '', regex=False)
+                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            
             # Filter to wool codes if requested
             if wool_only:
                 if wool_categories:
@@ -232,7 +268,7 @@ def get_data_summary(df):
             'end': int(df['month'].max())
         },
         'countries': sorted(df['country'].unique().tolist()),
-        'total_value': float(df['total_export_FOB'].sum()),
+        'total_value': float(df['total_export_fob'].sum()),
         'total_quantity': float(df['total_export_qty'].sum()),
         'has_provisional': 'Provisional' in df['status'].values,
         'provisional_months': sorted(df[df['status'] == 'Provisional']['month'].unique().tolist()) if 'Provisional' in df['status'].values else []
@@ -246,13 +282,10 @@ def aggregate_by_category(df, group_by='wool_category'):
     if df.empty:
         return pd.DataFrame()
     
+    # Only use Total Exports columns (exports + re-exports)
     agg_df = df.groupby(group_by).agg({
-        'total_export_FOB': 'sum',
-        'total_export_qty': 'sum',
-        'Export_FOB': 'sum',
-        'Export_Qty': 'sum',
-        'Re_export_FOB': 'sum',
-        'Re_export_Qty': 'sum'
+        'total_export_fob': 'sum',
+        'total_export_qty': 'sum'
     }).reset_index()
     
     return agg_df
@@ -263,17 +296,14 @@ def aggregate_by_country(df):
     if df.empty:
         return pd.DataFrame()
     
+    # Only use Total Exports columns (exports + re-exports)
     agg_df = df.groupby('country').agg({
-        'total_export_FOB': 'sum',
-        'total_export_qty': 'sum',
-        'Export_FOB': 'sum',
-        'Export_Qty': 'sum',
-        'Re_export_FOB': 'sum',
-        'Re_export_Qty': 'sum'
+        'total_export_fob': 'sum',
+        'total_export_qty': 'sum'
     }).reset_index()
     
     # Sort by total value descending
-    agg_df = agg_df.sort_values('total_export_FOB', ascending=False)
+    agg_df = agg_df.sort_values('total_export_fob', ascending=False)
     
     return agg_df
 
@@ -283,13 +313,10 @@ def aggregate_by_month(df):
     if df.empty:
         return pd.DataFrame()
     
+    # Only use Total Exports columns (exports + re-exports)
     agg_df = df.groupby('month').agg({
-        'total_export_FOB': 'sum',
+        'total_export_fob': 'sum',
         'total_export_qty': 'sum',
-        'Export_FOB': 'sum',
-        'Export_Qty': 'sum',
-        'Re_export_FOB': 'sum',
-        'Re_export_Qty': 'sum',
         'status': lambda x: x.iloc[0]  # Take first status (should be same for all in month)
     }).reset_index()
     
