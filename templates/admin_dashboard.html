@@ -3,6 +3,17 @@
 {% block title %}Admin Dashboard - Fusca Pro Lookup{% endblock %}
 
 {% block content %}
+<!-- Password Prompt Modal -->
+<div id="passwordModal" style="display: {% if require_auth %}block{% else %}none{% endif %}; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);">
+    <div style="background-color: white; margin: 15% auto; padding: 30px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+        <h2 style="color: #153D33; margin-top: 0; margin-bottom: 20px;">Admin Access Required</h2>
+        <p style="color: #666; margin-bottom: 20px;">Please enter the password to access the admin dashboard:</p>
+        <input type="password" id="adminPassword" placeholder="Enter password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; margin-bottom: 15px; box-sizing: border-box;" autofocus>
+        <div id="passwordError" style="color: #d32f2f; font-size: 12px; margin-bottom: 15px; display: none;"></div>
+        <button onclick="submitPassword()" style="width: 100%; padding: 12px; background: #3D7F4B; color: white; border: none; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer;">Submit</button>
+    </div>
+</div>
+
 <style>
     .event-item {
         cursor: pointer;
@@ -389,6 +400,10 @@ document.getElementById('clear-logs-btn').addEventListener('click', clearLogs);
 
 // Load on page load
 document.addEventListener('DOMContentLoaded', function() {
+    {% if require_auth %}
+    // Don't load analytics if not authenticated
+    return;
+    {% else %}
     loadAnalytics();
     loadRawLogs();
     // Auto-refresh every 30 seconds
@@ -396,6 +411,59 @@ document.addEventListener('DOMContentLoaded', function() {
         loadAnalytics();
         loadRawLogs();
     }, 30000);
+    {% endif %}
 });
+
+// Password authentication
+{% if require_auth %}
+function submitPassword() {
+    const password = document.getElementById('adminPassword').value;
+    const errorDiv = document.getElementById('passwordError');
+    
+    if (!password) {
+        errorDiv.textContent = 'Please enter a password';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    // Send password to server
+    fetch('/api/admin/authenticate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ password: password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Hide modal and reload page to show dashboard
+            document.getElementById('passwordModal').style.display = 'none';
+            window.location.reload();
+        } else {
+            errorDiv.textContent = data.error || 'Incorrect password';
+            errorDiv.style.display = 'block';
+            document.getElementById('adminPassword').value = '';
+            document.getElementById('adminPassword').focus();
+        }
+    })
+    .catch(error => {
+        errorDiv.textContent = 'Error authenticating. Please try again.';
+        errorDiv.style.display = 'block';
+    });
+}
+
+// Allow Enter key to submit password
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.getElementById('adminPassword');
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitPassword();
+            }
+        });
+    }
+});
+{% endif %}
 </script>
 {% endblock %}

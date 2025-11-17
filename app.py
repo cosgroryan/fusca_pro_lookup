@@ -4,7 +4,7 @@ Auction Data Search GUI
 A Flask web app for searching and visualizing auction data
 """
 
-from flask import Flask, render_template, request, jsonify, g, send_file, make_response
+from flask import Flask, render_template, request, jsonify, g, send_file, make_response, session
 from db_connector import get_db_connection
 from datetime import datetime, timedelta
 import json
@@ -21,6 +21,7 @@ from export_data_loader import (
     get_available_files, load_export_data, categorize_wool_data,
     get_data_summary, aggregate_by_category, aggregate_by_country, aggregate_by_month
 )
+from config import ADMIN_PASSWORD
 try:
     from reportlab.lib.pagesizes import letter, A4
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -33,6 +34,7 @@ except ImportError:
     REPORTLAB_AVAILABLE = False
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'fusca-admin-secret-key-change-in-production')
 
 # Configure log file path (outside git repo to avoid conflicts)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -204,11 +206,33 @@ def export_data_iframe():
 @app.route('/admin')
 def admin_dashboard():
     """Admin dashboard for search analytics"""
-    return render_template('admin_dashboard.html', page='admin')
+    # Check if user is authenticated
+    if not session.get('admin_authenticated', False):
+        return render_template('admin_dashboard.html', page='admin', require_auth=True)
+    return render_template('admin_dashboard.html', page='admin', require_auth=False)
+
+@app.route('/api/admin/authenticate', methods=['POST'])
+def authenticate_admin():
+    """Verify admin password"""
+    try:
+        data = request.json
+        password = data.get('password', '')
+        
+        if password == ADMIN_PASSWORD:
+            session['admin_authenticated'] = True
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Incorrect password'}), 401
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/admin/analytics')
 def get_analytics():
     """Get analytics data from log file"""
+    # Check authentication
+    if not session.get('admin_authenticated', False):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
     try:
         if not os.path.exists(LOG_FILE):
             return jsonify({
@@ -295,6 +319,10 @@ def get_analytics():
 @app.route('/api/admin/raw-logs')
 def get_raw_logs():
     """Get raw log file content"""
+    # Check authentication
+    if not session.get('admin_authenticated', False):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
     try:
         if not os.path.exists(LOG_FILE):
             return jsonify({'logs': '', 'line_count': 0})
@@ -321,6 +349,10 @@ def get_raw_logs():
 @app.route('/api/admin/clear-logs', methods=['POST'])
 def clear_logs():
     """Archive current log file and create a new empty one"""
+    # Check authentication
+    if not session.get('admin_authenticated', False):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
     try:
         if not os.path.exists(LOG_FILE):
             return jsonify({'status': 'success', 'message': 'No log file to archive'})
@@ -2097,6 +2129,7 @@ def get_export_data_files():
         print(f"Error getting export data files: {str(e)}")
         import traceback
         traceback.print_exc()
+        log_activity('/api/export-data/files', 'Export Data', error=str(e))
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/export-data/load', methods=['POST'])
@@ -2110,13 +2143,13 @@ def load_export_data_api():
         countries = data.get('countries', None)
         wool_categories = data.get('wool_categories', None)
         
-        log_activity('/api/export-data/load', 'Export Data', {
+        log_data = {
             'filenames': filenames,
             'wool_only': wool_only,
             'date_range': date_range,
             'country_count': len(countries) if countries else 0,
             'category_count': len(wool_categories) if wool_categories else 0
-        })
+        }
         
         # Load data
         df = load_export_data(
@@ -2128,6 +2161,7 @@ def load_export_data_api():
         )
         
         if df.empty:
+            log_activity('/api/export-data/load', 'Export Data', log_data, result_count=0)
             return jsonify({
                 'data': [],
                 'summary': get_data_summary(df),
@@ -2152,6 +2186,9 @@ def load_export_data_api():
         
         summary = get_data_summary(df)
         
+        # Log with result count
+        log_activity('/api/export-data/load', 'Export Data', log_data, result_count=len(records))
+        
         return jsonify({
             'data': records,
             'summary': summary,
@@ -2162,6 +2199,7 @@ def load_export_data_api():
         print(f"Error loading export data: {str(e)}")
         import traceback
         traceback.print_exc()
+        log_activity('/api/export-data/load', 'Export Data', data=log_data if 'log_data' in locals() else {}, error=str(e))
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/export-data/aggregate', methods=['POST'])
@@ -2176,11 +2214,13 @@ def aggregate_export_data():
         wool_categories = data.get('wool_categories', None)
         group_by = data.get('group_by', 'wool_category')  # 'wool_category', 'country', 'month', 'processing_stage', 'micron_range'
         
-        log_activity('/api/export-data/aggregate', 'Export Data', {
+        log_data = {
             'group_by': group_by,
             'filenames': filenames,
-            'category_count': len(wool_categories) if wool_categories else 0
-        })
+            'category_count': len(wool_categories) if wool_categories else 0,
+            'country_count': len(countries) if countries else 0,
+            'date_range': date_range
+        }
         
         # Load data
         df = load_export_data(
@@ -2208,10 +2248,10 @@ def aggregate_export_data():
             agg_df = aggregate_by_category(df, group_by='wool_category')
         
         # Convert to JSON-serializable format
-        records = agg_df.to_dict('records')
+        aggregated_records = agg_df.to_dict('records')
         
         # Convert numpy types to native Python types
-        for record in records:
+        for record in aggregated_records:
             for key, value in record.items():
                 if pd.isna(value):
                     record[key] = None
@@ -2220,16 +2260,22 @@ def aggregate_export_data():
                 elif isinstance(value, (np.floating, np.float64)):
                     record[key] = float(value)
         
+        summary = get_data_summary(agg_df)
+        
+        # Log with result count
+        log_activity('/api/export-data/aggregate', 'Export Data', log_data, result_count=len(aggregated_records))
+        
         return jsonify({
-            'data': records,
-            'group_by': group_by,
-            'record_count': len(records)
+            'aggregated_data': aggregated_records,
+            'summary': summary,
+            'group_by': group_by
         })
         
     except Exception as e:
         print(f"Error aggregating export data: {str(e)}")
         import traceback
         traceback.print_exc()
+        log_activity('/api/export-data/aggregate', 'Export Data', data=log_data if 'log_data' in locals() else {}, error=str(e))
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/export-data/countries', methods=['GET'])
@@ -2242,6 +2288,7 @@ def get_export_data_countries():
         return jsonify({'countries': countries})
     except Exception as e:
         print(f"Error getting countries: {str(e)}")
+        log_activity('/api/export-data/countries', 'Export Data', error=str(e))
         return jsonify({'error': str(e)}), 500
 
 @app.teardown_appcontext
