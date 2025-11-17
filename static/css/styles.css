@@ -227,6 +227,12 @@ button.button--secondary:hover:not(:disabled):not(.hide-btn), .button--secondary
     background: var(--deep-green);
 }
 
+/* Hover state for green outline secondary buttons (white bg, green border) */
+button[style*="border: 1px solid #3D7F4B"][style*="background: white"]:hover {
+    background: #f5f5f5 !important;
+    color: #3D7F4B !important;
+}
+
 /* Hollow button */
 button.hollow, .button.hollow {
     background: transparent;

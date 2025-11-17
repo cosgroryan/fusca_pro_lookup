@@ -112,7 +112,7 @@
         text-transform: uppercase;
         letter-spacing: 0.1em;
         cursor: pointer;
-        width: 100%;
+        width: fit-content;
         transition: all 0.3s;
         height: 32px;                /* Match input field height exactly */
         box-sizing: border-box;
@@ -123,6 +123,12 @@
     
     .run-analysis-btn:hover {
         background: #2d5f39;
+    }
+    
+    /* Hover state for green outline buttons (secondary buttons) */
+    .run-analysis-btn[style*="border: 1px solid #3D7F4B"]:hover {
+        background: #f5f5f5;
+        color: #3D7F4B;
     }
     
     .run-analysis-btn:disabled {
@@ -503,11 +509,11 @@
         </div>
         
         <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button class="run-analysis-btn" onclick="clearDistributionForm()" style="background: white; color: #3D7F4B; border: 1px solid #3D7F4B;">Clear</button>
             <button class="run-analysis-btn" onclick="runDistributionAnalysis()" id="dist-run-btn">
                 <span class="btn-text-full">Run Distribution Analysis</span>
                 <span class="btn-text-mobile">Run Analysis</span>
             </button>
-            <button class="run-analysis-btn" onclick="clearDistributionForm()" style="background: #666;">Clear</button>
         </div>
     </div>
     
@@ -568,11 +574,11 @@
         </div>
         
         <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button class="run-analysis-btn" onclick="clearTimeseriesForm()" style="background: white; color: #3D7F4B; border: 1px solid #3D7F4B;">Clear</button>
             <button class="run-analysis-btn" onclick="runTimeseriesAnalysis()" id="ts-run-btn">
                 <span class="btn-text-full">Run Time Series Analysis</span>
                 <span class="btn-text-mobile">Run Analysis</span>
             </button>
-            <button class="run-analysis-btn" onclick="clearTimeseriesForm()" style="background: #666;">Clear</button>
         </div>
     </div>
     
@@ -630,11 +636,11 @@
         </div>
         
         <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button class="run-analysis-btn" onclick="clearRegressionForm()" style="background: white; color: #3D7F4B; border: 1px solid #3D7F4B;">Clear</button>
             <button class="run-analysis-btn" onclick="runRegressionAnalysis()" id="reg-run-btn">
                 <span class="btn-text-full">Run Regression Analysis</span>
                 <span class="btn-text-mobile">Run Analysis</span>
             </button>
-            <button class="run-analysis-btn" onclick="clearRegressionForm()" style="background: #666;">Clear</button>
         </div>
     </div>
     
@@ -744,8 +750,8 @@
         </div>
         
         <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button class="run-analysis-btn" onclick="clearScenarioForm()" style="background: white; color: #3D7F4B; border: 1px solid #3D7F4B;">Clear</button>
             <button class="run-analysis-btn" onclick="runScenarioAnalysis()" id="scenario-run-btn">Calculate Impact</button>
-            <button class="run-analysis-btn" onclick="clearScenarioForm()" style="background: #666;">Clear</button>
         </div>
     </div>
     
@@ -807,11 +813,11 @@
         </div>
         
         <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button class="run-analysis-btn" onclick="clearBenchmarkForm()" style="background: white; color: #3D7F4B; border: 1px solid #3D7F4B;">Clear</button>
             <button class="run-analysis-btn" onclick="runBenchmarkAnalysis()" id="bench-run-btn">
                 <span class="btn-text-full">Run Benchmark Analysis</span>
                 <span class="btn-text-mobile">Run Analysis</span>
             </button>
-            <button class="run-analysis-btn" onclick="clearBenchmarkForm()" style="background: #666;">Clear</button>
         </div>
     </div>
     
