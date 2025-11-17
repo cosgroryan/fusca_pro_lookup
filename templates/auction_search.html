@@ -1188,7 +1188,7 @@
         <div class="chart-section" id="compareChartSection" style="display: none;">
             <div class="module-header">
                 <h2 style="color: #153D33; font-size: 14px;">Price Comparison</h2>
-                <button class="hide-btn" onclick="toggleModule('compareChart')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
+                <button class="hide-btn content-visible" onclick="toggleModule('compareChart')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
             </div>
             <div id="compareChartContent" class="module-content">
                 <div class="chart-container">
@@ -1200,7 +1200,7 @@
         <div class="chart-section" id="chartSection" style="display: none;">
             <div class="module-header">
                 <h2 style="color: #153D33; font-size: 14px;">Average Price Over Time</h2>
-                <button class="hide-btn" onclick="toggleModule('priceChart')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
+                <button class="hide-btn content-visible" onclick="toggleModule('priceChart')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
             </div>
             <div id="priceChartContent" class="module-content">
                 <div class="chart-container">
@@ -1214,7 +1214,7 @@
         <div class="chart-section" id="balesChartSection" style="display: none;">
             <div class="module-header">
                 <h2 style="color: #153D33; font-size: 14px;">Total Bales by Sale Date</h2>
-                <button class="hide-btn" onclick="toggleModule('balesChart')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
+                <button class="hide-btn content-visible" onclick="toggleModule('balesChart')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
             </div>
             <div id="balesChartContent" class="module-content">
                 <div class="chart-container">
@@ -1229,7 +1229,7 @@
                 <div style="display: flex; gap: 15px; align-items: center;">
                     <button class="download-csv-btn" onclick="downloadCSV()" id="downloadBtn">Download CSV</button>
                     <span style="color: #666; font-size: 11px;">Showing up to 1,000 results</span>
-                    <button class="hide-btn" onclick="toggleModule('resultsTable')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
+                    <button class="hide-btn content-visible" onclick="toggleModule('resultsTable')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
                 </div>
             </div>
             

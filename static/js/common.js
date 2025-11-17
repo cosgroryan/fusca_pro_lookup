@@ -247,6 +247,7 @@ function toggleModule(moduleId) {
     if (content.classList.contains('collapsed')) {
         // Content is hidden, show it (use eye-off icon because user can hide it)
         content.classList.remove('collapsed');
+        button.classList.add('content-visible');
         const img = button.querySelector('img');
         if (img) {
             img.src = '/static/images/eye-off-svgrepo-com.svg';
@@ -256,6 +257,7 @@ function toggleModule(moduleId) {
     } else {
         // Content is visible, hide it (use eye icon because user can show it)
         content.classList.add('collapsed');
+        button.classList.remove('content-visible');
         const img = button.querySelector('img');
         if (img) {
             img.src = '/static/images/eye-svgrepo-com.svg';

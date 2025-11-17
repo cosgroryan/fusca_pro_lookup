@@ -62,11 +62,11 @@
         <h2 style="color: #153D33; font-size: 14px;">Average Price Over Time (Volume-Weighted)</h2>
         <div style="display: flex; gap: 8px; align-items: center;">
             <!-- View Toggle -->
-            <div class="date-range-buttons" style="display: flex !important; gap: 4px !important; padding: 0 !important; margin: 0 !important; background: #f9f9f9 !important; border-radius: 6px !important; height: 32px !important; align-items: center !important; box-sizing: border-box !important; line-height: 32px !important; flex-wrap: nowrap !important;">
+            <div class="date-range-buttons" style="display: flex !important; gap: 4px !important; padding: 0 !important; margin: 0 !important; background: #eeedef !important; border-radius: 6px !important; height: 32px !important; align-items: center !important; box-sizing: border-box !important; line-height: 32px !important; flex-wrap: nowrap !important;">
                 <button class="date-range-btn active" id="viewToggleGraph" onclick="toggleView('graph')" style="height: 32px !important; box-sizing: border-box !important; line-height: 1 !important; display: flex !important; align-items: center !important; justify-content: center !important; margin: 0 !important; padding: 8px 16px !important;">Graph</button>
                 <button class="date-range-btn" id="viewToggleTable" onclick="toggleView('table')" style="height: 32px !important; box-sizing: border-box !important; line-height: 1 !important; display: flex !important; align-items: center !important; justify-content: center !important; margin: 0 !important; padding: 8px 16px !important;">Table</button>
             </div>
-            <button class="hide-btn" onclick="toggleModule('priceChart')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
+            <button class="hide-btn content-visible" onclick="toggleModule('priceChart')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
         </div>
     </div>
     <div id="priceChartContent" class="module-content">
@@ -133,7 +133,7 @@
 <div class="chart-section" id="balesChartSection" style="display: none;">
     <div class="module-header">
         <h2 style="color: #153D33; font-size: 14px;">Total Bales by Sale Date</h2>
-        <button class="hide-btn" onclick="toggleModule('balesChart')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
+        <button class="hide-btn content-visible" onclick="toggleModule('balesChart')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
     </div>
     <div id="balesChartContent" class="module-content">
         <div class="chart-container">
@@ -152,7 +152,7 @@
             <button class="download-csv-btn" onclick="downloadTableCSV()" id="downloadBtn">Download CSV</button>
             <button class="download-csv-btn" onclick="downloadExcel(currentResults)" id="downloadExcelBtn" style="background: #28a745;">Download Excel</button>
             <span style="color: #666; font-size: 11px;">Showing up to 1,000 results</span>
-            <button class="hide-btn" onclick="toggleModule('resultsTable')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
+            <button class="hide-btn content-visible" onclick="toggleModule('resultsTable')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
         </div>
     </div>
     

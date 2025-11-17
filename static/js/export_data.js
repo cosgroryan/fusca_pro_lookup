@@ -52,13 +52,15 @@ function renderWoolCategorySelector() {
         const categoryId = `category_${category}`;
         html += `
             <div class="wool-category-checkbox">
-                <input type="checkbox" id="${categoryId}" value="${category}">
+                <input type="checkbox" id="${categoryId}" value="${category}" onchange="updateCategoryActionButtons()">
                 <label for="${categoryId}">${WOOL_CATEGORIES[category]}</label>
             </div>
         `;
     });
     
     container.innerHTML = html;
+    // Update button states after rendering
+    updateCategoryActionButtons();
 }
 
 // Select all greasy wool categories
@@ -70,6 +72,7 @@ function selectAllGreasy() {
             checkbox.checked = true;
         }
     });
+    updateCategoryActionButtons();
 }
 
 // Select all scoured/degreased wool categories
@@ -81,15 +84,82 @@ function selectAllScoured() {
             checkbox.checked = true;
         }
     });
+    updateCategoryActionButtons();
+}
+
+// Update category action button states based on selections
+function updateCategoryActionButtons() {
+    const checkboxes = document.querySelectorAll('#woolCategorySelector input[type="checkbox"]');
+    const checkedBoxes = document.querySelectorAll('#woolCategorySelector input[type="checkbox"]:checked');
+    const allChecked = checkboxes.length > 0 && checkedBoxes.length === checkboxes.length;
+    const noneChecked = checkedBoxes.length === 0;
+    
+    // Get greasy and scoured categories
+    const greasyCategories = ['greasy_fine', 'greasy_medium', 'greasy_coarse', 'greasy_very_coarse'];
+    const scouredCategories = ['degreased_fine', 'degreased_medium', 'degreased_coarse', 'degreased_very_coarse'];
+    
+    const greasyChecked = greasyCategories.every(cat => {
+        const cb = document.getElementById(`category_${cat}`);
+        return cb && cb.checked;
+    });
+    
+    const scouredChecked = scouredCategories.every(cat => {
+        const cb = document.getElementById(`category_${cat}`);
+        return cb && cb.checked;
+    });
+    
+    // Update button states
+    const selectAllBtn = document.querySelector('.category-action-link[onclick="selectAllCategories()"]');
+    const deselectAllBtn = document.querySelector('.category-action-link[onclick="deselectAllCategories()"]');
+    const selectGreasyBtn = document.querySelector('.category-action-link[onclick="selectAllGreasy()"]');
+    const selectScouredBtn = document.querySelector('.category-action-link[onclick="selectAllScoured()"]');
+    
+    if (selectAllBtn) {
+        if (allChecked) {
+            selectAllBtn.classList.add('active');
+        } else {
+            selectAllBtn.classList.remove('active');
+        }
+    }
+    
+    if (deselectAllBtn) {
+        // Deselect All should never stay active
+        deselectAllBtn.classList.remove('active');
+    }
+    
+    if (selectGreasyBtn) {
+        if (greasyChecked && greasyCategories.some(cat => {
+            const cb = document.getElementById(`category_${cat}`);
+            return cb && cb.checked;
+        })) {
+            selectGreasyBtn.classList.add('active');
+        } else {
+            selectGreasyBtn.classList.remove('active');
+        }
+    }
+    
+    if (selectScouredBtn) {
+        if (scouredChecked && scouredCategories.some(cat => {
+            const cb = document.getElementById(`category_${cat}`);
+            return cb && cb.checked;
+        })) {
+            selectScouredBtn.classList.add('active');
+        } else {
+            selectScouredBtn.classList.remove('active');
+        }
+    }
 }
 
 // Category selection helpers
 function selectAllCategories() {
     document.querySelectorAll('#woolCategorySelector input[type="checkbox"]').forEach(cb => cb.checked = true);
+    updateCategoryActionButtons();
 }
 
 function deselectAllCategories() {
     document.querySelectorAll('#woolCategorySelector input[type="checkbox"]').forEach(cb => cb.checked = false);
+    // Remove active class from all buttons
+    document.querySelectorAll('.category-action-link').forEach(btn => btn.classList.remove('active'));
 }
 
 // Category mode toggle (combine vs compare)

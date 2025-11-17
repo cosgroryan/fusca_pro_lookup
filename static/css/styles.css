@@ -309,8 +309,25 @@ button.hollow:hover:not(.hide-btn), .button.hollow:hover:not(.hide-btn) {
 .hide-btn img {
     width: 18px;
     height: 18px;
-    opacity: 0.6;
-    filter: brightness(0) saturate(100%) invert(70%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1) contrast(1);
+    transition: filter 0.2s ease;
+}
+
+/* Default state: inactive/hidden (eye icon shown) - lighter grey */
+.hide-btn img {
+    opacity: 0.5;
+    filter: brightness(0) saturate(100%) invert(75%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1) contrast(1);
+}
+
+/* Active state: visible (eye-off icon shown) - slightly darker grey */
+.hide-btn.content-visible img {
+    opacity: 0.7;
+    filter: brightness(0) saturate(100%) invert(60%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1) contrast(1);
+}
+
+/* Hover state: change icon to dark green (#3D7F4B) */
+.hide-btn:hover img {
+    opacity: 1;
+    filter: brightness(0) saturate(100%) invert(38%) sepia(25%) saturate(2000%) hue-rotate(100deg) brightness(0.85) contrast(1);
 }
 
 .module-content {
@@ -480,8 +497,9 @@ th.sortable.sort-desc::after {
 
 .date-range-btn {
     font-weight: 400;                /* Normal weight instead of bold */
-    color: #bfc5cd !important;       /* Custom text color for unselected */
+    color: #8a9199 !important;       /* Darker text color for unselected - improved contrast */
     background: transparent !important;
+    background-color: transparent !important;
     border: none;
     padding: 8px 16px;               /* Match input field height (32px total) */
     border-radius: 6px;              /* Slightly rounded individual buttons */
@@ -494,8 +512,15 @@ th.sortable.sort-desc::after {
 }
 
 .date-range-btn:hover:not(.active) {
-    color: #bfc5cd !important;       /* Keep same text color as unselected */
-    background: #fbfbfb !important;  /* Custom hover background color */
+    color: #8a9199 !important;       /* Keep same text color as unselected */
+    background: #f5f5f5 !important;  /* Custom hover background color - more visible */
+    background-color: #f5f5f5 !important;  /* Ensure background color is set */
+}
+
+/* Ensure hover works even with inline container styles */
+.date-range-buttons .date-range-btn:hover:not(.active) {
+    background: #f5f5f5 !important;
+    background-color: #f5f5f5 !important;
 }
 
 .date-range-btn.active {
