@@ -264,14 +264,14 @@ def get_data_summary(df):
     summary = {
         'total_records': len(df),
         'date_range': {
-            'start': int(df['month'].min()),
-            'end': int(df['month'].max())
+            'start': int(df['month'].min()) if 'month' in df.columns else None,
+            'end': int(df['month'].max()) if 'month' in df.columns else None
         },
-        'countries': sorted(df['country'].unique().tolist()),
-        'total_value': float(df['total_export_fob'].sum()),
-        'total_quantity': float(df['total_export_qty'].sum()),
-        'has_provisional': 'Provisional' in df['status'].values,
-        'provisional_months': sorted(df[df['status'] == 'Provisional']['month'].unique().tolist()) if 'Provisional' in df['status'].values else []
+        'countries': sorted(df['country'].unique().tolist()) if 'country' in df.columns else [],
+        'total_value': float(df['total_export_fob'].sum()) if 'total_export_fob' in df.columns else 0,
+        'total_quantity': float(df['total_export_qty'].sum()) if 'total_export_qty' in df.columns else 0,
+        'has_provisional': 'status' in df.columns and 'Provisional' in df['status'].values,
+        'provisional_months': sorted(df[df['status'] == 'Provisional']['month'].unique().tolist()) if 'status' in df.columns and 'month' in df.columns and 'Provisional' in df['status'].values else []
     }
     
     return summary
