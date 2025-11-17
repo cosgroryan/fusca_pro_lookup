@@ -161,8 +161,9 @@ function setQuickDateRange(range) {
     
     // Set flag to prevent auto-switch
     isSettingDateProgrammatically = true;
-    document.getElementById('startDate').value = startDate.toString();
-    document.getElementById('endDate').value = dateRange.max;
+    // Convert YYYYMM to YYYY-MM format for input
+    document.getElementById('startDate').value = yyyymmToDashFormat(startDate.toString());
+    document.getElementById('endDate').value = yyyymmToDashFormat(dateRange.max.toString());
     isSettingDateProgrammatically = false;
     
     // Update active button
@@ -318,14 +319,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     loadAvailableFiles().then(() => {
-        // Pre-fill date fields with min/max dates
+        // Pre-fill date fields with 1-year range and set "1 Year" as active
         if (dateRange.min && dateRange.max) {
+            // Calculate 1-year range
+            const endDate = parseInt(dateRange.max);
+            const endYear = Math.floor(endDate / 100);
+            const endMonth = endDate % 100;
+            
+            // 1 year ago
+            let startDate = (endYear - 1) * 100 + endMonth;
+            
+            // Ensure start date is not before min
+            const minDate = parseInt(dateRange.min);
+            if (startDate < minDate) {
+                startDate = minDate;
+            }
+            
+            // Set flag to prevent auto-switch
             isSettingDateProgrammatically = true;
-            document.getElementById('startDate').value = dateRange.min;
-            document.getElementById('endDate').value = dateRange.max;
+            // Convert YYYYMM to YYYY-MM format for input
+            document.getElementById('startDate').value = yyyymmToDashFormat(startDate.toString());
+            document.getElementById('endDate').value = yyyymmToDashFormat(dateRange.max.toString());
             isSettingDateProgrammatically = false;
-            // Set "All Time" as active since we're pre-filling with full range
-            updateDateRangeButton('all');
+            
+            // Set "1 Year" as active
+            updateDateRangeButton('1y');
         }
     });
     loadCountries();
@@ -414,6 +432,29 @@ async function loadAvailableFiles() {
         console.error('Error loading files:', error);
         showError('Failed to load available files');
     }
+}
+
+// Convert YYYYMM to YYYY-MM format
+function yyyymmToDashFormat(yyyymm) {
+    if (!yyyymm) return '';
+    const str = yyyymm.toString();
+    if (str.length === 6) {
+        const year = str.substring(0, 4);
+        const month = str.substring(4, 6);
+        return `${year}-${month}`;
+    }
+    return str;
+}
+
+// Convert YYYY-MM to YYYYMM format
+function dashFormatToYyyymm(yyyyDashMm) {
+    if (!yyyyDashMm) return '';
+    // Remove any dashes and ensure 6 digits
+    const cleaned = yyyyDashMm.replace(/-/g, '');
+    if (cleaned.length === 6) {
+        return cleaned;
+    }
+    return yyyyDashMm;
 }
 
 // Format date for display (like quick date buttons)
@@ -575,20 +616,24 @@ async function loadExportData() {
         return;
     }
     
-    if (!/^\d{6}$/.test(startDate)) {
-        showError('Start date must be in YYYYMM format (e.g., 202401)');
+    // Validate YYYY-MM format
+    if (!/^\d{4}-\d{2}$/.test(startDate)) {
+        showError('Start date must be in YYYY-MM format (e.g., 2024-01)');
         return;
     }
     
-    if (!/^\d{6}$/.test(endDate)) {
-        showError('End date must be in YYYYMM format (e.g., 202412)');
+    if (!/^\d{4}-\d{2}$/.test(endDate)) {
+        showError('End date must be in YYYY-MM format (e.g., 2024-12)');
         return;
     }
     
-    const dateRangeArray = [parseInt(startDate), parseInt(endDate)];
+    // Convert YYYY-MM to YYYYMM for backend
+    const startDateYyyymm = dashFormatToYyyymm(startDate);
+    const endDateYyyymm = dashFormatToYyyymm(endDate);
+    const dateRangeArray = [parseInt(startDateYyyymm), parseInt(endDateYyyymm)];
     
-    // Get files needed for this date range
-    const selectedFiles = getFilesForDateRange(startDate, endDate);
+    // Get files needed for this date range (using YYYYMM format)
+    const selectedFiles = getFilesForDateRange(startDateYyyymm, endDateYyyymm);
     
     if (selectedFiles.length === 0) {
         showError('No data files available for the selected date range');
@@ -1556,15 +1601,19 @@ async function exportToCSV() {
         const selectedCategories = Array.from(document.querySelectorAll('#woolCategorySelector input[type="checkbox"]:checked'))
             .map(cb => cb.value);
         
-        // Get files needed for this date range
-        const selectedFiles = getFilesForDateRange(startDate, endDate);
+        // Convert YYYY-MM to YYYYMM for file selection and backend
+        const startDateYyyymm = dashFormatToYyyymm(startDate);
+        const endDateYyyymm = dashFormatToYyyymm(endDate);
+        
+        // Get files needed for this date range (using YYYYMM format)
+        const selectedFiles = getFilesForDateRange(startDateYyyymm, endDateYyyymm);
         
         if (selectedFiles.length === 0) {
             showError('No data files available for the selected date range');
             return;
         }
         
-        const dateRangeArray = [parseInt(startDate), parseInt(endDate)];
+        const dateRangeArray = [parseInt(startDateYyyymm), parseInt(endDateYyyymm)];
         
         // Load full raw data for export
         const response = await fetch('/api/export-data/load', {

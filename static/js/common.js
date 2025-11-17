@@ -242,14 +242,26 @@ function getDateRangeFilter(range) {
 // Module toggle function
 function toggleModule(moduleId) {
     const content = document.getElementById(moduleId + 'Content');
-    const button = event.target;
+    const button = event.target.closest('.hide-btn') || event.target;
     
     if (content.classList.contains('collapsed')) {
+        // Content is hidden, show it (use eye-off icon because user can hide it)
         content.classList.remove('collapsed');
-        button.textContent = 'Hide';
+        const img = button.querySelector('img');
+        if (img) {
+            img.src = '/static/images/eye-off-svgrepo-com.svg';
+            img.alt = 'Hide';
+        }
+        button.setAttribute('aria-label', 'Hide');
     } else {
+        // Content is visible, hide it (use eye icon because user can show it)
         content.classList.add('collapsed');
-        button.textContent = 'Show';
+        const img = button.querySelector('img');
+        if (img) {
+            img.src = '/static/images/eye-svgrepo-com.svg';
+            img.alt = 'Show';
+        }
+        button.setAttribute('aria-label', 'Show');
     }
 }
 
