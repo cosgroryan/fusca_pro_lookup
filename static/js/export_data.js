@@ -492,6 +492,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
+    // Initialize recent searches
+    renderRecentSearches();
+    
+    // Attach event listeners for recent searches
+    attachRecentSearchListeners();
+    
     loadAvailableFiles().then(() => {
         // Pre-fill date fields with 1-year range and set "1 Year" as active
         if (dateRange.min && dateRange.max) {
@@ -927,6 +933,17 @@ async function loadExportData() {
         if (exportCSVBtn) {
             exportCSVBtn.disabled = false;
         }
+        
+        // Save to recent searches
+        saveRecentSearch({
+            startDate: startDate,
+            endDate: endDate,
+            countries: selectedCountries,
+            categories: selectedCategories,
+            groupBy: groupBy,
+            chartDisplay: chartDisplayMode,
+            categoryMode: categoryMode
+        });
         
     } catch (error) {
         console.error('Error loading export data:', error);
@@ -1903,4 +1920,356 @@ function escapeCSV(value) {
     
     return stringValue;
 }
+
+// Recent Searches Functions
+const RECENT_SEARCHES_KEY = 'export_data_recent_searches';
+const MAX_RECENT_SEARCHES = 10;
+
+// Generate default name for search
+function generateSearchName(searchParams) {
+    const parts = [];
+    
+    // Date range
+    if (searchParams.startDate && searchParams.endDate) {
+        parts.push(`${searchParams.startDate} to ${searchParams.endDate}`);
+    }
+    
+    // Countries
+    if (searchParams.countries && searchParams.countries.length > 0) {
+        if (searchParams.countries.length === 1) {
+            parts.push(getCountryDisplayName(searchParams.countries[0]));
+        } else {
+            parts.push(`${searchParams.countries.length} countries`);
+        }
+    } else {
+        parts.push('All countries');
+    }
+    
+    // Categories
+    if (searchParams.categories && searchParams.categories.length > 0) {
+        const categoryNames = searchParams.categories.map(cat => {
+            const label = WOOL_CATEGORIES[cat] || cat;
+            // Shorten category names
+            if (label.includes('Greasy Wool')) {
+                return label.replace('Greasy Wool - ', 'G-').replace('μm', 'μ');
+            } else if (label.includes('Degreased Wool')) {
+                return label.replace('Degreased Wool - ', 'D-').replace('μm', 'μ');
+            } else {
+                return label.split(' ')[0]; // First word
+            }
+        });
+        if (categoryNames.length <= 2) {
+            parts.push(categoryNames.join(', '));
+        } else {
+            parts.push(`${categoryNames.length} categories`);
+        }
+    }
+    
+    return parts.join(' • ');
+}
+
+// Save recent search
+function saveRecentSearch(searchParams) {
+    try {
+        let recentSearches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+        
+        // Generate default name
+        const defaultName = generateSearchName(searchParams);
+        
+        // Create search object
+        const searchObj = {
+            id: Date.now(),
+            name: defaultName,
+            timestamp: new Date().toISOString(),
+            params: searchParams
+        };
+        
+        // Remove duplicate (same params) - normalize arrays for comparison
+        const normalizeParams = (params) => {
+            const normalized = { ...params };
+            if (normalized.countries) {
+                normalized.countries = [...normalized.countries].sort();
+            }
+            if (normalized.categories) {
+                normalized.categories = [...normalized.categories].sort();
+            }
+            return normalized;
+        };
+        
+        const normalizedNewParams = normalizeParams(searchParams);
+        recentSearches = recentSearches.filter(s => {
+            const normalizedOldParams = normalizeParams(s.params);
+            return JSON.stringify(normalizedOldParams) !== JSON.stringify(normalizedNewParams);
+        });
+        
+        // Add to beginning
+        recentSearches.unshift(searchObj);
+        
+        // Keep only last 10
+        if (recentSearches.length > MAX_RECENT_SEARCHES) {
+            recentSearches = recentSearches.slice(0, MAX_RECENT_SEARCHES);
+        }
+        
+        // Save to localStorage
+        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(recentSearches));
+        
+        // Refresh display
+        renderRecentSearches();
+    } catch (error) {
+        console.error('Error saving recent search:', error);
+    }
+}
+
+// Load recent searches
+function getRecentSearches() {
+    try {
+        return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+    } catch (error) {
+        console.error('Error loading recent searches:', error);
+        return [];
+    }
+}
+
+// Render recent searches list
+function renderRecentSearches() {
+    const listContainer = document.getElementById('recentSearchesList');
+    const dropdownList = document.getElementById('recentSearchesDropdownList');
+    
+    const searches = getRecentSearches();
+    const emptyHtml = '<div style="padding: 20px; text-align: center; color: #666; font-size: 11px;">No recent searches yet</div>';
+    
+    if (searches.length === 0) {
+        if (listContainer) listContainer.innerHTML = emptyHtml;
+        if (dropdownList) dropdownList.innerHTML = emptyHtml;
+        return;
+    }
+    
+    let html = '';
+    searches.forEach(search => {
+        const timeAgo = getTimeAgo(new Date(search.timestamp));
+        const details = formatSearchDetails(search.params);
+        
+        // Ensure search.id is a number for consistent matching
+        const searchId = typeof search.id === 'string' ? parseInt(search.id, 10) : search.id;
+        
+        html += `
+            <div class="recent-search-item" data-search-id="${searchId}">
+                <div class="recent-search-item-header">
+                    <div class="recent-search-item-name" data-search-id="${searchId}" style="cursor: pointer;">${escapeHtml(search.name || 'Unnamed Search')}</div>
+                    <div class="recent-search-item-actions">
+                        <button class="recent-search-action-btn" data-action="delete" data-search-id="${searchId}" title="Delete">🗑️</button>
+                    </div>
+                </div>
+                <div class="recent-search-item-details">${details}</div>
+                <div class="recent-search-item-time">${timeAgo}</div>
+            </div>
+        `;
+    });
+    
+    if (listContainer) listContainer.innerHTML = html;
+    if (dropdownList) dropdownList.innerHTML = html;
+    
+    // Attach event listeners using event delegation
+    attachRecentSearchListeners();
+}
+
+// Event handlers for recent searches (stored for cleanup)
+let recentSearchClickHandler = null;
+let recentSearchActionHandler = null;
+
+// Attach event listeners for recent searches
+function attachRecentSearchListeners() {
+    const containers = [
+        document.getElementById('recentSearchesList'),
+        document.getElementById('recentSearchesDropdownList')
+    ].filter(Boolean);
+    
+    // Remove old listeners if they exist
+    if (recentSearchClickHandler) {
+        containers.forEach(container => {
+            container.removeEventListener('click', recentSearchClickHandler);
+        });
+    }
+    if (recentSearchActionHandler) {
+        containers.forEach(container => {
+            container.removeEventListener('click', recentSearchActionHandler);
+        });
+    }
+    
+    // Create new handlers
+    recentSearchClickHandler = function(e) {
+        // Check if click is on the name element or its children
+        const nameElement = e.target.closest('.recent-search-item-name');
+        if (nameElement) {
+            // Get searchId from the name element or the parent item
+            let searchId = nameElement.getAttribute('data-search-id');
+            if (!searchId) {
+                const item = nameElement.closest('.recent-search-item');
+                if (item) {
+                    searchId = item.getAttribute('data-search-id');
+                }
+            }
+            
+            if (searchId) {
+                const id = parseInt(searchId, 10);
+                if (id) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    loadRecentSearch(id);
+                }
+            }
+        }
+    };
+    
+    recentSearchActionHandler = function(e) {
+        const btn = e.target.closest('.recent-search-action-btn');
+        if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const action = btn.getAttribute('data-action');
+            const searchId = parseInt(btn.getAttribute('data-search-id'), 10);
+            
+            if (action === 'delete' && searchId) {
+                deleteRecentSearch(searchId);
+            }
+        }
+    };
+    
+    // Attach new listeners
+    containers.forEach(container => {
+        container.addEventListener('click', recentSearchClickHandler);
+        container.addEventListener('click', recentSearchActionHandler);
+    });
+}
+
+// Format search details for display
+function formatSearchDetails(params) {
+    const parts = [];
+    
+    if (params.groupBy) {
+        parts.push(`Group: ${params.groupBy}`);
+    }
+    
+    if (params.chartDisplay) {
+        parts.push(`Display: ${params.chartDisplay}`);
+    }
+    
+    if (params.categoryMode) {
+        parts.push(`Mode: ${params.categoryMode}`);
+    }
+    
+    return parts.join(' • ') || 'Default settings';
+}
+
+// Get time ago string
+function getTimeAgo(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString();
+}
+
+// Escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Load a recent search
+function loadRecentSearch(searchId) {
+    // Convert searchId to number if it's a string (from onclick attribute)
+    const id = typeof searchId === 'string' ? parseInt(searchId, 10) : searchId;
+    
+    const searches = getRecentSearches();
+    const search = searches.find(s => s.id === id);
+    
+    if (!search) {
+        alert('Search not found');
+        return;
+    }
+    
+    const params = search.params;
+    
+    // Set date fields
+    if (params.startDate) {
+        document.getElementById('startDate').value = params.startDate;
+    }
+    if (params.endDate) {
+        document.getElementById('endDate').value = params.endDate;
+    }
+    
+    // Set countries
+    const countryFilter = document.getElementById('countryFilter');
+    Array.from(countryFilter.options).forEach(opt => {
+        opt.selected = params.countries && params.countries.includes(opt.value);
+    });
+    
+    // Set categories
+    document.querySelectorAll('#woolCategorySelector input[type="checkbox"]').forEach(cb => {
+        cb.checked = params.categories && params.categories.includes(cb.value);
+    });
+    updateCategoryActionButtons();
+    
+    // Set group by
+    if (params.groupBy) {
+        document.getElementById('groupBy').value = params.groupBy;
+    }
+    
+    // Set chart display
+    if (params.chartDisplay) {
+        toggleChartDisplay(params.chartDisplay);
+    }
+    
+    // Set category mode
+    if (params.categoryMode) {
+        toggleCategoryMode(params.categoryMode);
+    }
+    
+    // Close dropdown on mobile
+    const dropdown = document.getElementById('recentSearchesDropdown');
+    if (dropdown) {
+        dropdown.classList.remove('open');
+    }
+    
+    // Auto-load the data
+    loadExportData();
+}
+
+// Delete recent search
+function deleteRecentSearch(searchId) {
+    if (!confirm('Delete this search?')) return;
+    
+    const searches = getRecentSearches();
+    const filtered = searches.filter(s => s.id !== searchId);
+    
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(filtered));
+    renderRecentSearches();
+}
+
+// Toggle recent searches dropdown (mobile)
+function toggleRecentSearches() {
+    const dropdown = document.getElementById('recentSearchesDropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('open');
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const toggle = document.getElementById('recentSearchesToggle');
+    const dropdown = document.getElementById('recentSearchesDropdown');
+    
+    if (dropdown && toggle && !toggle.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.classList.remove('open');
+    }
+});
 

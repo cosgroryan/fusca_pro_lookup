@@ -169,6 +169,136 @@
         filter: brightness(0) saturate(100%) invert(38%) sepia(25%) saturate(2000%) hue-rotate(100deg) brightness(0.85) contrast(1);
     }
     
+    .query-controls-wrapper {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+    
+    .query-controls {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .recent-searches-toggle {
+        background: transparent;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 6px 10px;
+        cursor: pointer;
+        color: #666;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .recent-searches-toggle:hover {
+        background: #f5f5f5;
+        border-color: #3D7F4B;
+    }
+    
+    .recent-searches-toggle img {
+        filter: brightness(0) saturate(100%) invert(50%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1) contrast(1);
+        transition: filter 0.2s ease;
+    }
+    
+    .recent-searches-toggle:hover img {
+        filter: brightness(0) saturate(100%) invert(38%) sepia(25%) saturate(2000%) hue-rotate(100deg) brightness(0.85) contrast(1);
+    }
+    
+    .recent-searches-panel {
+        width: 280px;
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 12px;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    
+    @media (min-width: 769px) {
+        .recent-searches-panel {
+            display: block !important;
+        }
+    }
+    
+    .recent-searches-header {
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .recent-searches-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .recent-search-item {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+    }
+    
+    .recent-search-item:hover {
+        border-color: #3D7F4B;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .recent-search-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+    
+    .recent-search-item-name {
+        font-weight: 600;
+        font-size: 12px;
+        color: #153D33;
+        flex: 1;
+        word-break: break-word;
+    }
+    
+    .recent-search-item-actions {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+    
+    .recent-search-action-btn {
+        background: transparent;
+        border: none;
+        padding: 2px 4px;
+        cursor: pointer;
+        color: #666;
+        font-size: 10px;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    }
+    
+    .recent-search-action-btn:hover {
+        opacity: 1;
+        color: #3D7F4B;
+    }
+    
+    .recent-search-item-details {
+        font-size: 10px;
+        color: #666;
+        line-height: 1.4;
+    }
+    
+    .recent-search-item-time {
+        font-size: 9px;
+        color: #999;
+        margin-top: 4px;
+    }
+    
     .date-inputs-container {
         display: flex;
         flex-direction: row;
@@ -375,6 +505,7 @@
         max-width: 100%;
         height: 500px;
         max-height: 500px;
+        width: 100%;
     }
     
     .chart-wrapper canvas {
@@ -415,7 +546,61 @@
         }
     }
     
+    .recent-searches-dropdown {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 8px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        min-width: 280px;
+        max-width: 90vw;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .recent-searches-dropdown.open {
+        display: block;
+    }
+    
+    .recent-searches-dropdown-header {
+        padding: 12px;
+        border-bottom: 1px solid #ddd;
+        font-weight: 600;
+        font-size: 12px;
+        color: #153D33;
+    }
+    
+    .recent-searches-dropdown-list {
+        padding: 8px;
+    }
+    
     @media (max-width: 768px) {
+        .query-controls-wrapper {
+            flex-direction: column;
+        }
+        
+        .recent-searches-toggle {
+            display: flex !important;
+            position: relative;
+        }
+        
+        .recent-searches-panel {
+            display: none !important;
+        }
+        
+        .recent-searches-dropdown {
+            display: none;
+        }
+        
+        .recent-searches-dropdown.open {
+            display: block;
+        }
+        
         .wool-category-selector {
             width: 100%;
         }
@@ -438,6 +623,7 @@
         }
         
         .chart-wrapper {
+            width: 100%;
             height: 35vh !important;
             min-height: 400px !important;
             max-height: 35vh !important;
@@ -461,20 +647,25 @@
             font-size: 11px;
         }
         
-        /* Stack buttons on mobile */
+        /* Buttons fit-content on mobile */
+        .run-analysis-btn {
+            width: fit-content !important;
+        }
+        
         .query-controls > div:last-child {
-            flex-direction: column;
+            flex-direction: row;
             gap: 10px;
+            flex-wrap: wrap;
         }
         
         .query-controls > div:last-child > div:first-child {
-            width: 100%;
-            justify-content: space-between;
+            width: auto;
+            justify-content: flex-start;
         }
         
         .query-controls > div:last-child button:last-child {
-            width: 100%;
-            margin-left: 0;
+            width: fit-content;
+            margin-left: auto;
         }
     }
 </style>
@@ -492,8 +683,24 @@
     <p>The data you are viewing includes provisional records for recent months. Provisional data may be subject to revision and should be interpreted with caution. Final data is typically available 2-3 months after the reporting period.</p>
 </div>
 
-    <div class="query-controls">
-        <h2 style="color: #153D33; font-size: 14px; margin-bottom: 16px;">Data Selection</h2>
+    <div class="query-controls-wrapper">
+        <div class="query-controls">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="color: #153D33; font-size: 14px; margin: 0;">Data Selection</h2>
+                <div style="position: relative;">
+                    <button class="recent-searches-toggle" id="recentSearchesToggle" onclick="toggleRecentSearches()" style="display: none;">
+                        <img src="{{ url_for('static', filename='images/search-folder-svgrepo-com.svg') }}" alt="Recent Searches" style="width: 20px; height: 20px;">
+                    </button>
+                    <div class="recent-searches-dropdown" id="recentSearchesDropdown">
+                        <div class="recent-searches-dropdown-header">Recent Searches</div>
+                        <div class="recent-searches-dropdown-list" id="recentSearchesDropdownList">
+                            <div style="padding: 20px; text-align: center; color: #666; font-size: 11px;">
+                                No recent searches yet
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         
         <div class="control-group">
             <label>Quick Date Range</label>
@@ -583,9 +790,23 @@
         </div>
         <button class="run-analysis-btn" onclick="exportToCSV()" id="exportCSVBtn" style="background: #3D7F4B; margin-left: auto;" disabled>Export to CSV</button>
     </div>
+        </div>
+        
+        <!-- Recent Searches Panel (Desktop only) -->
+        <div class="recent-searches-panel" id="recentSearchesPanel" style="display: none;">
+            <div class="recent-searches-header">
+                <h3 style="color: #153D33; font-size: 13px; margin: 0;">Recent Searches</h3>
+            </div>
+            <div class="recent-searches-list" id="recentSearchesList">
+                <div style="padding: 20px; text-align: center; color: #666; font-size: 11px;">
+                    No recent searches yet
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="results-section" id="resultsSection">
+<div class="results-section container" id="resultsSection">
     <div class="results-header">
         <h3>Export Data Analysis Results</h3>
     </div>
