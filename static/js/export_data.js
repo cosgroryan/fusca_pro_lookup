@@ -686,9 +686,11 @@ async function loadExportData() {
             }
             
             currentSummary = fullData.summary;
+            
+            // Use aggregated_data from aggregate endpoint, or data from load endpoint
+            const chartData = data.aggregated_data || data.data || [];
+            currentData = chartData;
         }
-        
-        currentData = data.data;
         
         // Check for provisional data
         if (currentSummary && currentSummary.has_provisional) {
@@ -697,8 +699,9 @@ async function loadExportData() {
             document.getElementById('provisionalWarning').classList.remove('show');
         }
         
-        // Display results
-        displayResults(data.data, groupBy, fullData.summary);
+        // Display results - use aggregated_data if available, otherwise use data
+        const displayData = data.aggregated_data || data.data || [];
+        displayResults(displayData, groupBy, fullData.summary);
         
         // Enable CSV export button
         const exportCSVBtn = document.getElementById('exportCSVBtn');
