@@ -2236,8 +2236,12 @@ function loadRecentSearch(searchId) {
     
     // Close dropdown on mobile
     const dropdown = document.getElementById('recentSearchesDropdown');
+    const toggle = document.getElementById('recentSearchesToggle');
     if (dropdown) {
         dropdown.classList.remove('open');
+    }
+    if (toggle) {
+        toggle.classList.remove('active');
     }
     
     // Auto-load the data
@@ -2258,8 +2262,16 @@ function deleteRecentSearch(searchId) {
 // Toggle recent searches dropdown (mobile)
 function toggleRecentSearches() {
     const dropdown = document.getElementById('recentSearchesDropdown');
+    const toggle = document.getElementById('recentSearchesToggle');
     if (dropdown) {
-        dropdown.classList.toggle('open');
+        const isOpen = dropdown.classList.toggle('open');
+        if (toggle) {
+            if (isOpen) {
+                toggle.classList.add('active');
+            } else {
+                toggle.classList.remove('active');
+            }
+        }
     }
 }
 
@@ -2268,8 +2280,18 @@ document.addEventListener('click', function(event) {
     const toggle = document.getElementById('recentSearchesToggle');
     const dropdown = document.getElementById('recentSearchesDropdown');
     
-    if (dropdown && toggle && !toggle.contains(event.target) && !dropdown.contains(event.target)) {
-        dropdown.classList.remove('open');
+    // Check if click is outside both the toggle button and the dropdown
+    if (dropdown && toggle) {
+        const clickedToggle = toggle.contains(event.target);
+        const clickedDropdown = dropdown.contains(event.target);
+        
+        if (!clickedToggle && !clickedDropdown) {
+            // Click was outside, close dropdown and remove active state
+            if (dropdown.classList.contains('open')) {
+                dropdown.classList.remove('open');
+                toggle.classList.remove('active');
+            }
+        }
     }
 });
 

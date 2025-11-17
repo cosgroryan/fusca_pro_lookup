@@ -2123,7 +2123,7 @@ def get_export_data_files():
     """Get list of available export data files"""
     try:
         files = get_available_files()
-        log_activity('/api/export-data/files', 'Export Data', {'file_count': len(files)})
+        # Only log if there's an error (not on successful page load)
         return jsonify({'files': files})
     except Exception as e:
         print(f"Error getting export data files: {str(e)}")
@@ -2284,7 +2284,7 @@ def get_export_data_countries():
     try:
         df = load_export_data(wool_only=True)
         countries = sorted(df['country'].unique().tolist())
-        log_activity('/api/export-data/countries', 'Export Data', {'country_count': len(countries)})
+        # Only log if there's an error (not on successful page load)
         return jsonify({'countries': countries})
     except Exception as e:
         print(f"Error getting countries: {str(e)}")
