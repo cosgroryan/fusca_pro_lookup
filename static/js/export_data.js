@@ -42,13 +42,31 @@ const WOOL_CATEGORIES = {
     'yarn_less85': 'Yarn (<85% wool)'
 };
 
-// Render wool category selector
+// Render wool category selector with sections
 function renderWoolCategorySelector() {
     const container = document.getElementById('woolCategorySelector');
     if (!container) return;
     
+    // Define categories by section
+    const greasyCategories = ['greasy_fine', 'greasy_medium', 'greasy_coarse', 'greasy_very_coarse'];
+    const scouredCategories = ['degreased_fine', 'degreased_medium', 'degreased_coarse', 'degreased_very_coarse'];
+    const semiFinishedCategories = ['carded', 'combed', 'yarn_carpet', 'yarn_85plus', 'yarn_less85'];
+    
     let html = '';
-    Object.keys(WOOL_CATEGORIES).forEach(category => {
+    
+    // Greasy Wool section
+    html += `
+        <div class="wool-category-section">
+            <div class="wool-category-section-header">
+                <h3 class="wool-category-section-title">Greasy Wool HS Codes:</h3>
+                <button class="category-action-link" onclick="selectAllGreasy()">
+                    <img src="/static/images/water-drop-svgrepo-com.svg" alt="">
+                    SELECT ALL GREASY
+                </button>
+            </div>
+            <div class="wool-category-checkboxes">
+    `;
+    greasyCategories.forEach(category => {
         const categoryId = `category_${category}`;
         html += `
             <div class="wool-category-checkbox">
@@ -57,31 +75,108 @@ function renderWoolCategorySelector() {
             </div>
         `;
     });
+    html += `</div></div>`;
+    
+    // Scoured Wool section
+    html += `
+        <div class="wool-category-section">
+            <div class="wool-category-section-header">
+                <h3 class="wool-category-section-title">Scoured Wool HS Codes:</h3>
+                <button class="category-action-link" onclick="selectAllScoured()">
+                    <img src="/static/images/soap-svgrepo-com.svg" alt="">
+                    SELECT ALL SCOURED
+                </button>
+            </div>
+            <div class="wool-category-checkboxes">
+    `;
+    scouredCategories.forEach(category => {
+        const categoryId = `category_${category}`;
+        html += `
+            <div class="wool-category-checkbox">
+                <input type="checkbox" id="${categoryId}" value="${category}" onchange="updateCategoryActionButtons()">
+                <label for="${categoryId}">${WOOL_CATEGORIES[category]}</label>
+            </div>
+        `;
+    });
+    html += `</div></div>`;
+    
+    // Semi-finished Wool section
+    html += `
+        <div class="wool-category-section">
+            <div class="wool-category-section-header">
+                <h3 class="wool-category-section-title">Semi-finished Wool HS Codes:</h3>
+                <button class="category-action-link" onclick="selectAllSemiFinished()">
+                    <img src="/static/images/spool-of-thread-svgrepo-com.svg" alt="">
+                    SELECT ALL SEMI-FINISHED
+                </button>
+            </div>
+            <div class="wool-category-checkboxes">
+    `;
+    semiFinishedCategories.forEach(category => {
+        const categoryId = `category_${category}`;
+        html += `
+            <div class="wool-category-checkbox">
+                <input type="checkbox" id="${categoryId}" value="${category}" onchange="updateCategoryActionButtons()">
+                <label for="${categoryId}">${WOOL_CATEGORIES[category]}</label>
+            </div>
+        `;
+    });
+    html += `</div></div>`;
     
     container.innerHTML = html;
     // Update button states after rendering
     updateCategoryActionButtons();
 }
 
-// Select all greasy wool categories
+// Select all greasy wool categories (toggle if all already selected)
 function selectAllGreasy() {
     const greasyCategories = ['greasy_fine', 'greasy_medium', 'greasy_coarse', 'greasy_very_coarse'];
+    const allChecked = greasyCategories.every(category => {
+        const checkbox = document.getElementById(`category_${category}`);
+        return checkbox && checkbox.checked;
+    });
+    
+    const newState = !allChecked;
     greasyCategories.forEach(category => {
         const checkbox = document.getElementById(`category_${category}`);
         if (checkbox) {
-            checkbox.checked = true;
+            checkbox.checked = newState;
         }
     });
     updateCategoryActionButtons();
 }
 
-// Select all scoured/degreased wool categories
+// Select all scoured/degreased wool categories (toggle if all already selected)
 function selectAllScoured() {
     const scouredCategories = ['degreased_fine', 'degreased_medium', 'degreased_coarse', 'degreased_very_coarse'];
+    const allChecked = scouredCategories.every(category => {
+        const checkbox = document.getElementById(`category_${category}`);
+        return checkbox && checkbox.checked;
+    });
+    
+    const newState = !allChecked;
     scouredCategories.forEach(category => {
         const checkbox = document.getElementById(`category_${category}`);
         if (checkbox) {
-            checkbox.checked = true;
+            checkbox.checked = newState;
+        }
+    });
+    updateCategoryActionButtons();
+}
+
+// Select all semi-finished wool categories (toggle if all already selected)
+function selectAllSemiFinished() {
+    const semiFinishedCategories = ['carded', 'combed', 'yarn_carpet', 'yarn_85plus', 'yarn_less85'];
+    const allChecked = semiFinishedCategories.every(category => {
+        const checkbox = document.getElementById(`category_${category}`);
+        return checkbox && checkbox.checked;
+    });
+    
+    const newState = !allChecked;
+    semiFinishedCategories.forEach(category => {
+        const checkbox = document.getElementById(`category_${category}`);
+        if (checkbox) {
+            checkbox.checked = newState;
         }
     });
     updateCategoryActionButtons();
@@ -94,9 +189,10 @@ function updateCategoryActionButtons() {
     const allChecked = checkboxes.length > 0 && checkedBoxes.length === checkboxes.length;
     const noneChecked = checkedBoxes.length === 0;
     
-    // Get greasy and scoured categories
+    // Get greasy, scoured, and semi-finished categories
     const greasyCategories = ['greasy_fine', 'greasy_medium', 'greasy_coarse', 'greasy_very_coarse'];
     const scouredCategories = ['degreased_fine', 'degreased_medium', 'degreased_coarse', 'degreased_very_coarse'];
+    const semiFinishedCategories = ['carded', 'combed', 'yarn_carpet', 'yarn_85plus', 'yarn_less85'];
     
     const greasyChecked = greasyCategories.every(cat => {
         const cb = document.getElementById(`category_${cat}`);
@@ -108,11 +204,17 @@ function updateCategoryActionButtons() {
         return cb && cb.checked;
     });
     
+    const semiFinishedChecked = semiFinishedCategories.every(cat => {
+        const cb = document.getElementById(`category_${cat}`);
+        return cb && cb.checked;
+    });
+    
     // Update button states
     const selectAllBtn = document.querySelector('.category-action-link[onclick="selectAllCategories()"]');
     const deselectAllBtn = document.querySelector('.category-action-link[onclick="deselectAllCategories()"]');
     const selectGreasyBtn = document.querySelector('.category-action-link[onclick="selectAllGreasy()"]');
     const selectScouredBtn = document.querySelector('.category-action-link[onclick="selectAllScoured()"]');
+    const selectSemiFinishedBtn = document.querySelector('.category-action-link[onclick="selectAllSemiFinished()"]');
     
     if (selectAllBtn) {
         if (allChecked) {
@@ -128,10 +230,7 @@ function updateCategoryActionButtons() {
     }
     
     if (selectGreasyBtn) {
-        if (greasyChecked && greasyCategories.some(cat => {
-            const cb = document.getElementById(`category_${cat}`);
-            return cb && cb.checked;
-        })) {
+        if (greasyChecked) {
             selectGreasyBtn.classList.add('active');
         } else {
             selectGreasyBtn.classList.remove('active');
@@ -139,13 +238,18 @@ function updateCategoryActionButtons() {
     }
     
     if (selectScouredBtn) {
-        if (scouredChecked && scouredCategories.some(cat => {
-            const cb = document.getElementById(`category_${cat}`);
-            return cb && cb.checked;
-        })) {
+        if (scouredChecked) {
             selectScouredBtn.classList.add('active');
         } else {
             selectScouredBtn.classList.remove('active');
+        }
+    }
+    
+    if (selectSemiFinishedBtn) {
+        if (semiFinishedChecked) {
+            selectSemiFinishedBtn.classList.add('active');
+        } else {
+            selectSemiFinishedBtn.classList.remove('active');
         }
     }
 }

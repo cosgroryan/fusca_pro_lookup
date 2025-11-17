@@ -105,9 +105,16 @@
     }
     
     .category-action-link.active {
-        color: #3D7F4B;
-        text-decoration: none; /* No underline for active state */
+        color: #3D7F4B !important;
+        text-decoration: none !important; /* No underline for active state */
         font-weight: bold; /* Bold font when active */
+    }
+    
+    /* Ensure inactive buttons are grey (not green) */
+    .category-action-link:not(.active) {
+        color: #666 !important;
+        text-decoration: none !important;
+        font-weight: 600 !important;
     }
     
     /* Deselect should not be bold even if active */
@@ -162,10 +169,23 @@
         filter: brightness(0) saturate(100%) invert(38%) sepia(25%) saturate(2000%) hue-rotate(100deg) brightness(0.85) contrast(1);
     }
     
-    .control-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+    .date-inputs-container {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
         gap: 16px;
+        width: 600px;
+        max-width: 100%;
+        padding-bottom: 15px;
+    }
+    
+    .date-inputs-container .control-group {
+        margin-bottom: 0;
+    }
+    
+    .date-inputs-container input {
+        width: 100%;
+        max-width: 150px;
     }
     
     .file-selector {
@@ -193,14 +213,52 @@
     
     .wool-category-selector {
         display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        max-height: 200px;
+        flex-direction: column;
+        gap: 16px;
+        max-height: 400px;
         overflow-y: auto;
         padding: 12px;
         background: #f9f9f9;
         border-radius: 4px;
         border: 1px solid #ddd;
+        width: 600px;
+        max-width: 100%;
+    }
+    
+    #countryFilter {
+        width: 600px;
+        max-width: 100%;
+    }
+    
+    #groupBy {
+        width: 600px;
+        max-width: 100%;
+    }
+    
+    .wool-category-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .wool-category-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+    }
+    
+    .wool-category-section-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: #153D33;
+        margin: 0;
+    }
+    
+    .wool-category-checkboxes {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
     
     .wool-category-checkbox {
@@ -358,8 +416,25 @@
     }
     
     @media (max-width: 768px) {
-        .control-row {
-            grid-template-columns: 1fr;
+        .wool-category-selector {
+            width: 100%;
+        }
+        
+        #countryFilter {
+            width: 100%;
+        }
+        
+        #groupBy {
+            width: 100%;
+        }
+        
+        .date-inputs-container {
+            width: 100%;
+            flex-direction: column;
+        }
+        
+        .date-inputs-container input {
+            max-width: 100%;
         }
         
         .chart-wrapper {
@@ -434,7 +509,7 @@
             </small>
         </div>
         
-        <div class="control-row">
+        <div class="date-inputs-container">
             <div class="control-group">
                 <label>Start Date (YYYY-MM)</label>
                 <input type="text" id="startDate" placeholder="e.g. 2024-01" pattern="\d{4}-\d{2}" maxlength="7">
@@ -450,7 +525,7 @@
         <select id="countryFilter" multiple style="min-height: 100px;">
             <option value="">Loading countries...</option>
         </select>
-        <small style="color: #666; font-size: 11px;">Hold Ctrl/Cmd to select multiple countries</small>
+        <small style="color: #666; font-size: 11px; display: block; margin-top: 4px;">Hold Ctrl/Cmd to select multiple countries</small>
     </div>
     
     <div class="control-group">
@@ -468,14 +543,6 @@
             <button class="category-action-link" onclick="deselectAllCategories()">
                 <img src="{{ url_for('static', filename='images/clear-circle-svgrepo-com.svg') }}" alt="">
                 DESELECT ALL
-            </button>
-            <button class="category-action-link" onclick="selectAllGreasy()">
-                <img src="{{ url_for('static', filename='images/water-drop-svgrepo-com.svg') }}" alt="">
-                SELECT ALL GREASY
-            </button>
-            <button class="category-action-link" onclick="selectAllScoured()">
-                <img src="{{ url_for('static', filename='images/soap-svgrepo-com.svg') }}" alt="">
-                SELECT ALL SCOURED
             </button>
         </div>
     </div>
