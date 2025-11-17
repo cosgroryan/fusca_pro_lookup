@@ -651,6 +651,19 @@ th.sortable.sort-desc::after {
         width: 100%;
     }
     
+    .module-header .hide-btn {
+        width: auto !important;
+        align-self: flex-end;
+    }
+    
+    /* Ensure the button container in module-header doesn't force full width */
+    .module-header > div {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        width: auto;
+    }
+    
     table {
         font-size: 10px;
     }

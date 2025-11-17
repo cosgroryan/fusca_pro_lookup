@@ -109,9 +109,9 @@
             <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
                 <button class="date-range-btn" onclick="exportTableToCSV()" style="background: #3D7F4B; color: white;">Export to CSV</button>
             </div>
-            <div style="overflow-x: auto;">
+            <div style="overflow-x: auto; overflow-y: auto; max-height: 500px; position: relative;">
                 <table id="priceTable" style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                    <thead>
+                    <thead style="position: sticky; top: 0; z-index: 10;">
                         <tr style="background: #153D33; color: white;">
                             <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Date</th>
                             <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Wool Type</th>
@@ -542,9 +542,11 @@
         // Reverse the array to show most recent first
         const reversedData = [...currentTableData].reverse();
         
-        reversedData.forEach(row => {
+        reversedData.forEach((row, index) => {
             const tr = document.createElement('tr');
             tr.style.borderBottom = '1px solid #ddd';
+            // Set fixed height for each row to ensure consistent 25-row display
+            tr.style.height = '40px';
             tr.innerHTML = `
                 <td style="padding: 8px; border: 1px solid #ddd;">${row.date || '-'}</td>
                 <td style="padding: 8px; border: 1px solid #ddd;">${row.wooltype || '-'}</td>
