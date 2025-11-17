@@ -4,6 +4,66 @@
 
 {% block title %}Simple Search - Fusca Pro Lookup{% endblock %}
 
+{% block styles %}
+<style>
+    .secondary-btn {
+        background: white;
+        color: #3D7F4B;
+        border: 1px solid #3D7F4B;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .secondary-btn:hover {
+        background: #f5f5f5;
+    }
+    
+    .simple-save-btn {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none;
+        color: #666;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0;
+        text-decoration: none;
+        transition: color 0.2s ease, text-decoration 0.2s ease;
+    }
+    
+    .simple-save-btn img {
+        width: 14px;
+        height: 14px;
+        opacity: 0.7;
+        filter: brightness(0) saturate(100%) invert(50%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1) contrast(1);
+        transition: filter 0.2s ease, opacity 0.2s ease;
+    }
+    
+    .simple-save-btn:hover,
+    .simple-save-btn:focus,
+    .simple-save-btn:active {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        color: #3D7F4B;
+        text-decoration: underline;
+    }
+    
+    .simple-save-btn:hover img {
+        filter: brightness(0) saturate(100%) invert(38%) sepia(25%) saturate(2000%) hue-rotate(100deg) brightness(0.85) contrast(1);
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Saved Searches -->
 <div class="saved-searches-section" id="savedSearchesSection" style="display: none;">
@@ -21,9 +81,12 @@
         <label for="wool_type">Wool Type Search (ID or Type Name)</label>
         <div class="search-bar">
             <input type="text" id="wool_type" placeholder="e.g. F3D or C3O">
-            <button onclick="search()" id="searchBtn">Search</button>
-            <button onclick="saveCurrentSearch()" class="save-search-btn">Save</button>
-            <button onclick="resetFilters()" style="background: white; color: #3D7F4B; border: 1px solid #3D7F4B;">Reset</button>
+            <button onclick="search()" id="searchBtn" style="width: fit-content;">Search</button>
+            <button onclick="resetFilters()" class="secondary-btn" style="width: fit-content;">Reset</button>
+            <button onclick="saveCurrentSearch()" class="simple-save-btn" style="width: fit-content;">
+                <img src="{{ url_for('static', filename='images/save-svgrepo-com.svg') }}" alt="Save" style="width: 14px; height: 14px;">
+                SAVE
+            </button>
         </div>
     </div>
     

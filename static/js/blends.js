@@ -81,6 +81,46 @@ function setupBlend() {
     populateBlendWeights(entries);
 }
 
+function resetBlend() {
+    // Clear input
+    document.getElementById('compareTypes').value = '';
+    
+    // Hide blend mode section
+    const section = document.getElementById('blendModeSection');
+    section.style.display = 'none';
+    
+    // Clear blend weights
+    const container = document.getElementById('blendWeights');
+    container.innerHTML = '';
+    
+    // Hide chart section
+    const chartSection = document.getElementById('compareChartSection');
+    chartSection.style.display = 'none';
+    
+    // Destroy chart if exists
+    if (compareChart) {
+        compareChart.destroy();
+        compareChart = null;
+    }
+    
+    // Reset date filter
+    blendDateFilter = null;
+    currentChartData = null;
+    currentEntries = null;
+    currentWeights = null;
+    
+    // Reset date range buttons
+    document.querySelectorAll('.date-range-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Hide custom date range
+    const customDateRange = document.getElementById('customDateRange');
+    if (customDateRange) {
+        customDateRange.style.display = 'none';
+    }
+}
+
 function populateBlendWeights(entries) {
     const container = document.getElementById('blendWeights');
     container.innerHTML = '';

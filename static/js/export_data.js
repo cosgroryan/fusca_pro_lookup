@@ -9,6 +9,8 @@ let chartDisplayMode = 'value'; // 'value', 'volume', or 'both'
 let categoryMode = 'combine'; // 'combine' or 'compare'
 let dateRange = { min: null, max: null }; // Store min/max dates from available files
 let isSettingDateProgrammatically = false; // Flag to prevent auto-switch when setting dates programmatically
+let showCountriesInGraph = false; // Track if "Show in Graph" is active
+let originalCountrySelection = []; // Store original country selection before activating "Show in Graph"
 
 // Chart colors for value/volume display
 const VOLUME_COLOR = 'rgba(21, 61, 51, 1)'; // Dark green for volume/quantity
@@ -685,11 +687,24 @@ function renderCountrySelector() {
         option.textContent = getCountryDisplayName(country); // Display simplified name
         select.appendChild(option);
     });
+    
+    // Add change listener to deactivate "Show in Graph" if user manually changes selection
+    // Remove old listener if exists to prevent duplicates
+    const newSelect = select.cloneNode(true);
+    select.parentNode.replaceChild(newSelect, select);
+    newSelect.addEventListener('change', function() {
+        checkCountrySelectionChange();
+    });
 }
 
 
 // Clear filters
 function clearFilters() {
+    // Reset "Show in Graph" state
+    showCountriesInGraph = false;
+    originalCountrySelection = [];
+    const btn = document.querySelector('.show-in-graph-btn');
+    if (btn) btn.classList.remove('active');
     // Reset to default date range
     if (dateRange.min && dateRange.max) {
         document.getElementById('startDate').value = dateRange.min;
@@ -959,6 +974,9 @@ function displayResults(data, groupBy, summary) {
     const resultsSection = document.getElementById('resultsSection');
     resultsSection.classList.add('visible');
     
+    // Store summary for use in toggle function
+    currentSummary = summary;
+    
     // Display summary stats
     displaySummaryStats(summary);
     
@@ -1022,15 +1040,159 @@ function displaySummaryStats(summary) {
     }
     
     if (summary.countries && summary.countries.length > 0) {
+        // Sort countries by value (or volume if only volume selected)
+        const sortedCountries = sortCountriesByValue(summary.countries);
+        const countriesList = sortedCountries.map(c => getCountryDisplayName(c.country)).join(', ');
+        const activeClass = showCountriesInGraph ? 'active' : '';
         html += `
-            <div class="stat-card">
-                <div class="stat-label">Countries</div>
-                <div class="stat-value">${summary.countries.length}</div>
+            <div class="stat-card stat-card-countries" data-countries='${JSON.stringify(summary.countries)}'>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div style="flex: 1;">
+                        <div class="stat-label stat-label-with-tooltip" data-tooltip="${escapeHtml(countriesList)}" style="position: relative; display: inline-block;">
+                            Countries <span class="help-icon">?</span>
+                        </div>
+                        <div class="stat-value">${summary.countries.length}</div>
+                    </div>
+                </div>
+                <div style="position: absolute; bottom: 8px; right: 12px;">
+                    <button class="category-action-link show-in-graph-btn ${activeClass}" onclick="toggleShowCountriesInGraph()" style="font-size: 10px;">
+                        SHOW IN GRAPH
+                    </button>
+                </div>
             </div>
         `;
     }
     
     container.innerHTML = html;
+    
+    // Attach tooltip handlers for countries tooltip
+    attachCountriesTooltip();
+}
+
+// Sort countries by value (or volume if only volume selected)
+function sortCountriesByValue(countries) {
+    if (!currentData || !Array.isArray(currentData) || currentData.length === 0) {
+        // If no data, return countries as-is
+        return countries.map(c => ({ country: c, value: 0, volume: 0 }));
+    }
+    
+    // Aggregate data by country
+    const countryTotals = {};
+    
+    currentData.forEach(item => {
+        const country = item.country || 'Unknown';
+        if (!countryTotals[country]) {
+            countryTotals[country] = { value: 0, volume: 0 };
+        }
+        
+        // Sum up values and volumes
+        if (item.total_export_fob !== undefined && item.total_export_fob !== null) {
+            countryTotals[country].value += parseFloat(item.total_export_fob) || 0;
+        }
+        if (item.total_export_qty !== undefined && item.total_export_qty !== null) {
+            countryTotals[country].volume += parseFloat(item.total_export_qty) || 0;
+        }
+    });
+    
+    // Create array with country and totals
+    const countriesWithTotals = countries.map(country => ({
+        country: country,
+        value: countryTotals[country]?.value || 0,
+        volume: countryTotals[country]?.volume || 0
+    }));
+    
+    // Sort by value (or volume if only volume is selected)
+    // If both are selected, prioritize value
+    if (chartDisplayMode === 'volume') {
+        // Sort by volume only if volume mode is selected
+        countriesWithTotals.sort((a, b) => b.volume - a.volume);
+    } else {
+        // Sort by value (default, or if both are selected - prioritize value)
+        countriesWithTotals.sort((a, b) => b.value - a.value);
+    }
+    
+    return countriesWithTotals;
+}
+
+// Attach tooltip handlers for countries stat card
+function attachCountriesTooltip() {
+    const tooltipLabel = document.querySelector('.stat-label-with-tooltip');
+    if (!tooltipLabel) return;
+    
+    let tooltipElement = null;
+    let mouseEnterTimeout = null;
+    
+    const showTooltip = function(e) {
+        const tooltipText = this.getAttribute('data-tooltip');
+        if (!tooltipText) return;
+        
+        // Clear any existing timeout
+        if (mouseEnterTimeout) {
+            clearTimeout(mouseEnterTimeout);
+            mouseEnterTimeout = null;
+        }
+        
+        // Remove existing tooltip if any
+        if (tooltipElement) {
+            tooltipElement.remove();
+        }
+        
+        // Create tooltip element
+        tooltipElement = document.createElement('div');
+        tooltipElement.className = 'stat-tooltip-fixed';
+        tooltipElement.textContent = tooltipText;
+        tooltipElement.style.visibility = 'hidden'; // Hide temporarily to measure
+        document.body.appendChild(tooltipElement);
+        
+        // Position tooltip below the label
+        const rect = this.getBoundingClientRect();
+        const tooltipRect = tooltipElement.getBoundingClientRect();
+        
+        let left = rect.left;
+        let top = rect.bottom + 5;
+        
+        // Adjust if tooltip would go off right edge
+        if (left + tooltipRect.width > window.innerWidth) {
+            left = window.innerWidth - tooltipRect.width - 10;
+        }
+        
+        // Adjust if tooltip would go off left edge
+        if (left < 10) {
+            left = 10;
+        }
+        
+        tooltipElement.style.left = left + 'px';
+        tooltipElement.style.top = top + 'px';
+        tooltipElement.style.visibility = 'visible'; // Show after positioning
+    };
+    
+    const hideTooltip = function() {
+        if (mouseEnterTimeout) {
+            clearTimeout(mouseEnterTimeout);
+            mouseEnterTimeout = null;
+        }
+        if (tooltipElement) {
+            tooltipElement.remove();
+            tooltipElement = null;
+        }
+    };
+    
+    tooltipLabel.addEventListener('mouseenter', showTooltip);
+    tooltipLabel.addEventListener('mouseleave', hideTooltip);
+    
+    // Also handle mouse events on the tooltip itself
+    document.addEventListener('mouseover', function(e) {
+        if (tooltipElement && tooltipElement.contains(e.target)) {
+            // Mouse is over tooltip, keep it visible
+            return;
+        }
+    });
+    
+    document.addEventListener('mouseout', function(e) {
+        if (tooltipElement && !tooltipLabel.contains(e.target) && !tooltipElement.contains(e.target)) {
+            hideTooltip();
+        }
+    });
 }
 
 // Setup chart resize observer
@@ -2271,6 +2433,70 @@ function toggleRecentSearches() {
             } else {
                 toggle.classList.remove('active');
             }
+        }
+    }
+}
+
+// Toggle show countries in graph
+function toggleShowCountriesInGraph() {
+    const countriesCard = document.querySelector('.stat-card-countries');
+    if (!countriesCard || !currentSummary || !currentSummary.countries) return;
+    
+    const countries = currentSummary.countries;
+    const countryFilter = document.getElementById('countryFilter');
+    const btn = document.querySelector('.show-in-graph-btn');
+    
+    if (!showCountriesInGraph) {
+        // Activate: Save original selection and select all countries from summary
+        originalCountrySelection = Array.from(countryFilter.selectedOptions)
+            .map(opt => opt.value)
+            .filter(v => v !== '');
+        
+        // Select all countries from summary
+        Array.from(countryFilter.options).forEach(opt => {
+            opt.selected = countries.includes(opt.value);
+        });
+        
+        showCountriesInGraph = true;
+        if (btn) btn.classList.add('active');
+        
+        // Reload the chart with countries as separate series
+        loadExportData();
+    } else {
+        // Deactivate: Restore original selection
+        Array.from(countryFilter.options).forEach(opt => {
+            opt.selected = originalCountrySelection.includes(opt.value);
+        });
+        
+        showCountriesInGraph = false;
+        if (btn) btn.classList.remove('active');
+        originalCountrySelection = [];
+        
+        // Reload the chart
+        loadExportData();
+    }
+}
+
+// Deactivate "Show in Graph" if user manually changes country selection
+function checkCountrySelectionChange() {
+    if (showCountriesInGraph) {
+        const countryFilter = document.getElementById('countryFilter');
+        const currentSelection = Array.from(countryFilter.selectedOptions)
+            .map(opt => opt.value)
+            .filter(v => v !== '');
+        const expectedCountries = currentSummary ? currentSummary.countries : [];
+        
+        // Check if selection matches expected (all countries from summary)
+        const allMatch = expectedCountries.length > 0 && 
+                        currentSelection.length === expectedCountries.length &&
+                        expectedCountries.every(c => currentSelection.includes(c));
+        
+        if (!allMatch) {
+            // User manually changed selection, deactivate
+            showCountriesInGraph = false;
+            originalCountrySelection = [];
+            const btn = document.querySelector('.show-in-graph-btn');
+            if (btn) btn.classList.remove('active');
         }
     }
 }

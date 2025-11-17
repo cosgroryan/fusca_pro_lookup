@@ -54,6 +54,79 @@
         font-size: 12px;
     }
     
+    /* Button Styles */
+    .primary-btn {
+        background: #3D7F4B;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .primary-btn:hover {
+        background: #153D33;
+    }
+    
+    .secondary-btn {
+        background: white;
+        color: #3D7F4B;
+        border: 1px solid #3D7F4B;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .secondary-btn:hover {
+        background: #f5f5f5;
+    }
+    
+    .blend-save-btn {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none;
+        color: #666;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0;
+        text-decoration: none;
+        transition: color 0.2s ease, text-decoration 0.2s ease;
+    }
+    
+    .blend-save-btn img {
+        width: 14px;
+        height: 14px;
+        opacity: 0.7;
+        filter: brightness(0) saturate(100%) invert(50%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1) contrast(1);
+        transition: filter 0.2s ease, opacity 0.2s ease;
+    }
+    
+    .blend-save-btn:hover,
+    .blend-save-btn:focus,
+    .blend-save-btn:active {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        color: #3D7F4B;
+        text-decoration: underline;
+    }
+    
+    .blend-save-btn:hover img {
+        filter: brightness(0) saturate(100%) invert(38%) sepia(25%) saturate(2000%) hue-rotate(100deg) brightness(0.85) contrast(1);
+        opacity: 1;
+    }
+    
     .blend-filter-row select, .blend-filter-row input {
         height: 32px;
         font-size: 12px;
@@ -261,7 +334,7 @@
 <!-- Blend Setup -->
 <div class="search-section" style="background: #e8f5e9; border: 2px solid #3D7F4B;">
     <h2 style="margin-bottom: 12px; color: #153D33; font-size: 14px;">
-        ✨ Create Advanced Blend
+        Create Advanced Blend
         <span class="help-icon">
             ?
             <div class="tooltip">
@@ -289,7 +362,7 @@
         <label for="compareTypes">Enter wool types or groups (comma-separated)</label>
         <div class="search-bar">
             <input type="text" id="compareTypes" placeholder="e.g. F2N, (C3G, C4G), F3D">
-            <button onclick="setupBlend()" style="background: #7B1FA2;">Setup Blend</button>
+            <button onclick="setupBlend()" class="primary-btn" style="width: fit-content;">Setup Blend</button>
         </div>
     </div>
 </div>
@@ -319,9 +392,13 @@
     
     <div id="blendWeights"></div>
     
-    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
-        <button onclick="applyBlendedCompare()" style="background: #7B1FA2;">Apply Blend</button>
-        <button onclick="saveBlendSearch()" style="background: #7B1FA2;">Save Blend</button>
+    <div style="display: flex; gap: 12px; margin-top: 15px;">
+        <button onclick="resetBlend()" class="secondary-btn" style="width: fit-content;">Reset</button>
+        <button onclick="applyBlendedCompare()" class="primary-btn" style="width: fit-content;">Apply Blend</button>
+        <button onclick="saveBlendSearch()" class="blend-save-btn" style="width: fit-content;">
+            <img src="{{ url_for('static', filename='images/save-svgrepo-com.svg') }}" alt="Save" style="width: 14px; height: 14px;">
+            Save Blend
+        </button>
     </div>
 </div>
 
