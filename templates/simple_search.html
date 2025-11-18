@@ -67,6 +67,56 @@
         filter: brightness(0) saturate(100%) invert(38%) sepia(25%) saturate(2000%) hue-rotate(100deg) brightness(0.85) contrast(1);
         opacity: 1;
     }
+    
+    /* Export disabled tooltip */
+    .export-disabled {
+        position: relative !important;
+        cursor: not-allowed !important;
+        opacity: 1 !important;
+        background: #ccc !important;
+        background-color: #ccc !important;
+    }
+    
+    .export-disabled:hover {
+        background: #ccc !important;
+        background-color: #ccc !important;
+        opacity: 1 !important;
+    }
+    
+    .export-disabled:active {
+        background: #ccc !important;
+        background-color: #ccc !important;
+        opacity: 1 !important;
+    }
+    
+    .export-disabled::after {
+        content: "Disabled for demo. Contact admin about this feature." !important;
+        text-transform: none !important;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: #f5f0e8;
+        color: #333;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        line-height: 1.6;
+        z-index: 9999;
+        margin-top: 8px;
+        width: 360px;
+        max-width: 90vw;
+        white-space: normal;
+        word-wrap: break-word;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        border: 1px solid #d4c5a9;
+        display: none;
+        pointer-events: none;
+        font-weight: normal;
+    }
+    
+    .export-disabled:hover::after {
+        display: block;
+    }
 </style>
 {% endblock %}
 
@@ -178,7 +228,7 @@
         <!-- Table View -->
         <div id="tableView" style="display: none;">
             <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
-                <button class="date-range-btn" onclick="exportTableToCSV()" style="background: #3D7F4B; color: white;">Export to CSV</button>
+                <button class="date-range-btn export-disabled" onclick="exportTableToCSV()" style="background: #3D7F4B; color: white;" disabled>Export to CSV</button>
             </div>
             <div style="overflow-x: auto; overflow-y: auto; max-height: 500px; position: relative;">
                 <table id="priceTable" style="width: 100%; border-collapse: collapse; font-size: 12px;">
@@ -220,8 +270,8 @@
     <div class="module-header" style="background: #e8f5e9; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
         <span class="results-count" id="resultsCount" style="font-weight: 600; color: #153D33; font-size: 13px;">-</span>
         <div style="display: flex; gap: 15px; align-items: center;">
-            <button class="download-csv-btn" onclick="downloadTableCSV()" id="downloadBtn">Download CSV</button>
-            <button class="download-csv-btn" onclick="downloadExcel(currentResults)" id="downloadExcelBtn" style="background: #28a745;">Download Excel</button>
+            <button class="download-csv-btn export-disabled" onclick="downloadTableCSV()" id="downloadBtn" disabled>Download CSV</button>
+            <button class="download-csv-btn export-disabled" onclick="downloadExcel(currentResults)" id="downloadExcelBtn" style="background: #28a745;" disabled>Download Excel</button>
             <span style="color: #666; font-size: 11px;">Showing up to 1,000 results</span>
             <button class="hide-btn content-visible" onclick="toggleModule('resultsTable')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
         </div>

@@ -568,6 +568,56 @@
         padding-bottom: 40px; /* Extra padding for the button */
     }
     
+    /* Export disabled tooltip */
+    .export-disabled {
+        position: relative !important;
+        cursor: not-allowed !important;
+        opacity: 1 !important;
+        background: #ccc !important;
+        background-color: #ccc !important;
+    }
+    
+    .export-disabled:hover {
+        background: #ccc !important;
+        background-color: #ccc !important;
+        opacity: 1 !important;
+    }
+    
+    .export-disabled:active {
+        background: #ccc !important;
+        background-color: #ccc !important;
+        opacity: 1 !important;
+    }
+    
+    .export-disabled::after {
+        content: "Disabled for demo. Contact admin about this feature." !important;
+        text-transform: none !important;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: #f5f0e8;
+        color: #333;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        line-height: 1.6;
+        z-index: 9999;
+        margin-top: 8px;
+        width: 360px;
+        max-width: 90vw;
+        white-space: normal;
+        word-wrap: break-word;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        border: 1px solid #d4c5a9;
+        display: none;
+        pointer-events: none;
+        font-weight: normal;
+    }
+    
+    .export-disabled:hover::after {
+        display: block;
+    }
+    
     .chart-wrapper {
         margin-top: 20px;
         background: white;
@@ -863,7 +913,7 @@
             <button class="run-analysis-btn" onclick="clearFilters()" style="background: white; color: #3D7F4B; border: 1px solid #3D7F4B;">Clear</button>
             <button class="run-analysis-btn" onclick="loadExportData()" id="loadBtn">Load Data</button>
         </div>
-        <button class="run-analysis-btn" onclick="exportToCSV()" id="exportCSVBtn" style="background: #3D7F4B; margin-left: auto;" disabled>Export to CSV</button>
+        <button class="run-analysis-btn export-disabled" onclick="exportToCSV()" id="exportCSVBtn" style="background: #3D7F4B; margin-left: auto;" disabled>Export to CSV</button>
     </div>
         </div>
         
