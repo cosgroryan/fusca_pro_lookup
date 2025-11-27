@@ -216,6 +216,10 @@ async function downloadRegressionPDF(regressionData) {
 // Date range helper functions
 function getDateRangeFilter(range) {
     const today = new Date();
+    // Add 2 days to account for server time vs dataset time differences
+    const endDate = new Date(today);
+    endDate.setDate(endDate.getDate() + 2);
+    
     let fromDate;
     
     if (range === '6m') {
@@ -235,7 +239,7 @@ function getDateRangeFilter(range) {
         column: 'sale_date',
         operator: 'between',
         value: fromDate.toISOString().split('T')[0],
-        value2: today.toISOString().split('T')[0]
+        value2: endDate.toISOString().split('T')[0]
     };
 }
 
