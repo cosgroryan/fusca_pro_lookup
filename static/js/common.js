@@ -452,3 +452,68 @@ function exportSavedSearches() {
     URL.revokeObjectURL(url);
 }
 
+// Global loading state management for POST operations
+let globalLoadingState = {
+    operations: 0,
+    callbacks: []
+};
+
+// Disable all POST buttons when loading starts
+function disablePostButtons() {
+    globalLoadingState.operations++;
+    
+    // Find and disable all buttons that trigger POST operations
+    const postButtons = document.querySelectorAll('button[onclick*="search"], button[onclick*="compare"], button[onclick*="applyBlendedCompare"], button[onclick*="Compare"], button[id="searchBtn"], button[id="compareBtn"], button[onclick*="saveCurrentSearch"], button[onclick*="saveCurrentComparison"], button[onclick*="saveBlendSearch"]');
+    
+    postButtons.forEach(btn => {
+        if (!btn.disabled && !btn.classList.contains('post-disabled')) {
+            btn.disabled = true;
+            btn.classList.add('post-disabled');
+            btn.style.cursor = 'not-allowed';
+            btn.style.opacity = '0.6';
+        }
+    });
+    
+    // Also disable saved search items
+    document.querySelectorAll('.saved-search-item').forEach(item => {
+        item.style.pointerEvents = 'none';
+        item.style.opacity = '0.5';
+        item.style.cursor = 'not-allowed';
+    });
+}
+
+// Re-enable all POST buttons when loading completes
+function enablePostButtons() {
+    globalLoadingState.operations = Math.max(0, globalLoadingState.operations - 1);
+    
+    // Only re-enable if no operations are in progress
+    if (globalLoadingState.operations === 0) {
+        const postButtons = document.querySelectorAll('button.post-disabled, button[onclick*="search"], button[onclick*="compare"], button[onclick*="applyBlendedCompare"], button[onclick*="Compare"], button[id="searchBtn"], button[id="compareBtn"], button[onclick*="saveCurrentSearch"], button[onclick*="saveCurrentComparison"], button[onclick*="saveBlendSearch"]');
+        
+        postButtons.forEach(btn => {
+            if (btn.classList.contains('post-disabled')) {
+                btn.disabled = false;
+                btn.classList.remove('post-disabled');
+                btn.style.cursor = '';
+                btn.style.opacity = '';
+            }
+        });
+        
+        // Re-enable saved search items
+        document.querySelectorAll('.saved-search-item').forEach(item => {
+            item.style.pointerEvents = '';
+            item.style.opacity = '';
+            item.style.cursor = '';
+        });
+        
+        // Execute any pending callbacks
+        globalLoadingState.callbacks.forEach(cb => cb());
+        globalLoadingState.callbacks = [];
+    }
+}
+
+// Check if any POST operations are in progress
+function isPostOperationInProgress() {
+    return globalLoadingState.operations > 0;
+}
+

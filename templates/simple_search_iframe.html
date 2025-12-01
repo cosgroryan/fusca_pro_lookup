@@ -327,6 +327,11 @@
     let isSearching = false;  // Prevent concurrent searches
     
     function setDateRange(range) {
+        if (isPostOperationInProgress()) {
+            console.log('Operation in progress, cannot change date range');
+            return;
+        }
+        
         // Clear active state
         document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
         event.target.classList.add('active');
@@ -362,6 +367,11 @@
     }
     
     function applyCustomDateRange() {
+        if (isPostOperationInProgress()) {
+            console.log('Operation in progress, cannot change date range');
+            return;
+        }
+        
         const fromDate = document.getElementById('customDateFrom').value;
         const toDate = document.getElementById('customDateTo').value;
         
@@ -487,12 +497,13 @@
     
     async function search() {
         // Prevent concurrent searches
-        if (isSearching) {
+        if (isSearching || isPostOperationInProgress()) {
             console.log('Search already in progress, skipping...');
             return;
         }
         
         isSearching = true;
+        disablePostButtons();
         
         const filters = getFilters();
         
@@ -503,7 +514,6 @@
         document.getElementById('chartSection').style.display = 'none';
         document.getElementById('balesChartSection').style.display = 'none';
         document.getElementById('errorMsg').style.display = 'none';
-        document.getElementById('searchBtn').disabled = true;
         
         try {
             // Fetch price chart
@@ -565,8 +575,8 @@
             showError('Search failed: ' + error.message);
         } finally {
             document.getElementById('loading').style.display = 'none';
-            document.getElementById('searchBtn').disabled = false;
             isSearching = false;
+            enablePostButtons();
         }
     }
     
@@ -1025,6 +1035,11 @@
     }
     
     function loadSavedSearch(searchId) {
+        if (isPostOperationInProgress()) {
+            console.log('Operation in progress, cannot load saved search');
+            return;
+        }
+        
         const savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
         const savedSearch = savedSearches.find(s => s.id === searchId);
         

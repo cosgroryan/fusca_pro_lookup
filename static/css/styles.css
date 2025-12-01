@@ -3,6 +3,19 @@
 /* Import Nunito Sans font */
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;500;600;700;900&display=swap');
 
+/* Disabled button styling for POST operations */
+button.post-disabled,
+button.post-disabled:hover,
+button.post-disabled:active,
+button.post-disabled:focus {
+    background: #ccc !important;
+    background-color: #ccc !important;
+    color: #666 !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+    pointer-events: none !important;
+}
+
 /* Design System Colors - Based on SCSS guidelines */
 :root {
     --primary-colour: #1A4C41;        /* primaryColour - dark green */

@@ -249,6 +249,11 @@ function removeBlendFilter(filterId) {
 }
 
 function setDateRange(range) {
+    if (isPostOperationInProgress()) {
+        console.log('Operation in progress, cannot change date range');
+        return;
+    }
+    
     document.querySelectorAll('.date-range-btn').forEach(btn => btn.classList.remove('active'));
     event.target.classList.add('active');
     document.getElementById('customDateRange').classList.remove('show');
@@ -279,6 +284,11 @@ function toggleCustomDateRange() {
 }
 
 function applyCustomDateRange() {
+    if (isPostOperationInProgress()) {
+        console.log('Operation in progress, cannot change date range');
+        return;
+    }
+    
     const fromDate = document.getElementById('customDateFrom').value;
     const toDate = document.getElementById('customDateTo').value;
     
@@ -303,12 +313,13 @@ function applyCustomDateRange() {
 
 async function applyBlendedCompare() {
     // Prevent concurrent blends
-    if (isBlending) {
+    if (isBlending || isPostOperationInProgress()) {
         console.log('Blend already in progress, skipping...');
         return;
     }
     
     isBlending = true;
+    disablePostButtons();
     
     const input = document.getElementById('compareTypes').value.trim();
     const entries = parseWoolTypeEntries(input);
@@ -344,7 +355,11 @@ async function applyBlendedCompare() {
             'This query may take 10-30 seconds.\n\n' +
             'Continue anyway?'
         );
-        if (!proceed) return;
+        if (!proceed) {
+            isBlending = false;
+            enablePostButtons();
+            return;
+        }
     }
     
     document.getElementById('compareChartSection').style.display = 'none';
@@ -383,6 +398,7 @@ async function applyBlendedCompare() {
     } finally {
         document.getElementById('loading').style.display = 'none';
         isBlending = false;
+        enablePostButtons();
     }
 }
 
@@ -620,6 +636,11 @@ async function saveBlendSearch() {
 }
 
 function loadSavedSearch(searchId) {
+    if (isPostOperationInProgress()) {
+        console.log('Operation in progress, cannot load saved search');
+        return;
+    }
+    
     const savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
     const savedSearch = savedSearches.find(s => s.id === searchId);
     
