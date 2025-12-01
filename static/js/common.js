@@ -370,3 +370,85 @@ function formatStats(stats) {
     `;
 }
 
+// Export saved searches to CSV
+function exportSavedSearches() {
+    const savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+    
+    if (savedSearches.length === 0) {
+        alert('No saved searches to export');
+        return;
+    }
+    
+    // CSV headers
+    const headers = ['Name', 'Page', 'Type', 'Created Date', 'Wool Types/Input', 'Filters/Details'];
+    
+    // Build rows
+    const rows = savedSearches.map(search => {
+        const name = search.name || '';
+        const page = search.page || 'simple';
+        const type = search.type || '';
+        const created = search.created ? new Date(search.created).toLocaleDateString() : '';
+        
+        // Format the search details based on type
+        let details = '';
+        let woolTypesInput = '';
+        
+        if (search.type === 'blend' || page === 'blends') {
+            // Blend format
+            woolTypesInput = search.inputString || JSON.stringify(search.entries || []);
+            details = JSON.stringify({
+                weights: search.weights || [],
+                entryFilters: search.entryFilters || [],
+                dateFilter: search.dateFilter || null
+            });
+        } else if (page === 'compare' || page === 'compare_types' || type === 'compare') {
+            // Compare format
+            woolTypesInput = Array.isArray(search.wool_types) ? search.wool_types.join(', ') : (search.wool_types || '');
+            details = JSON.stringify({
+                filters: search.filters || [],
+                dateFilter: search.dateFilter || null
+            });
+        } else {
+            // Simple search format
+            woolTypesInput = search.filters?.wool_type_search || '';
+            const filters = search.filters?.column_filters || [];
+            details = JSON.stringify({
+                filters: filters,
+                dateFilter: search.dateFilter || null
+            });
+        }
+        
+        return [
+            name,
+            page,
+            type,
+            created,
+            woolTypesInput,
+            details
+        ];
+    });
+    
+    // Build CSV content
+    const csvContent = [
+        headers.map(escapeCSV).join(','),
+        ...rows.map(row => row.map(escapeCSV).join(','))
+    ].join('\n');
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    
+    // Generate filename with current date
+    const now = new Date();
+    const timestamp = now.toISOString().split('T')[0];
+    link.setAttribute('download', `saved_searches_${timestamp}.csv`);
+    
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+

@@ -106,11 +106,98 @@
             font-size: 10px;
         }
     }
+    
+    .simple-save-btn {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none;
+        color: #666;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0;
+        text-decoration: none;
+        transition: color 0.2s ease, text-decoration 0.2s ease;
+    }
+    
+    .simple-save-btn img {
+        width: 14px;
+        height: 14px;
+        opacity: 0.7;
+        filter: brightness(0) saturate(100%) invert(50%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1) contrast(1);
+        transition: filter 0.2s ease, opacity 0.2s ease;
+    }
+    
+    .simple-save-btn:hover,
+    .simple-save-btn:focus,
+    .simple-save-btn:active {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        color: #3D7F4B;
+        text-decoration: underline;
+    }
+    
+    .simple-save-btn:hover img {
+        filter: brightness(0) saturate(100%) invert(38%) sepia(25%) saturate(2000%) hue-rotate(100deg) brightness(0.85) contrast(1);
+        opacity: 1;
+    }
+    
+    .saved-searches-section {
+        background: #e8f5e9;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+    
+    .saved-search-item {
+        display: inline-block;
+        background: white;
+        border: 1px solid #3D7F4B;
+        border-radius: 4px;
+        padding: 6px 10px;
+        margin: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 12px;
+    }
+    
+    .saved-search-item:hover {
+        background: #3D7F4B;
+        color: white;
+    }
+    
+    .saved-search-item .delete-btn {
+        margin-left: 10px;
+        color: #dc3545;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    
+    .saved-search-item:hover .delete-btn {
+        color: white;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <h1 style="margin-bottom: 20px; color: #153D33;">Compare Wool Types</h1>
+
+<!-- Saved Searches -->
+<div class="saved-searches-section" id="savedSearchesSection" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="margin: 0; color: #153D33; font-size: 13px;">Saved Comparisons</h3>
+        <button onclick="exportSavedSearches()" class="simple-save-btn" style="width: fit-content;">
+            <img src="{{ url_for('static', filename='images/export-2-svgrepo-com.svg') }}" alt="Export" style="width: 14px; height: 14px;">
+            EXPORT SAVES
+        </button>
+    </div>
+    <div id="savedSearchesList"></div>
+</div>
 
 <!-- Compare Section -->
 <div class="search-section" style="background: #e8f5e9; border: 2px solid #3D7F4B;">
@@ -142,6 +229,10 @@
             <input type="text" id="compareTypes" placeholder="e.g. F2N, F3D, C3G">
             <button onclick="compareWoolTypes()" id="compareBtn">Compare</button>
             <button onclick="resetFilters()" style="background: white; color: #3D7F4B; border: 1px solid #3D7F4B;">Reset</button>
+            <button onclick="saveCurrentComparison()" class="simple-save-btn" style="width: fit-content;">
+                <img src="{{ url_for('static', filename='images/save-svgrepo-com.svg') }}" alt="Save" style="width: 14px; height: 14px;">
+                SAVE
+            </button>
         </div>
     </div>
     
@@ -491,7 +582,137 @@
         errorDiv.style.display = 'block';
     }
     
+    // Saved searches functionality
+    async function saveCurrentComparison() {
+        const input = document.getElementById('compareTypes').value.trim();
+        
+        if (!input) {
+            alert('Please enter wool types to compare first');
+            return;
+        }
+        
+        const name = prompt('Enter a name for this comparison:');
+        if (!name) return;
+        
+        const woolTypes = input.split(',').map(t => t.trim()).filter(t => t);
+        const filters = getFilters();
+        
+        let savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+        
+        savedSearches.push({
+            id: Date.now(),
+            name: name,
+            wool_types: woolTypes,
+            filters: filters,
+            dateFilter: currentDateFilter,
+            page: 'compare',
+            type: 'compare',
+            created: new Date().toISOString()
+        });
+        
+        localStorage.setItem('fusca_saved_searches', JSON.stringify(savedSearches));
+        
+        try {
+            await fetch('/api/log_saved_search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    name: name, 
+                    type: 'compare',
+                    comparison_data: { wool_types: woolTypes, filters: filters, dateFilter: currentDateFilter }
+                })
+            });
+        } catch (e) {
+            console.warn('Failed to log saved comparison:', e);
+        }
+        
+        renderSavedSearches();
+        console.log('Comparison saved:', name);
+    }
+    
+    function loadSavedSearch(searchId) {
+        const savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+        const savedSearch = savedSearches.find(s => s.id === searchId);
+        
+        if (!savedSearch || (savedSearch.page !== 'compare' && savedSearch.type !== 'compare')) return;
+        
+        // Clear current filters
+        document.getElementById('filtersList').innerHTML = '';
+        filterCount = 0;
+        currentDateFilter = savedSearch.dateFilter || null;
+        
+        // Set wool types
+        if (savedSearch.wool_types && Array.isArray(savedSearch.wool_types)) {
+            document.getElementById('compareTypes').value = savedSearch.wool_types.join(', ');
+        }
+        
+        // Set date filter state
+        if (currentDateFilter) {
+            if (currentDateFilter.operator === 'between') {
+                document.getElementById('customDateFrom').value = currentDateFilter.value;
+                document.getElementById('customDateTo').value = currentDateFilter.value2;
+            }
+        }
+        
+        // Add filters
+        if (savedSearch.filters && Array.isArray(savedSearch.filters)) {
+            savedSearch.filters.forEach(filter => {
+                if (filter.column !== 'sale_date') {
+                    addFilter();
+                    const lastFilter = document.getElementById('filtersList').lastElementChild;
+                    lastFilter.querySelector('.filter-column').value = filter.column;
+                    updateFilterOperators(lastFilter.id);
+                    lastFilter.querySelector('.filter-operator').value = filter.operator;
+                    lastFilter.querySelector('.filter-value').value = filter.value;
+                    if (filter.value2) {
+                        lastFilter.querySelector('.filter-value2').value = filter.value2;
+                        lastFilter.querySelector('.filter-value2').style.display = 'block';
+                    }
+                }
+            });
+        }
+        
+        // Trigger comparison
+        compareWoolTypes();
+    }
+    
+    function deleteSavedSearch(searchId) {
+        if (!confirm('Delete this saved comparison?')) return;
+        
+        let savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+        savedSearches = savedSearches.filter(s => s.id !== searchId);
+        localStorage.setItem('fusca_saved_searches', JSON.stringify(savedSearches));
+        
+        renderSavedSearches();
+    }
+    
+    function renderSavedSearches() {
+        const savedSearches = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+        const compareSearches = savedSearches.filter(s => s.page === 'compare' || s.type === 'compare');
+        const container = document.getElementById('savedSearchesList');
+        const section = document.getElementById('savedSearchesSection');
+        
+        if (compareSearches.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+        
+        section.style.display = 'block';
+        container.innerHTML = '';
+        
+        compareSearches.forEach(search => {
+            const item = document.createElement('div');
+            item.className = 'saved-search-item';
+            item.innerHTML = `
+                <span onclick="loadSavedSearch(${search.id})">${search.name}</span>
+                <span class="delete-btn" onclick="event.stopPropagation(); deleteSavedSearch(${search.id})">✕</span>
+            `;
+            container.appendChild(item);
+        });
+    }
+    
     console.log('Compare types ready');
+    renderSavedSearches();
 </script>
 {% endblock %}
 

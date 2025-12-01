@@ -335,6 +335,10 @@
 <div class="saved-searches-section" id="savedSearchesSection" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <h3 style="margin: 0; color: #153D33; font-size: 13px;">Saved Blends</h3>
+        <button onclick="exportSavedSearches()" class="blend-save-btn" style="width: fit-content;">
+            <img src="{{ url_for('static', filename='images/export-2-svgrepo-com.svg') }}" alt="Export" style="width: 14px; height: 14px;">
+            EXPORT SAVES
+        </button>
     </div>
     <div id="savedSearchesList"></div>
 </div>
