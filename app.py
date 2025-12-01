@@ -1302,7 +1302,9 @@ def get_compare_chart_blend():
                     SELECT 
                         sale_date,
                         price,
-                        bales
+                        bales,
+                        colour,
+                        vegetable_matter
                     FROM auction_data_joined
                     WHERE price > 10 AND bales > 0
                     AND (CAST(wool_type_id AS CHAR) = %s OR type_combined = %s)
@@ -1380,13 +1382,15 @@ def get_compare_chart_blend():
                 cursor.execute(query, params)
                 results = cursor.fetchall()
                 
-                # Group by date for THIS specific type - store (price, bales)
+                # Group by date for THIS specific type - store (price, bales, colour, vm)
                 type_date_data = defaultdict(list)
                 for row in results:
                     if row['sale_date'] and row['price'] and row['bales']:
                         type_date_data[row['sale_date']].append({
                             'price': float(row['price']),
-                            'bales': float(row['bales'])
+                            'bales': float(row['bales']),
+                            'colour': float(row['colour']) if row['colour'] is not None else None,
+                            'vegetable_matter': float(row['vegetable_matter']) if row['vegetable_matter'] is not None else None
                         })
                 
                 # Calculate volume-weighted filtered averages for THIS type
@@ -1420,29 +1424,80 @@ def get_compare_chart_blend():
                         weighted_avg_price = total_weighted_price / total_bales
                         weighted_avg_price_dollars = weighted_avg_price / 100
                         date_key = sale_date.strftime('%Y-%m-%d')
-                        type_data[date_key] = weighted_avg_price_dollars
+                        
+                        # Calculate volume-weighted average colour
+                        total_weighted_colour = sum(item['colour'] * item['bales'] for item in filtered_items if item['colour'] is not None)
+                        colour_bales = sum(item['bales'] for item in filtered_items if item['colour'] is not None)
+                        avg_colour = total_weighted_colour / colour_bales if colour_bales > 0 else None
+                        
+                        # Calculate volume-weighted average vegetable matter
+                        total_weighted_vm = sum(item['vegetable_matter'] * item['bales'] for item in filtered_items if item['vegetable_matter'] is not None)
+                        vm_bales = sum(item['bales'] for item in filtered_items if item['vegetable_matter'] is not None)
+                        avg_vm = total_weighted_vm / vm_bales if vm_bales > 0 else None
+                        
+                        type_data[date_key] = {
+                            'price': weighted_avg_price_dollars,
+                            'avg_colour': round(avg_colour, 2) if avg_colour is not None else None,
+                            'avg_vm': round(avg_vm, 2) if avg_vm is not None else None,
+                            'total_volume': int(total_bales)
+                        }
                 
                 type_series.append(type_data)
             
             # Get all unique dates across all types in this group
             group_dates = sorted(set(date for series in type_series for date in series.keys()))
             
-            # Interpolate each type's series to fill missing dates
+            # Interpolate each type's series to fill missing dates (only for price)
             interpolated_series = []
             for type_data in type_series:
-                # Create array with None for missing dates
-                values = [type_data.get(date, None) for date in group_dates]
+                # Create array with None for missing dates (price only for interpolation)
+                values = [type_data.get(date, {}).get('price') if isinstance(type_data.get(date), dict) else (type_data.get(date) if type_data.get(date) else None) for date in group_dates]
                 # Apply linear interpolation
                 interpolated = interpolate_series(values)
                 interpolated_series.append(interpolated)
             
-            # Now average the interpolated series together
+            # Now average the interpolated series together and combine metrics
             series_data = {}
             for idx, date in enumerate(group_dates):
                 valid_values = [series[idx] for series in interpolated_series if series[idx] is not None]
                 if len(valid_values) > 0:
-                    avg_value = sum(valid_values) / len(valid_values)
-                    series_data[date] = round(avg_value, 2)
+                    avg_price = sum(valid_values) / len(valid_values)
+                    
+                    # Collect all type data for this date to calculate combined metrics
+                    date_type_data = []
+                    for type_data_dict in type_series:
+                        date_entry = type_data_dict.get(date)
+                        if isinstance(date_entry, dict) and date_entry.get('price'):
+                            date_type_data.append(date_entry)
+                    
+                    # Calculate combined avg_colour, avg_vm, total_volume
+                    if date_type_data:
+                        # Volume-weighted average colour
+                        total_colour_weight = sum(entry.get('avg_colour', 0) * entry.get('total_volume', 0) for entry in date_type_data if entry.get('avg_colour') is not None)
+                        total_colour_vol = sum(entry.get('total_volume', 0) for entry in date_type_data if entry.get('avg_colour') is not None)
+                        combined_colour = round(total_colour_weight / total_colour_vol, 2) if total_colour_vol > 0 else None
+                        
+                        # Volume-weighted average VM
+                        total_vm_weight = sum(entry.get('avg_vm', 0) * entry.get('total_volume', 0) for entry in date_type_data if entry.get('avg_vm') is not None)
+                        total_vm_vol = sum(entry.get('total_volume', 0) for entry in date_type_data if entry.get('avg_vm') is not None)
+                        combined_vm = round(total_vm_weight / total_vm_vol, 2) if total_vm_vol > 0 else None
+                        
+                        # Total volume
+                        combined_volume = sum(entry.get('total_volume', 0) for entry in date_type_data)
+                        
+                        series_data[date] = {
+                            'price': round(avg_price, 2),
+                            'avg_colour': combined_colour,
+                            'avg_vm': combined_vm,
+                            'total_volume': combined_volume
+                        }
+                    else:
+                        series_data[date] = {
+                            'price': round(avg_price, 2),
+                            'avg_colour': None,
+                            'avg_vm': None,
+                            'total_volume': 0
+                        }
             
             all_series[label] = series_data
         
@@ -1455,7 +1510,17 @@ def get_compare_chart_blend():
         
         for idx, entry_label in enumerate(all_series.keys()):
             series_data = all_series.get(entry_label, {})
-            data_values = [series_data.get(date, None) for date in all_dates]
+            # Extract price values for chart
+            data_values = []
+            for date in all_dates:
+                date_entry = series_data.get(date)
+                if isinstance(date_entry, dict):
+                    data_values.append(date_entry.get('price'))
+                elif date_entry is not None:
+                    # Handle legacy format
+                    data_values.append(date_entry)
+                else:
+                    data_values.append(None)
             
             datasets.append({
                 'label': entry_label,
@@ -1470,7 +1535,8 @@ def get_compare_chart_blend():
         
         return jsonify({
             'labels': all_dates,
-            'datasets': datasets
+            'datasets': datasets,
+            'table_data': all_series  # Include detailed data for table view
         })
         
     except Exception as e:

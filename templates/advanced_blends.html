@@ -414,11 +414,46 @@
 <div class="chart-section" id="compareChartSection" style="display: none;">
     <div class="module-header">
         <h2 style="color: #153D33; font-size: 14px;">Blended Price Comparison (Volume-Weighted)</h2>
-        <button class="hide-btn content-visible" onclick="toggleModule('compareChart')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <!-- View Toggle -->
+            <div class="date-range-buttons" style="display: flex !important; gap: 4px !important; padding: 0 !important; margin: 0 !important; background: #eeedef !important; border-radius: 6px !important; height: 32px !important; align-items: center !important; box-sizing: border-box !important; line-height: 32px !important; flex-wrap: nowrap !important;">
+                <button class="date-range-btn active" id="viewToggleGraph" onclick="toggleBlendView('graph')" style="height: 32px !important; box-sizing: border-box !important; line-height: 1 !important; display: flex !important; align-items: center !important; justify-content: center !important; margin: 0 !important; padding: 8px 16px !important;">Graph</button>
+                <button class="date-range-btn" id="viewToggleTable" onclick="toggleBlendView('table')" style="height: 32px !important; box-sizing: border-box !important; line-height: 1 !important; display: flex !important; align-items: center !important; justify-content: center !important; margin: 0 !important; padding: 8px 16px !important;">Table</button>
+            </div>
+            <button class="hide-btn content-visible" onclick="toggleModule('compareChart')" aria-label="Hide"><img src="{{ url_for('static', filename='images/eye-off-svgrepo-com.svg') }}" alt="Hide"></button>
+        </div>
     </div>
     <div id="compareChartContent" class="module-content">
-        <div class="chart-container">
-            <canvas id="compareChart"></canvas>
+        <!-- Graph View -->
+        <div id="blendGraphView">
+            <div class="chart-container">
+                <canvas id="compareChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Table View -->
+        <div id="blendTableView" style="display: none;">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                <button class="date-range-btn export-disabled" onclick="exportBlendTableToCSV()" style="background: #3D7F4B; color: white;" disabled>Export to CSV</button>
+            </div>
+            <div style="overflow-x: auto; overflow-y: auto; max-height: 500px; position: relative;">
+                <table id="blendTable" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead style="position: sticky; top: 0; z-index: 10;">
+                        <tr style="background: #153D33; color: white;">
+                            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Date</th>
+                            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Type</th>
+                            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Weight</th>
+                            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Avg Price ($)</th>
+                            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Avg Colour</th>
+                            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Avg VM</th>
+                            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Total Volume (Bales)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="blendTableBody">
+                        <!-- Table rows will be populated here -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

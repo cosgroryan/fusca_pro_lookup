@@ -6,6 +6,8 @@ let currentChartData = null;
 let currentEntries = null;
 let currentWeights = null;
 let isBlending = false;
+let currentBlendViewMode = 'graph'; // 'graph' or 'table'
+let currentBlendTableData = null;
 
 // Parse wool types input, handling parentheses for groups
 function parseWoolTypeEntries(input) {
@@ -387,12 +389,60 @@ async function applyBlendedCompare() {
 function displayBlendedChart(data, entries, weights) {
     document.getElementById('compareChartSection').style.display = 'block';
     
-    // Store for MA updates
+    // Store for MA updates and table view
     currentChartData = data;
     currentEntries = entries;
     currentWeights = weights;
+    currentBlendTableData = data.table_data || {};
     
-    updateChart();
+    // Ensure views are in correct state
+    const graphView = document.getElementById('blendGraphView');
+    const tableView = document.getElementById('blendTableView');
+    if (graphView && tableView) {
+        if (currentBlendViewMode === 'table') {
+            graphView.style.display = 'none';
+            tableView.style.display = 'block';
+            displayBlendTable();
+        } else {
+            graphView.style.display = 'block';
+            tableView.style.display = 'none';
+            updateChart();
+        }
+    } else {
+        // Fallback - just update chart if views don't exist yet
+        updateChart();
+    }
+}
+
+// Toggle between graph and table view
+function toggleBlendView(mode) {
+    currentBlendViewMode = mode;
+    
+    const graphBtn = document.getElementById('viewToggleGraph');
+    const tableBtn = document.getElementById('viewToggleTable');
+    const graphView = document.getElementById('blendGraphView');
+    const tableView = document.getElementById('blendTableView');
+    
+    if (graphBtn && tableBtn) {
+        graphBtn.classList.remove('active');
+        tableBtn.classList.remove('active');
+        
+        if (mode === 'graph') {
+            graphBtn.classList.add('active');
+            graphView.style.display = 'block';
+            tableView.style.display = 'none';
+            if (currentChartData && currentEntries && currentWeights) {
+                updateChart();
+            }
+        } else {
+            tableBtn.classList.add('active');
+            graphView.style.display = 'none';
+            tableView.style.display = 'block';
+            if (currentBlendTableData) {
+                displayBlendTable();
+            }
+        }
+    }
 }
 
 function updateChart() {
@@ -446,18 +496,18 @@ function updateChart() {
         });
     });
     
-    // Blended average line (bold)
+    // Blended average line (bold, green)
     datasets.push({
         label: '✨ Weighted Average',
         data: blendedData,
-        borderColor: '#153D33',
-        backgroundColor: 'rgba(21, 61, 51, 0.1)',
+        borderColor: '#3D7F4B',
+        backgroundColor: 'rgba(61, 127, 75, 0.1)',
         borderWidth: 3,
         tension: 0.1,
         fill: true,
         spanGaps: true,
         pointRadius: 2,
-        pointBackgroundColor: '#153D33',
+        pointBackgroundColor: '#3D7F4B',
         order: 1
     });
     
@@ -647,6 +697,235 @@ function renderSavedSearches() {
         `;
         container.appendChild(item);
     });
+}
+
+function displayBlendTable() {
+    const tbody = document.getElementById('blendTableBody');
+    if (!tbody || !currentBlendTableData || !currentEntries || !currentWeights) return;
+    
+    tbody.innerHTML = '';
+    
+    // Get all unique dates from all entries
+    const allDates = new Set();
+    Object.values(currentBlendTableData).forEach(seriesData => {
+        Object.keys(seriesData).forEach(date => allDates.add(date));
+    });
+    const sortedDates = Array.from(allDates).sort().reverse(); // Most recent first
+    
+    sortedDates.forEach(date => {
+        // Calculate blended metrics for this date
+        let blendedPrice = null;
+        let blendedColour = null;
+        let blendedVm = null;
+        let blendedVolume = 0;
+        
+        let weightedPriceSum = 0;
+        let totalWeight = 0;
+        let totalColourWeight = 0;
+        let totalColourVolume = 0;
+        let totalVmWeight = 0;
+        let totalVmVolume = 0;
+        
+        // Calculate weighted blend
+        currentEntries.forEach((entry, idx) => {
+            const entryData = currentBlendTableData[entry.label];
+            if (!entryData) return;
+            
+            const dateData = entryData[date];
+            if (!dateData || typeof dateData !== 'object' || !dateData.price) return;
+            
+            const weight = currentWeights[idx] || 1;
+            weightedPriceSum += dateData.price * weight;
+            totalWeight += weight;
+            
+            // Aggregate colour and VM with volume weighting
+            if (dateData.avg_colour !== null && dateData.avg_colour !== undefined && dateData.total_volume > 0) {
+                totalColourWeight += dateData.avg_colour * dateData.total_volume;
+                totalColourVolume += dateData.total_volume;
+            }
+            
+            if (dateData.avg_vm !== null && dateData.avg_vm !== undefined && dateData.total_volume > 0) {
+                totalVmWeight += dateData.avg_vm * dateData.total_volume;
+                totalVmVolume += dateData.total_volume;
+            }
+            
+            blendedVolume += dateData.total_volume || 0;
+        });
+        
+        if (totalWeight > 0) {
+            blendedPrice = weightedPriceSum / totalWeight;
+        }
+        if (totalColourVolume > 0) {
+            blendedColour = totalColourWeight / totalColourVolume;
+        }
+        if (totalVmVolume > 0) {
+            blendedVm = totalVmWeight / totalVmVolume;
+        }
+        
+        // Add blend row (green text)
+        const blendRow = document.createElement('tr');
+        blendRow.style.backgroundColor = '#f0f8f0';
+        blendRow.innerHTML = `
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: 600;">${date}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: 600; color: #3D7F4B;">✨ Blended Average</td>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: 600; color: #3D7F4B;">-</td>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: 600; color: #3D7F4B;">$${blendedPrice !== null ? blendedPrice.toFixed(2) : '-'}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: 600; color: #3D7F4B;">${blendedColour !== null && blendedColour !== undefined ? blendedColour.toFixed(2) : '-'}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: 600; color: #3D7F4B;">${blendedVm !== null && blendedVm !== undefined ? blendedVm.toFixed(2) : '-'}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: 600; color: #3D7F4B;">${blendedVolume.toLocaleString()}</td>
+        `;
+        tbody.appendChild(blendRow);
+        
+        // Add component rows
+        currentEntries.forEach((entry, idx) => {
+            const entryData = currentBlendTableData[entry.label];
+            if (!entryData) return;
+            
+            const dateData = entryData[date];
+            if (!dateData || typeof dateData !== 'object' || !dateData.price) return;
+            
+            const weight = currentWeights[idx] || 1;
+            const componentRow = document.createElement('tr');
+            componentRow.innerHTML = `
+                <td style="padding: 8px; border: 1px solid #ddd;"></td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${entry.label}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; font-weight: 600;">${weight}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">$${dateData.price !== null && dateData.price !== undefined ? dateData.price.toFixed(2) : '-'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${dateData.avg_colour !== null && dateData.avg_colour !== undefined ? dateData.avg_colour.toFixed(2) : '-'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${dateData.avg_vm !== null && dateData.avg_vm !== undefined ? dateData.avg_vm.toFixed(2) : '-'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${(dateData.total_volume || 0).toLocaleString()}</td>
+            `;
+            tbody.appendChild(componentRow);
+        });
+    });
+}
+
+function exportBlendTableToCSV() {
+    if (!currentBlendTableData || !currentEntries || !currentWeights) {
+        alert('No data to export');
+        return;
+    }
+    
+    // Build CSV content
+    const headers = ['Date', 'Type', 'Weight', 'Avg Price ($)', 'Avg Colour', 'Avg VM', 'Total Volume (Bales)'];
+    const rows = [];
+    
+    // Get all unique dates
+    const allDates = new Set();
+    Object.values(currentBlendTableData).forEach(seriesData => {
+        Object.keys(seriesData).forEach(date => allDates.add(date));
+    });
+    const sortedDates = Array.from(allDates).sort().reverse();
+    
+    sortedDates.forEach(date => {
+        // Calculate blended metrics
+        let blendedPrice = null;
+        let blendedColour = null;
+        let blendedVm = null;
+        let blendedVolume = 0;
+        
+        let weightedPriceSum = 0;
+        let totalWeight = 0;
+        let totalColourWeight = 0;
+        let totalColourVolume = 0;
+        let totalVmWeight = 0;
+        let totalVmVolume = 0;
+        
+        currentEntries.forEach((entry, idx) => {
+            const entryData = currentBlendTableData[entry.label];
+            if (!entryData) return;
+            
+            const dateData = entryData[date];
+            if (!dateData || typeof dateData !== 'object' || !dateData.price) return;
+            
+            const weight = currentWeights[idx] || 1;
+            weightedPriceSum += dateData.price * weight;
+            totalWeight += weight;
+            
+            if (dateData.avg_colour !== null && dateData.avg_colour !== undefined && dateData.total_volume > 0) {
+                totalColourWeight += dateData.avg_colour * dateData.total_volume;
+                totalColourVolume += dateData.total_volume;
+            }
+            
+            if (dateData.avg_vm !== null && dateData.avg_vm !== undefined && dateData.total_volume > 0) {
+                totalVmWeight += dateData.avg_vm * dateData.total_volume;
+                totalVmVolume += dateData.total_volume;
+            }
+            
+            blendedVolume += dateData.total_volume || 0;
+        });
+        
+        if (totalWeight > 0) {
+            blendedPrice = weightedPriceSum / totalWeight;
+        }
+        if (totalColourVolume > 0) {
+            blendedColour = totalColourWeight / totalColourVolume;
+        }
+        if (totalVmVolume > 0) {
+            blendedVm = totalVmWeight / totalVmVolume;
+        }
+        
+        // Add blend row
+        rows.push([
+            date,
+            '✨ Blended Average',
+            '',
+            blendedPrice !== null ? blendedPrice.toFixed(2) : '',
+            blendedColour !== null && blendedColour !== undefined ? blendedColour.toFixed(2) : '',
+            blendedVm !== null && blendedVm !== undefined ? blendedVm.toFixed(2) : '',
+            blendedVolume.toString()
+        ]);
+        
+        // Add component rows
+        currentEntries.forEach((entry, idx) => {
+            const entryData = currentBlendTableData[entry.label];
+            if (!entryData) return;
+            
+            const dateData = entryData[date];
+            if (!dateData || typeof dateData !== 'object' || !dateData.price) return;
+            
+            const weight = currentWeights[idx] || 1;
+            rows.push([
+                '',
+                entry.label,
+                weight.toString(),
+                dateData.price !== null && dateData.price !== undefined ? dateData.price.toFixed(2) : '',
+                dateData.avg_colour !== null && dateData.avg_colour !== undefined ? dateData.avg_colour.toFixed(2) : '',
+                dateData.avg_vm !== null && dateData.avg_vm !== undefined ? dateData.avg_vm.toFixed(2) : '',
+                (dateData.total_volume || 0).toString()
+            ]);
+        });
+    });
+    
+    // Build CSV content
+    const csvContent = [
+        headers.map(escapeCSV).join(','),
+        ...rows.map(row => row.map(escapeCSV).join(','))
+    ].join('\n');
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    
+    const now = new Date();
+    const timestamp = now.toISOString().split('T')[0];
+    link.setAttribute('download', `blend_data_${timestamp}.csv`);
+    
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function escapeCSV(value) {
+    if (value === null || value === undefined) return '';
+    const stringValue = String(value);
+    if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+        return '"' + stringValue.replace(/"/g, '""') + '"';
+    }
+    return stringValue;
 }
 
 function showError(message) {
