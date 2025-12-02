@@ -203,6 +203,16 @@ def export_data_iframe():
     """Export Data analysis page (iframe version)"""
     return render_template('export_data_iframe.html', page='export-data')
 
+@app.route('/market_reports')
+def market_reports():
+    """Market Reports page"""
+    return render_template('market_reports.html', page='market-reports')
+
+@app.route('/market_reports-iframe')
+def market_reports_iframe():
+    """Market Reports iframe version (no header/nav)"""
+    return render_template('market_reports_iframe.html', page='market-reports')
+
 @app.route('/admin')
 def admin_dashboard():
     """Admin dashboard for search analytics"""
@@ -2356,6 +2366,521 @@ def get_export_data_countries():
         print(f"Error getting countries: {str(e)}")
         log_activity('/api/export-data/countries', 'Export Data', error=str(e))
         return jsonify({'error': str(e)}), 500
+
+# ==================== MARKET REPORTS API ENDPOINTS ====================
+
+@app.route('/api/market_report/search_prices', methods=['POST'])
+def get_search_prices():
+    """Get current price (latest sale date) and previous price for a saved search"""
+    try:
+        data = request.get_json()
+        saved_search = data.get('savedSearch', {})
+        
+        # Build query based on saved search type
+        if saved_search.get('page') == 'blends' or saved_search.get('type') == 'blend':
+            # Handle blend search
+            # For blends, we'd need to get the blend data and calculate
+            # For now, return error - blend pricing needs special handling
+            return jsonify({'error': 'Blend pricing not yet implemented'}), 400
+        
+        # Build query for simple/compare searches
+        query = """
+            SELECT sale_date, price, bales
+            FROM auction_data_joined
+            WHERE price > 10 AND bales > 0
+        """
+        
+        params = []
+        
+        # Apply wool type filter
+        if saved_search.get('wool_types'):
+            wool_types = saved_search['wool_types']
+            if isinstance(wool_types, list):
+                placeholders = ','.join(['%s'] * len(wool_types))
+                query += f" AND type_combined IN ({placeholders})"
+                params.extend(wool_types)
+        elif saved_search.get('filters', {}).get('wool_type_search'):
+            search_term = saved_search['filters']['wool_type_search'].strip()
+            query += " AND (CAST(wool_type_id AS CHAR) = %s OR type_combined = %s)"
+            params.append(search_term)
+            params.append(search_term)
+        
+        # Apply column filters
+        filters = saved_search.get('filters', {}).get('column_filters', [])
+        date_filter = saved_search.get('dateFilter')
+        
+        if date_filter:
+            if date_filter.get('operator') == 'between':
+                query += " AND sale_date BETWEEN %s AND %s"
+                params.append(date_filter['value'])
+                params.append(date_filter.get('value2', date_filter['value']))
+        
+        if filters:
+            for filter_item in filters:
+                column = filter_item.get('column')
+                operator = filter_item.get('operator')
+                value = filter_item.get('value')
+                value2 = filter_item.get('value2')
+                
+                if not column or not operator or not value:
+                    continue
+                
+                # Security: Validate column name against whitelist
+                if column not in ALLOWED_COLUMNS:
+                    print(f"Warning: Invalid column name attempted: {column}")
+                    continue
+                
+                # Build filter condition based on operator (same as price_chart endpoint)
+                if operator == 'eq':
+                    query += f" AND {column} = %s"
+                    params.append(value)
+                elif operator == 'ne':
+                    query += f" AND {column} != %s"
+                    params.append(value)
+                elif operator == 'gt':
+                    query += f" AND {column} > %s"
+                    params.append(value)
+                elif operator == 'lt':
+                    query += f" AND {column} < %s"
+                    params.append(value)
+                elif operator == 'gte':
+                    query += f" AND {column} >= %s"
+                    params.append(value)
+                elif operator == 'lte':
+                    query += f" AND {column} <= %s"
+                    params.append(value)
+                elif operator == 'between' and value2:
+                    query += f" AND {column} BETWEEN %s AND %s"
+                    params.append(value)
+                    params.append(value2)
+                elif operator == 'contains':
+                    query += f" AND {column} LIKE %s"
+                    params.append(f"%{value}%")
+                elif operator == 'not_contains':
+                    query += f" AND {column} NOT LIKE %s"
+                    params.append(f"%{value}%")
+        
+        query += " ORDER BY sale_date DESC LIMIT 1000"
+        
+        conn, tunnel = get_db()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        
+        if not results:
+            return jsonify({
+                'current_price': None,
+                'current_date': None,
+                'previous_price': None,
+                'previous_date': None,
+                'percent_change': None
+            })
+        
+        # Get unique sale dates, sorted desc
+        dates = sorted(set(r['sale_date'] for r in results if r['sale_date']), reverse=True)
+        
+        if len(dates) == 0:
+            return jsonify({
+                'current_price': None,
+                'current_date': None,
+                'previous_price': None,
+                'previous_date': None,
+                'percent_change': None
+            })
+        
+        # Calculate weighted average for latest date
+        latest_date = dates[0]
+        latest_rows = [r for r in results if r['sale_date'] == latest_date]
+        total_weight = sum(float(r['bales']) for r in latest_rows)
+        current_price = sum(float(r['price']) * float(r['bales']) for r in latest_rows) / total_weight if total_weight > 0 else 0
+        
+        # Get previous date price
+        previous_price = None
+        previous_date = None
+        if len(dates) > 1:
+            previous_date = dates[1]
+            prev_rows = [r for r in results if r['sale_date'] == previous_date]
+            prev_weight = sum(float(r['bales']) for r in prev_rows)
+            previous_price = sum(float(r['price']) * float(r['bales']) for r in prev_rows) / prev_weight if prev_weight > 0 else 0
+        
+        # Calculate percent change: (current - previous)/current*100
+        percent_change = None
+        if current_price and previous_price:
+            percent_change = ((current_price - previous_price) / current_price) * 100
+        
+        # Return prices in cents (as stored in database)
+        return jsonify({
+            'current_price': round(current_price, 2) if current_price else None,  # Already in cents
+            'current_date': str(latest_date) if latest_date else None,
+            'previous_price': round(previous_price, 2) if previous_price else None,  # Already in cents
+            'previous_date': str(previous_date) if previous_date else None,
+            'percent_change': round(percent_change, 2) if percent_change is not None else None
+        })
+    
+    except Exception as e:
+        print(f"Search prices error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/market_report/exchange_rate')
+def get_exchange_rate():
+    """Get current NZD/USD exchange rate from a live API"""
+    try:
+        import requests
+        
+        # Try to get rate from a free API (e.g., exchangerate-api.com or fixer.io free tier)
+        # For now, return a placeholder - you may want to use a specific API
+        try:
+            # Example using exchangerate-api.com (free tier)
+            response = requests.get('https://api.exchangerate-api.com/v4/latest/NZD', timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                rate = data.get('rates', {}).get('USD', None)
+                if rate:
+                    return jsonify({'rate': round(rate, 4)})
+        except:
+            pass
+        
+        # Fallback: return None (user can enter manually)
+        return jsonify({'rate': None, 'error': 'Unable to fetch live rate'})
+    
+    except Exception as e:
+        print(f"Exchange rate error: {e}")
+        return jsonify({'rate': None, 'error': str(e)})
+
+@app.route('/api/market_report/indicator_data', methods=['POST'])
+def get_indicator_data():
+    """Get indicator chart data for a calendar year (Jan-Dec) and previous year"""
+    try:
+        data = request.get_json()
+        blend_data = data.get('blendData', {})
+        year = int(data.get('year', datetime.now().year))
+        previous_year = year - 1
+        
+        # Extract blend entries from saved blend data
+        entries = []
+        weights = []
+        entry_filters = []
+        date_filter = None
+        
+        # Try different possible structures
+        if blend_data.get('blend_data'):
+            blend_info = blend_data['blend_data']
+            entries = blend_info.get('entries', [])
+            weights = blend_info.get('weights', [])
+            entry_filters = blend_info.get('entryFilters', [])
+            date_filter = blend_info.get('dateFilter')
+        elif blend_data.get('entries'):
+            entries = blend_data['entries']
+            weights = blend_data.get('weights', [1] * len(entries) if entries else [])
+            entry_filters = blend_data.get('entryFilters', [])
+            date_filter = blend_data.get('dateFilter')
+        
+        # Ensure weights array matches entries length
+        if len(weights) < len(entries):
+            weights.extend([1.0] * (len(entries) - len(weights)))
+        
+        # Ensure entry_filters array matches entries length
+        if len(entry_filters) < len(entries):
+            entry_filters.extend([[]] * (len(entries) - len(entry_filters)))
+        
+        if not entries:
+            return jsonify({'error': 'Invalid blend data - no entries found'}), 400
+        
+        print(f"Getting indicator data for {len(entries)} entries, year {year}")
+        start_time = time.time()
+        
+        # Get data for current year (Jan 1 - Dec 31)
+        current_year_data = get_calendar_year_data(entries, weights, entry_filters, date_filter, year)
+        elapsed_current = time.time() - start_time
+        print(f"Current year data retrieved in {elapsed_current:.2f}s")
+        
+        # Get data for previous year
+        previous_start = time.time()
+        previous_year_data = get_calendar_year_data(entries, weights, entry_filters, date_filter, previous_year)
+        elapsed_previous = time.time() - previous_start
+        print(f"Previous year data retrieved in {elapsed_previous:.2f}s")
+        
+        total_elapsed = time.time() - start_time
+        print(f"Total indicator data retrieval took {total_elapsed:.2f}s")
+        
+        return jsonify({
+            'currentYear': current_year_data,
+            'previousYear': previous_year_data
+        })
+    
+    except Exception as e:
+        print(f"Indicator data error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/market_report/most_recent_date')
+def get_most_recent_date():
+    """Get the most recent sale date from the database"""
+    cursor = None
+    try:
+        print("Getting most recent date...")
+        conn, tunnel = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        query = """
+            SELECT MAX(sale_date) as most_recent_date
+            FROM auction_data_joined
+            WHERE sale_date IS NOT NULL
+        """
+        cursor.execute(query)
+        result = cursor.fetchone()
+        
+        most_recent_date = result['most_recent_date'] if result and result['most_recent_date'] else None
+        
+        print(f"Most recent date: {most_recent_date}")
+        return jsonify({
+            'mostRecentDate': str(most_recent_date) if most_recent_date else None
+        })
+    
+    except Exception as e:
+        print(f"Most recent date error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+
+@app.route('/api/market_report/sale_stats', methods=['POST'])
+def get_sale_stats():
+    """Get offering (total bales) and passings (sold/total) for a sale date"""
+    conn = None
+    tunnel = None
+    cursor = None
+    try:
+        data = request.get_json()
+        sale_date = data.get('saleDate')
+        
+        if not sale_date:
+            return jsonify({'error': 'Sale date required'}), 400
+        
+        # Ensure sale_date is in the correct format (YYYY-MM-DD)
+        if isinstance(sale_date, str):
+            # If it's a datetime string, extract just the date part
+            if ' ' in sale_date:
+                sale_date = sale_date.split(' ')[0]
+            # If it's a datetime object string representation, parse it
+            if 'T' in sale_date:
+                sale_date = sale_date.split('T')[0]
+        
+        conn, tunnel = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get total bales for this sale date
+        query_total = """
+            SELECT SUM(bales) as total_bales, SUM(CASE WHEN is_sold = 1 THEN bales ELSE 0 END) as sold_bales
+            FROM auction_data_joined
+            WHERE sale_date = %s AND bales > 0
+        """
+        cursor.execute(query_total, [sale_date])
+        result = cursor.fetchone()
+        
+        if not result:
+            return jsonify({
+                'totalBales': 0,
+                'soldBales': 0,
+                'passings': '0%'
+            })
+        
+        total_bales = int(result['total_bales'] or 0)
+        sold_bales = int(result['sold_bales'] or 0)
+        
+        # Calculate passings percentage
+        passings = round((sold_bales / total_bales) * 100, 1) if total_bales > 0 else 0
+        
+        return jsonify({
+            'totalBales': total_bales,
+            'soldBales': sold_bales,
+            'passings': f'{passings}%'
+        })
+    
+    except Exception as e:
+        print(f"Sale stats error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        # Note: conn and tunnel are managed by get_db() and should not be closed here
+
+def get_calendar_year_data(entries, weights, entry_filters, date_filter, year):
+    """Get monthly average prices for a calendar year using blend logic"""
+    conn = None
+    tunnel = None
+    cursor = None
+    try:
+        from collections import defaultdict
+        import statistics
+        
+        # Get a single database connection for all queries
+        conn, tunnel = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Define month boundaries (calendar year Jan-Dec)
+        months = [
+            (f'{year}-01-01', f'{year}-01-31'),
+            (f'{year}-02-01', f'{year}-02-28' if year % 4 != 0 else f'{year}-02-29'),
+            (f'{year}-03-01', f'{year}-03-31'),
+            (f'{year}-04-01', f'{year}-04-30'),
+            (f'{year}-05-01', f'{year}-05-31'),
+            (f'{year}-06-01', f'{year}-06-30'),
+            (f'{year}-07-01', f'{year}-07-31'),
+            (f'{year}-08-01', f'{year}-08-31'),
+            (f'{year}-09-01', f'{year}-09-30'),
+            (f'{year}-10-01', f'{year}-10-31'),
+            (f'{year}-11-01', f'{year}-11-30'),
+            (f'{year}-12-01', f'{year}-12-31')
+        ]
+        
+        monthly_prices = []
+        
+        for month_start, month_end in months:
+            # Process blend entries similar to compare_chart_blend
+            all_entry_monthly_data = []
+            
+            for entry_idx, entry in enumerate(entries):
+                types = entry.get('types', [])
+                entry_filter_list = entry_filters[entry_idx] if entry_idx < len(entry_filters) else []
+                weight = weights[entry_idx] if entry_idx < len(weights) else 1.0
+                
+                if not types:
+                    continue
+                
+                # Get data for all types in this entry for this month
+                type_data_list = []
+                
+                for wool_type in types:
+                    query = """
+                        SELECT 
+                            sale_date,
+                            price,
+                            bales
+                        FROM auction_data_joined
+                        WHERE price > 10 AND bales > 0
+                        AND sale_date >= %s AND sale_date <= %s
+                        AND (CAST(wool_type_id AS CHAR) = %s OR type_combined = %s)
+                    """
+                    
+                    params = [month_start, month_end, wool_type, wool_type]
+                    
+                    # Apply per-entry filters (all operators like price_chart endpoint)
+                    for filter_item in entry_filter_list:
+                        column = filter_item.get('column')
+                        operator = filter_item.get('operator')
+                        value = filter_item.get('value')
+                        value2 = filter_item.get('value2')
+                        
+                        if not column or not operator or not value:
+                            continue
+                        
+                        # Security: Validate column name against whitelist
+                        if column not in ALLOWED_COLUMNS:
+                            continue
+                        
+                        # Build filter condition based on operator (same as price_chart endpoint)
+                        if operator == 'eq':
+                            query += f" AND {column} = %s"
+                            params.append(value)
+                        elif operator == 'ne':
+                            query += f" AND {column} != %s"
+                            params.append(value)
+                        elif operator == 'gt':
+                            query += f" AND {column} > %s"
+                            params.append(value)
+                        elif operator == 'lt':
+                            query += f" AND {column} < %s"
+                            params.append(value)
+                        elif operator == 'gte':
+                            query += f" AND {column} >= %s"
+                            params.append(value)
+                        elif operator == 'lte':
+                            query += f" AND {column} <= %s"
+                            params.append(value)
+                        elif operator == 'between' and value2:
+                            query += f" AND {column} BETWEEN %s AND %s"
+                            params.append(value)
+                            params.append(value2)
+                        elif operator == 'contains':
+                            query += f" AND {column} LIKE %s"
+                            params.append(f"%{value}%")
+                        elif operator == 'not_contains':
+                            query += f" AND {column} NOT LIKE %s"
+                            params.append(f"%{value}%")
+                    
+                    # Reuse the same cursor for all queries
+                    try:
+                        # Check connection health before query
+                        if not conn.is_connected():
+                            print("Database connection lost, reconnecting...")
+                            cursor.close()
+                            conn, tunnel = get_db()
+                            cursor = conn.cursor(dictionary=True)
+                        
+                        cursor.execute(query, params)
+                        results = cursor.fetchall()
+                    except Exception as query_error:
+                        print(f"Query error in get_calendar_year_data: {query_error}")
+                        import traceback
+                        traceback.print_exc()
+                        # Continue to next type if this query fails
+                        continue
+                    
+                    # Calculate volume-weighted average for this type this month
+                    if results:
+                        total_weighted_price = sum(float(r['price']) * float(r['bales']) for r in results)
+                        total_bales = sum(float(r['bales']) for r in results)
+                        
+                        if total_bales > 0:
+                            avg_price = total_weighted_price / total_bales
+                            type_data_list.append({
+                                'price': avg_price,
+                                'weight': weight
+                            })
+                
+                # Average across types in this entry (simple average)
+                if type_data_list:
+                    entry_avg_price = sum(t['price'] for t in type_data_list) / len(type_data_list)
+                    all_entry_monthly_data.append({
+                        'price': entry_avg_price,
+                        'weight': weight
+                    })
+            
+            # Calculate weighted blend average across all entries for this month
+            if all_entry_monthly_data:
+                total_weight = sum(e['weight'] for e in all_entry_monthly_data)
+                if total_weight > 0:
+                    weighted_avg = sum(e['price'] * e['weight'] for e in all_entry_monthly_data) / total_weight
+                    monthly_prices.append(round(weighted_avg / 100, 2))  # Convert cents to dollars
+                else:
+                    monthly_prices.append(None)
+            else:
+                monthly_prices.append(None)
+        
+        return monthly_prices
+    
+    except Exception as e:
+        print(f"Calendar year data error: {e}")
+        import traceback
+        traceback.print_exc()
+        return [None] * 12
+    finally:
+        # Clean up cursor (connection is managed by get_db())
+        if cursor:
+            try:
+                cursor.close()
+            except:
+                pass
+
+# ==================== END MARKET REPORTS ENDPOINTS ====================
 
 @app.teardown_appcontext
 def cleanup_connection(error):

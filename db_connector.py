@@ -3,8 +3,11 @@ import mysql.connector
 import os
 import logging
 
-# Enable verbose logging for sshtunnel
-logging.basicConfig(level=logging.DEBUG)
+# Set logging level - suppress paramiko debug messages
+logging.basicConfig(level=logging.INFO)
+# Specifically silence paramiko transport debug messages
+logging.getLogger('paramiko.transport').setLevel(logging.WARNING)
+logging.getLogger('paramiko').setLevel(logging.WARNING)
 
 def get_db_connection():
     """

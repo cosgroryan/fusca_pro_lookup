@@ -1,0 +1,1398 @@
+// Market Reports JavaScript
+
+let savedSearches = [];
+let sections = [];
+let indicators = [];
+let selectedSearches = new Set();
+let reportConfig = {
+    logo: null,
+    heroImage: null,
+    title: 'Strong wool report',
+    year: new Date().getFullYear().toString(),
+    saleDate: '',
+    nextAuction: '',
+    offering: '',
+    passings: '',
+    nzdUsd: '',
+    commentary: ''
+};
+let indicatorChart = null;
+
+// Load saved searches on page load
+function loadSavedSearches() {
+    const allSaved = JSON.parse(localStorage.getItem('fusca_saved_searches') || '[]');
+    savedSearches = allSaved.filter(s => s.page === 'simple' || s.page === 'blends' || s.page === 'compare');
+    renderSavedSearches();
+}
+
+function renderSavedSearches() {
+    const container = document.getElementById('savedSearchesList');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (savedSearches.length === 0) {
+        container.innerHTML = '<p style="color: #666; font-size: 11px;">No saved searches found. Save searches in Simple Search or Blends first.</p>';
+        return;
+    }
+    
+    savedSearches.forEach(search => {
+        const item = document.createElement('div');
+        item.className = 'saved-search-item-selectable';
+        item.innerHTML = `
+            <input type="checkbox" id="search_${search.id}" onchange="toggleSearchSelection(${search.id})">
+            <label for="search_${search.id}" style="cursor: pointer; flex: 1; margin: 0;">
+                ${search.type === 'blend' || search.page === 'blends' ? '✨ ' : ''}${search.name}
+            </label>
+        `;
+        container.appendChild(item);
+    });
+}
+
+function toggleSearchSelection(searchId) {
+    const checkbox = document.getElementById(`search_${searchId}`);
+    if (checkbox.checked) {
+        selectedSearches.add(searchId);
+        // Add to all sections' allowed searches if they don't already have it
+        sections.forEach(section => {
+            if (!section.allowedSearchIds) {
+                section.allowedSearchIds = [];
+            }
+            if (!section.allowedSearchIds.includes(searchId)) {
+                section.allowedSearchIds.push(searchId);
+            }
+        });
+        renderSections(); // Re-render to show new option in dropdowns
+    } else {
+        selectedSearches.delete(searchId);
+        // Remove from sections
+        sections.forEach(section => {
+            section.searchIds = section.searchIds.filter(id => id !== searchId);
+        });
+        renderSections();
+    }
+    
+    const item = checkbox.closest('.saved-search-item-selectable');
+    if (checkbox.checked) {
+        item.classList.add('selected');
+    } else {
+        item.classList.remove('selected');
+    }
+}
+
+let sectionCount = 0;
+
+function addSection() {
+    // Capture currently selected searches when section is created
+    const currentlySelected = Array.from(selectedSearches);
+    const sectionId = `section_${sectionCount++}`;
+    sections.push({
+        id: sectionId,
+        title: 'New Section',
+        searchIds: [],
+        allowedSearchIds: [...currentlySelected] // Only allow searches selected when section was created
+    });
+    renderSections();
+}
+
+function removeSection(sectionId) {
+    sections = sections.filter(s => s.id !== sectionId);
+    renderSections();
+}
+
+function renderSections() {
+    const container = document.getElementById('sectionsList');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    sections.forEach(section => {
+        const sectionDiv = document.createElement('div');
+        sectionDiv.className = 'section-item';
+        sectionDiv.innerHTML = `
+            <div class="section-header">
+                <input type="text" class="section-title-input" value="${section.title}" 
+                       onchange="updateSectionTitle('${section.id}', this.value)" 
+                       placeholder="Section title">
+                <span class="drag-handle">☰</span>
+            </div>
+            <div style="margin-top: 8px;">
+                <select id="section_${section.id}_select" style="width: 100%; padding: 4px; font-size: 12px;" 
+                        onchange="addSearchToSection('${section.id}', this.value); this.value='';">
+                    <option value="">Add saved search to section...</option>
+                    ${(section.allowedSearchIds || []).map(id => {
+                        const search = savedSearches.find(s => s.id === id);
+                        if (!search) return '';
+                        const isInSection = section.searchIds.includes(id);
+                        if (isInSection) return '';
+                        return `<option value="${id}">${search.name}</option>`;
+                    }).join('')}
+                </select>
+                <div id="section_${section.id}_items" style="margin-top: 8px;">
+                    ${section.searchIds.map(id => {
+                        const search = savedSearches.find(s => s.id === id);
+                        if (!search) return '';
+                        return `<div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: white; border-radius: 4px; margin-bottom: 4px;">
+                            <span style="font-size: 11px;">${search.name}</span>
+                            <button onclick="removeSearchFromSection('${section.id}', ${id})" style="background: #dc3545; color: white; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">✕</button>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>
+            <button onclick="removeSection('${section.id}')" style="margin-top: 8px; background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; width: 100%;">Remove Section</button>
+        `;
+        container.appendChild(sectionDiv);
+    });
+}
+
+function updateSectionTitle(sectionId, title) {
+    const section = sections.find(s => s.id === sectionId);
+    if (section) {
+        section.title = title;
+    }
+}
+
+function addSearchToSection(sectionId, searchId) {
+    const searchIdNum = parseInt(searchId);
+    if (!searchIdNum) return;
+    
+    const section = sections.find(s => s.id === sectionId);
+    if (section) {
+        // Check if search is allowed in this section
+        if (!section.allowedSearchIds || !section.allowedSearchIds.includes(searchIdNum)) {
+            alert('This search was not selected when the section was created. Please uncheck and re-check it, then add the section again.');
+            return;
+        }
+        if (!section.searchIds.includes(searchIdNum)) {
+            section.searchIds.push(searchIdNum);
+            renderSections();
+        }
+    }
+}
+
+function removeSearchFromSection(sectionId, searchId) {
+    const section = sections.find(s => s.id === sectionId);
+    if (section) {
+        section.searchIds = section.searchIds.filter(id => id !== searchId);
+        renderSections();
+    }
+}
+
+// Indicator builder - uses saved blend searches
+function showIndicatorBuilder() {
+    const modal = document.getElementById('indicatorBuilderModal');
+    if (!modal) return;
+    
+    modal.style.display = 'block';
+    
+    // Get all saved blend searches
+    const blendSearches = savedSearches.filter(s => s.page === 'blends' || s.type === 'blend');
+    
+    const content = document.getElementById('indicatorBuilderContent');
+    if (blendSearches.length === 0) {
+        content.innerHTML = `
+            <div style="margin-bottom: 16px;">
+                <p style="color: #666;">No saved blend searches found. Please create and save a blend in the Advanced Blends tool first.</p>
+                <button onclick="closeIndicatorBuilder()" class="btn btn-secondary" style="margin-top: 12px;">Close</button>
+            </div>
+        `;
+        return;
+    }
+    
+    content.innerHTML = `
+        <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 4px; font-weight: 600;">Select a saved blend to use as indicator:</label>
+            <select id="indicatorBlendSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                <option value="">Choose a blend...</option>
+                ${blendSearches.map(blend => `<option value="${blend.id}">${blend.name}</option>`).join('')}
+            </select>
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 4px; font-weight: 600;">Indicator Display Name (optional):</label>
+            <input type="text" id="indicatorDisplayName" placeholder="Leave empty to use blend name" 
+                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button onclick="addIndicator()" class="btn">Add Indicator</button>
+            <button onclick="closeIndicatorBuilder()" class="btn btn-secondary">Cancel</button>
+        </div>
+    `;
+}
+
+function addIndicator() {
+    const blendSelect = document.getElementById('indicatorBlendSelect');
+    const displayNameInput = document.getElementById('indicatorDisplayName');
+    
+    if (!blendSelect || !blendSelect.value) {
+        alert('Please select a blend');
+        return;
+    }
+    
+    const blendId = parseInt(blendSelect.value);
+    const blend = savedSearches.find(s => s.id === blendId);
+    if (!blend) {
+        alert('Blend not found');
+        return;
+    }
+    
+    const displayName = displayNameInput ? displayNameInput.value.trim() : '';
+    const indicatorName = displayName || blend.name;
+    
+    // Check if already added
+    if (indicators.find(i => i.blendId === blendId)) {
+        alert('This indicator has already been added');
+        return;
+    }
+    
+    indicators.push({
+        id: `indicator_${indicators.length}`,
+        blendId: blendId,
+        name: indicatorName,
+        blendData: blend
+    });
+    
+    renderIndicators();
+    closeIndicatorBuilder();
+}
+
+function renderIndicators() {
+    const container = document.getElementById('indicatorsList');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (indicators.length === 0) {
+        container.innerHTML = '<p style="color: #666; font-size: 11px;">No indicators added yet.</p>';
+        return;
+    }
+    
+    indicators.forEach(indicator => {
+        const item = document.createElement('div');
+        item.className = 'section-item';
+        item.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; font-weight: 600;">${indicator.name}</span>
+                <button onclick="removeIndicator('${indicator.id}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">Remove</button>
+            </div>
+        `;
+        container.appendChild(item);
+    });
+}
+
+function removeIndicator(indicatorId) {
+    indicators = indicators.filter(i => i.id !== indicatorId);
+    renderIndicators();
+}
+
+function closeIndicatorBuilder() {
+    const modal = document.getElementById('indicatorBuilderModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Generate report preview
+async function generateReport() {
+    if (isPostOperationInProgress()) {
+        console.log('Report generation already in progress');
+        return;
+    }
+    
+    if (sections.length === 0) {
+        alert('Please add at least one section to your report');
+        return;
+    }
+    
+    disablePostButtons();
+    
+    const preview = document.getElementById('reportPreview');
+    preview.innerHTML = '<div style="text-align: center; padding: 20px;">Generating report...</div>';
+    
+    try {
+        // Fetch data for all selected searches
+        const reportData = await fetchReportData();
+        
+        // Render the report
+        await renderReport(reportData);
+    } catch (error) {
+        console.error('Error generating report:', error);
+        alert('Error generating report: ' + error.message);
+        const preview = document.getElementById('reportPreview');
+        if (preview) {
+            preview.innerHTML = '<div style="text-align: center; padding: 20px; color: #dc3545;">Error generating report. Please check the console for details.</div>';
+        }
+    } finally {
+        enablePostButtons();
+    }
+}
+
+async function fetchReportData() {
+    const data = {};
+    let mostRecentDate = null;
+    
+    // Fetch current/previous prices for each selected search
+    for (const searchId of selectedSearches) {
+        const search = savedSearches.find(s => s.id === searchId);
+        if (!search) continue;
+        
+        try {
+            const response = await fetch('/api/market_report/search_prices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ savedSearch: search })
+            });
+            
+            if (response.ok) {
+                const priceData = await response.json();
+                data[searchId] = priceData;
+                
+                // Track most recent date across all searches
+                if (priceData.current_date) {
+                    if (!mostRecentDate || priceData.current_date > mostRecentDate) {
+                        mostRecentDate = priceData.current_date;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error(`Error fetching price data for search ${searchId}:`, error);
+        }
+    }
+    
+    // Fetch NZD/USD rate
+    try {
+        const rateResponse = await fetch('/api/market_report/exchange_rate');
+        if (rateResponse.ok) {
+            const rateData = await rateResponse.json();
+            reportConfig.nzdUsd = rateData.rate || '';
+        }
+    } catch (error) {
+        console.error('Error fetching exchange rate:', error);
+    }
+    
+    // Auto-fill sale date with most recent date
+    if (mostRecentDate) {
+        reportConfig.saleDate = mostRecentDate;
+        
+        // Auto-fill offering and passings for this date
+        try {
+            const saleDataResponse = await fetch('/api/market_report/sale_stats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ saleDate: mostRecentDate })
+            });
+            
+            if (saleDataResponse.ok) {
+                const saleData = await saleDataResponse.json();
+                reportConfig.offering = saleData.totalBales || '';
+                reportConfig.passings = saleData.passings || '';
+            }
+        } catch (error) {
+            console.error('Error fetching sale stats:', error);
+        }
+    }
+    
+    return data;
+}
+
+async function renderReport(reportData) {
+    const preview = document.getElementById('reportPreview');
+    
+    let html = `
+        <div style="max-width: 800px; margin: 0 auto; font-family: 'Nunito Sans', sans-serif; font-size: 10px;">
+            <!-- Report Header -->
+            <div class="report-header" style="background: #1A4C41; color: white; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                <div class="report-header-top" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                    <div>
+                        <div class="report-title" style="font-size: 18px; font-weight: 700; margin-bottom: 2px;">
+                            <input type="text" id="reportTitle" value="${reportConfig.title}" 
+                                   onchange="reportConfig.title = this.value" 
+                                   style="background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 2px 4px; border-radius: 4px; font-size: 18px; font-weight: 700; width: 250px;">
+                        </div>
+                        <div class="report-year" style="font-size: 14px; opacity: 0.9;">
+                            <input type="text" id="reportYear" value="${reportConfig.year}" 
+                                   onchange="reportConfig.year = this.value" 
+                                   style="background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 2px 4px; border-radius: 4px; font-size: 14px; width: 80px;">
+                        </div>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 4px; font-size: 11px; opacity: 0.8;">Logo:</label>
+                        <input type="file" id="logoUpload" accept="image/*" onchange="handleLogoUpload(event)" style="display: none;">
+                        <button onclick="document.getElementById('logoUpload').click()" class="btn" style="font-size: 11px; padding: 4px 8px;">Upload Logo</button>
+                        <div id="logoPreview" style="margin-top: 8px;">
+                            ${reportConfig.logo ? `<img src="${reportConfig.logo}" style="max-height: 60px; max-width: 200px;">` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hero Image and Market Info -->
+            <div class="hero-section" style="display: grid; grid-template-columns: 1fr 280px; gap: 12px; margin-bottom: 12px;">
+                <div class="hero-image-container" style="position: relative; border-radius: 4px; overflow: hidden; height: 150px; width: 100%; background: #f0f0f0;">
+                    <input type="file" id="heroUpload" accept="image/*" onchange="handleHeroUpload(event)" style="display: none;">
+                    ${reportConfig.heroImage ? 
+                        `<div style="position: relative; width: 100%; height: 150px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                            <img src="${reportConfig.heroImage}" class="hero-image-preview" style="width: 100%; height: 150px; object-fit: cover; object-position: center;">
+                            <button onclick="document.getElementById('heroUpload').click()" class="btn" style="position: absolute; bottom: 8px; right: 8px; font-size: 10px; padding: 4px 8px; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">Change Image</button>
+                        </div>` :
+                        `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">
+                            <button onclick="document.getElementById('heroUpload').click()" class="btn" style="font-size: 10px; padding: 4px 8px;">Upload Hero Image</button>
+                        </div>`
+                    }
+                </div>
+                <div class="market-info-box" style="background: #1A4C41; color: white; padding: 10px; border-radius: 4px;">
+                    <div class="market-info-row" style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 10px;">
+                        <span style="font-weight: bold;">Sale Date:</span>
+                        <input type="date" id="saleDateInput" value="${reportConfig.saleDate}" 
+                               onchange="reportConfig.saleDate = this.value" 
+                               style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; font-weight: normal;">
+                    </div>
+                    <div class="market-info-row" style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 10px;">
+                        <span style="font-weight: bold;">Next Auction:</span>
+                        <input type="date" id="nextAuctionInput" value="${reportConfig.nextAuction}" 
+                               onchange="reportConfig.nextAuction = this.value" 
+                               style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; font-weight: normal;">
+                    </div>
+                    <div class="market-info-row" style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 10px;">
+                        <span style="font-weight: bold;">Offering (Bales):</span>
+                        <input type="text" id="offeringInput" value="${reportConfig.offering}" 
+                               onchange="reportConfig.offering = this.value" 
+                               style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; width: 70px; font-weight: normal;">
+                    </div>
+                    <div class="market-info-row" style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 10px;">
+                        <span style="font-weight: bold;">PASSINGS:</span>
+                        <input type="text" id="passingsInput" value="${reportConfig.passings}" 
+                               onchange="reportConfig.passings = this.value" 
+                               style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; width: 50px; font-weight: normal;">
+                    </div>
+                    <div class="market-info-row" style="display: flex; justify-content: space-between; font-size: 10px;">
+                        <span style="font-weight: bold;">NZD/USD:</span>
+                        <input type="text" id="nzdUsdInput" value="${reportConfig.nzdUsd}" 
+                               onchange="reportConfig.nzdUsd = this.value" 
+                               style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; width: 70px; font-weight: normal;">
+                    </div>
+                </div>
+            </div>
+    `;
+    
+    // Add Indicator Chart
+    if (indicators.length > 0) {
+        html += `
+            <div style="margin: 12px 0;">
+                <h2 style="font-size: 12px; font-weight: 600; color: #153D33; margin-bottom: 8px;">Indicator Chart</h2>
+                <div class="indicator-chart-container" style="position: relative; height: 200px; margin: 10px 0;">
+                    <div id="indicatorChartLoading" style="text-align: center; padding: 40px; color: #666; font-size: 12px;">Loading indicator chart...</div>
+                    <canvas id="indicatorChart" style="display: none;"></canvas>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Add Sections with Tables in 2-column grid
+    if (sections.length > 0) {
+        html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0;">`;
+        
+        sections.forEach((section, sectionIndex) => {
+            html += `
+                <div class="section-container" style="page-break-inside: avoid;">
+                    <h2 style="font-size: 14px; font-weight: 600; color: #153D33; margin-bottom: 8px;">${section.title}</h2>
+                    <table class="price-table" style="width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px;">
+                        <thead>
+                            <tr>
+                                <th style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; background: #153D33; color: white; font-weight: 600; font-size: 10px;">Type Name</th>
+                                <th style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; background: #153D33; color: white; font-weight: 600; font-size: 10px;">Current Price</th>
+                                <th style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; background: #153D33; color: white; font-weight: 600; font-size: 10px;">% Change</th>
+                            </tr>
+                        </thead>
+                        <tbody id="section_${section.id}_table_body">
+            `;
+            
+            // Add rows for each search in this section
+            section.searchIds.forEach(searchId => {
+                const search = savedSearches.find(s => s.id === searchId);
+                const priceData = reportData[searchId];
+                if (!search || !priceData) return;
+                
+                // Convert cents to dollars
+                const price = priceData.current_price ? `$${(priceData.current_price / 100).toFixed(2)}` : 'N/A';
+                const percentChange = priceData.percent_change !== null ? priceData.percent_change : null;
+                const changeClass = percentChange !== null ? (percentChange >= 0 ? 'price-positive' : 'price-negative') : '';
+                const changeDisplay = percentChange !== null ? 
+                    `${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(2)}%` : 'N/A';
+                
+                html += `
+                    <tr>
+                        <td style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; font-size: 10px;">${search.name}</td>
+                        <td style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; font-size: 10px;">${price}</td>
+                        <td style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; font-size: 10px; ${changeClass ? `color: ${changeClass === 'price-positive' ? '#28a745' : '#dc3545'};` : ''}">${changeDisplay}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        });
+        
+        html += `</div>`;
+    }
+    
+    // Add Market Commentary
+    html += `
+        <div style="margin: 12px 0;">
+            <h2 style="font-size: 12px; font-weight: 600; color: #153D33; margin-bottom: 8px;">Market Commentary</h2>
+            <textarea id="marketCommentary" onchange="reportConfig.commentary = this.value" 
+                      style="width: 100%; min-height: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 10px; font-family: inherit; white-space: pre-wrap; word-wrap: break-word;"
+                      placeholder="Enter market commentary...">${reportConfig.commentary}</textarea>
+        </div>
+    `;
+    
+    html += `</div>`;
+    
+    preview.innerHTML = html;
+    
+    // Render indicator chart if indicators exist (non-blocking - don't await)
+    // TEMPORARILY DISABLED - indicator chart disabled to unblock report generation
+    if (false && indicators.length > 0) {
+        // Don't block report generation - load chart in background
+        renderIndicatorChart().catch(error => {
+            console.error('Indicator chart error (non-blocking):', error);
+        });
+    }
+}
+
+function handleLogoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        reportConfig.logo = e.target.result;
+        const preview = document.getElementById('logoPreview');
+        if (preview) {
+            preview.innerHTML = `<img src="${e.target.result}" style="max-height: 60px; max-width: 200px;">`;
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+function handleHeroUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        reportConfig.heroImage = e.target.result;
+        const container = document.querySelector('.hero-image-container');
+        if (container) {
+            container.innerHTML = `
+                <input type="file" id="heroUpload" accept="image/*" onchange="handleHeroUpload(event)" style="display: none;">
+                <div style="position: relative; width: 100%; height: 150px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                    <img src="${e.target.result}" class="hero-image-preview" style="width: 100%; height: 150px; object-fit: cover; object-position: center;">
+                    <button onclick="document.getElementById('heroUpload').click()" class="btn" style="position: absolute; bottom: 8px; right: 8px; font-size: 10px; padding: 4px 8px; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">Change Image</button>
+                </div>
+            `;
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+// Helper function to convert blend data format for API
+function convertBlendDataToApiFormat(blendData) {
+    console.log('Converting blend data:', blendData);
+    
+    // Extract the blend structure from saved blend format
+    // blendData is the saved search object, which has blend_data property
+    let entries = [];
+    let weights = [];
+    let entryFilters = [];
+    
+    // Handle different possible structures
+    if (blendData.blend_data) {
+        // Standard saved blend format
+        const blend = blendData.blend_data;
+        entries = blend.entries || [];
+        weights = blend.weights || [];
+        entryFilters = blend.entryFilters || [];
+    } else if (blendData.entries) {
+        // Direct format (for backwards compatibility)
+        entries = blendData.entries;
+        weights = blendData.weights || [];
+        entryFilters = blendData.entryFilters || [];
+    }
+    
+    if (!entries || entries.length === 0) {
+        console.error('No entries found in blend data:', blendData);
+        throw new Error('Invalid blend data: no entries found');
+    }
+    
+    // Convert to API format (matching blends.js structure)
+    const apiEntries = entries.map((entry, idx) => ({
+        types: entry.types || [],
+        label: entry.label || `Entry ${idx + 1}`,
+        filters: entryFilters[idx] || []
+    }));
+    
+    console.log('Converted API format:', { entries: apiEntries });
+    return { entries: apiEntries };
+}
+
+// Helper function to aggregate daily data into monthly averages
+function aggregateToMonthly(dailyData, year) {
+    try {
+        console.log(`Aggregating data for year ${year}:`, dailyData);
+        
+        const months = [
+            { name: 'Jan', start: `${year}-01-01`, end: `${year}-01-31` },
+            { name: 'Feb', start: `${year}-02-01`, end: `${year}-02-28` },
+            { name: 'Mar', start: `${year}-03-01`, end: `${year}-03-31` },
+            { name: 'Apr', start: `${year}-04-01`, end: `${year}-04-30` },
+            { name: 'May', start: `${year}-05-01`, end: `${year}-05-31` },
+            { name: 'Jun', start: `${year}-06-01`, end: `${year}-06-30` },
+            { name: 'Jul', start: `${year}-07-01`, end: `${year}-07-31` },
+            { name: 'Aug', start: `${year}-08-01`, end: `${year}-08-31` },
+            { name: 'Sep', start: `${year}-09-01`, end: `${year}-09-30` },
+            { name: 'Oct', start: `${year}-10-01`, end: `${year}-10-31` },
+            { name: 'Nov', start: `${year}-11-01`, end: `${year}-11-30` },
+            { name: 'Dec', start: `${year}-12-01`, end: `${year}-12-31` }
+        ];
+        
+        // Handle leap year for February
+        if (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) {
+            months[1].end = `${year}-02-29`;
+        }
+        
+        // Get all series data (first series in table_data)
+        const tableData = dailyData.table_data || {};
+        const seriesKeys = Object.keys(tableData);
+        
+        if (seriesKeys.length === 0) {
+            console.warn(`No table_data found for year ${year}`);
+            return [null, null, null, null, null, null, null, null, null, null, null, null];
+        }
+        
+        // Use the first (and likely only) series, or combine all if multiple
+        let allDatesData = {};
+        seriesKeys.forEach(key => {
+            const seriesData = tableData[key] || {};
+            Object.keys(seriesData).forEach(date => {
+                if (!allDatesData[date]) {
+                    allDatesData[date] = [];
+                }
+                const entry = seriesData[date];
+                const price = typeof entry === 'object' && entry !== null ? entry.price : entry;
+                if (price !== null && price !== undefined && !isNaN(price)) {
+                    allDatesData[date].push(price);
+                }
+            });
+        });
+        
+        // Average prices for dates that have multiple entries
+        Object.keys(allDatesData).forEach(date => {
+            if (allDatesData[date].length > 1) {
+                const sum = allDatesData[date].reduce((a, b) => a + b, 0);
+                allDatesData[date] = sum / allDatesData[date].length;
+            } else {
+                allDatesData[date] = allDatesData[date][0];
+            }
+        });
+        
+        const monthlyAverages = months.map(month => {
+            // Find all dates in this month that have price data
+            const monthDates = Object.keys(allDatesData).filter(date => {
+                return date >= month.start && date <= month.end;
+            });
+            
+            if (monthDates.length === 0) return null;
+            
+            // Get all prices for this month
+            const prices = monthDates
+                .map(date => allDatesData[date])
+                .filter(price => price !== null && price !== undefined && !isNaN(price));
+            
+            if (prices.length === 0) return null;
+            
+            // Calculate average price for the month
+            const sum = prices.reduce((a, b) => a + b, 0);
+            return parseFloat((sum / prices.length).toFixed(2));
+        });
+        
+        console.log(`Monthly averages for ${year}:`, monthlyAverages);
+        return monthlyAverages;
+    } catch (error) {
+        console.error(`Error aggregating data for year ${year}:`, error);
+        return [null, null, null, null, null, null, null, null, null, null, null, null];
+    }
+}
+
+async function renderIndicatorChart() {
+    const canvas = document.getElementById('indicatorChart');
+    const loadingDiv = document.getElementById('indicatorChartLoading');
+    if (!canvas) return;
+    
+    // Show loading state
+    if (loadingDiv) {
+        loadingDiv.style.display = 'block';
+        loadingDiv.textContent = 'Loading indicator chart...';
+    }
+    if (canvas) {
+        canvas.style.display = 'none';
+    }
+    
+    const currentYear = parseInt(reportConfig.year) || new Date().getFullYear();
+    const previousYear = currentYear - 1;
+    
+    // Destroy existing chart if it exists
+    if (indicatorChart) {
+        indicatorChart.destroy();
+        indicatorChart = null;
+    }
+    
+    // Fetch data for all indicators in parallel using the fast blends API
+    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+    
+    // Update loading message to show progress
+    if (loadingDiv && indicators.length > 0) {
+        loadingDiv.textContent = `Loading ${indicators.length} indicator(s)...`;
+    }
+    
+    // Helper function to add timeout to fetch
+    const fetchWithTimeout = (url, options, timeout = 30000) => {
+        return Promise.race([
+            fetch(url, options),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timeout')), timeout)
+            )
+        ]);
+    };
+    
+    // Create all fetch promises using the blends API
+    const fetchPromises = indicators.map((indicator, i) => {
+        const startTime = Date.now();
+        console.log(`Fetching indicator ${i + 1}/${indicators.length}: ${indicator.name}`);
+        
+        try {
+            // Convert blend data to API format
+            const apiFormat = convertBlendDataToApiFormat(indicator.blendData);
+            
+            if (!apiFormat.entries || apiFormat.entries.length === 0) {
+                throw new Error('No entries in API format');
+            }
+            
+            // Fetch current year and previous year data in parallel with timeout
+            const currentYearPromise = fetchWithTimeout('/api/compare_chart_blend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    entries: apiFormat.entries,
+                    date_filter: {
+                        operator: 'between',
+                        value: `${currentYear}-01-01`,
+                        value2: `${currentYear}-12-31`
+                    }
+                })
+            }, 30000);
+            
+            const previousYearPromise = fetchWithTimeout('/api/compare_chart_blend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    entries: apiFormat.entries,
+                    date_filter: {
+                        operator: 'between',
+                        value: `${previousYear}-01-01`,
+                        value2: `${previousYear}-12-31`
+                    }
+                })
+            }, 30000);
+            
+            return Promise.all([currentYearPromise, previousYearPromise])
+                .then(async ([currentResponse, previousResponse]) => {
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    console.log(`Indicator ${indicator.name} responses received in ${elapsed}s`);
+                    
+                    if (!currentResponse.ok) {
+                        const errorText = await currentResponse.text();
+                        throw new Error(`Current year request failed: ${currentResponse.status} - ${errorText}`);
+                    }
+                    
+                    if (!previousResponse.ok) {
+                        const errorText = await previousResponse.text();
+                        throw new Error(`Previous year request failed: ${previousResponse.status} - ${errorText}`);
+                    }
+                    
+                    const currentData = await currentResponse.json();
+                    const previousData = await previousResponse.json();
+                    
+                    console.log(`Indicator ${indicator.name} data parsed, aggregating...`);
+                    
+                    // Aggregate daily data into monthly averages
+                    const currentMonthly = aggregateToMonthly(currentData, currentYear);
+                    const previousMonthly = aggregateToMonthly(previousData, previousYear);
+                    
+                    const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    console.log(`Indicator ${indicator.name} completed in ${totalElapsed}s`);
+                    
+                    return {
+                        indicator,
+                        data: {
+                            currentYear: currentMonthly,
+                            previousYear: previousMonthly
+                        },
+                        color: colors[i % colors.length]
+                    };
+                })
+                .catch(error => {
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    console.error(`Error fetching indicator data for ${indicator.name} (after ${elapsed}s):`, error);
+                    return { status: 'error', error: error.message, indicator: indicator.name };
+                });
+        } catch (error) {
+            console.error(`Error preparing indicator ${indicator.name}:`, error);
+            return { status: 'error', error: error.message, indicator: indicator.name };
+        }
+    });
+    
+    // Wait for all requests to complete
+    let results = [];
+    try {
+        const settledResults = await Promise.allSettled(fetchPromises);
+        results = settledResults.map(result => {
+            if (result.status === 'fulfilled') {
+                return result.value;
+            } else {
+                console.error('Promise rejected:', result.reason);
+                return { status: 'error', error: result.reason };
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching indicator data:', error);
+        if (loadingDiv) {
+            loadingDiv.textContent = 'Error loading indicator data. Please try again.';
+            loadingDiv.style.display = 'block';
+        }
+        return;
+    }
+    
+    // Build datasets from all results
+    const datasets = [];
+    const errors = [];
+    
+    results.forEach((result) => {
+        if (!result || result.status === 'error' || result.status === 'timeout') {
+            if (result && result.status === 'error') {
+                errors.push(result.indicator || 'Unknown');
+            }
+            return;
+        }
+        
+        const { indicator, data, color } = result;
+        const colorRgb = hexToRgb(color);
+        
+        // Add current year data
+        if (data.currentYear && data.currentYear.some(v => v !== null)) {
+            datasets.push({
+                label: `${indicator.name} (${currentYear})`,
+                data: data.currentYear,
+                borderColor: color,
+                backgroundColor: `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, 0.2)`,
+                fill: false,
+                tension: 0.4,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            });
+        }
+        
+        // Add previous year data at 50% opacity (same color)
+        if (data.previousYear && data.previousYear.some(v => v !== null)) {
+            datasets.push({
+                label: `${indicator.name} (${previousYear})`,
+                data: data.previousYear,
+                borderColor: `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, 0.5)`,
+                backgroundColor: `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, 0.1)`,
+                fill: false,
+                tension: 0.4,
+                pointRadius: 2,
+                pointHoverRadius: 4,
+                borderDash: [5, 5]
+            });
+        }
+    });
+    
+    // Check if we have data
+    if (datasets.length === 0) {
+        console.warn('No indicator data available to display');
+        if (loadingDiv) {
+            let errorMsg = 'No indicator data available';
+            if (errors.length > 0) {
+                errorMsg += ' (some requests failed or timed out)';
+            }
+            loadingDiv.textContent = errorMsg;
+            loadingDiv.style.display = 'block';
+        }
+        if (canvas) {
+            canvas.style.display = 'none';
+        }
+        return;
+    }
+    
+    // Log warnings if some indicators failed
+    if (errors.length > 0) {
+        console.warn('Some indicators failed to load:', errors);
+    }
+    
+    // Create chart (hide loading after chart is created)
+    try {
+        if (canvas) {
+            canvas.style.display = 'block';
+        }
+        
+        indicatorChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: datasets
+            },
+            options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Strong Wool Indicator',
+                    font: { size: 14, weight: 'bold' },
+                    color: '#153D33'
+                },
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 10,
+                        font: { size: 10 }
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += '$' + context.parsed.y.toFixed(2);
+                            } else {
+                                label += 'N/A';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Price ($)',
+                        font: { size: 10, weight: 'bold' }
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toFixed(2);
+                        },
+                        font: { size: 9 }
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Month',
+                        font: { size: 10, weight: 'bold' }
+                    },
+                    ticks: {
+                        font: { size: 9 }
+                    }
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            },
+            animation: {
+                onComplete: function() {
+                    // Ensure loading div is hidden after chart animation completes
+                    const loadingDiv = document.getElementById('indicatorChartLoading');
+                    if (loadingDiv) {
+                        loadingDiv.style.display = 'none';
+                        loadingDiv.innerHTML = '';
+                    }
+                }
+            }
+        }
+        });
+        
+        // Hide loading div immediately (don't wait for animation)
+        if (loadingDiv) {
+            loadingDiv.style.display = 'none';
+            loadingDiv.innerHTML = '';
+        }
+    } catch (chartError) {
+        console.error('Error creating indicator chart:', chartError);
+        if (loadingDiv) {
+            loadingDiv.textContent = 'Error creating chart. Please try again.';
+            loadingDiv.style.display = 'block';
+        }
+        if (canvas) {
+            canvas.style.display = 'none';
+        }
+    }
+}
+
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : { r: 0, g: 0, b: 0 };
+}
+
+async function exportPDF() {
+    const preview = document.getElementById('reportPreview');
+    if (!preview || preview.innerHTML.includes('Configure your report')) {
+        alert('Please generate a report first before exporting');
+        return;
+    }
+    
+    try {
+        // Store original content
+        const originalHTML = preview.innerHTML;
+        
+        // Replace input fields with text values
+        const inputs = preview.querySelectorAll('input, textarea');
+        const replacements = [];
+        inputs.forEach(input => {
+            const parent = input.parentElement;
+            const value = input.value || '';
+            const span = document.createElement('span');
+            span.textContent = value;
+            span.style.cssText = window.getComputedStyle(input).cssText;
+            span.style.border = 'none';
+            span.style.background = 'transparent';
+            span.style.padding = '0';
+            
+            // For textarea, preserve line breaks
+            if (input.tagName === 'TEXTAREA') {
+                span.style.whiteSpace = 'pre-wrap';
+                span.style.wordWrap = 'break-word';
+                span.style.display = 'block';
+                span.style.width = '100%';
+            }
+            
+            replacements.push({ input, span, parent });
+            parent.replaceChild(span, input);
+        });
+        
+        // Hide all buttons
+        const buttons = preview.querySelectorAll('button');
+        buttons.forEach(btn => {
+            btn.style.display = 'none';
+        });
+        
+        // Fix hero image aspect ratio - ensure it's centered and cropped, not stretched
+        const heroImg = preview.querySelector('.hero-image-preview');
+        if (heroImg) {
+            heroImg.style.width = '100%';
+            heroImg.style.height = '150px';
+            heroImg.style.objectFit = 'cover';
+            heroImg.style.objectPosition = 'center';
+            heroImg.style.display = 'block';
+        }
+        
+        // Wait for images to load
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Use html2canvas to capture the report
+        const canvas = await html2canvas(preview, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff'
+        });
+        
+        // Restore original HTML
+        preview.innerHTML = originalHTML;
+        
+        // Re-render chart if needed
+        if (indicators.length > 0) {
+            await renderIndicatorChart();
+        }
+        
+        // Convert to PDF using jsPDF
+        const { jsPDF } = window.jspdf;
+        const imgData = canvas.toDataURL('image/png');
+        
+        // Calculate dimensions
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const pdfWidth = 210; // A4 width in mm
+        const pdfHeight = (imgHeight * pdfWidth) / imgWidth;
+        
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        // If content is taller than one page, split across pages
+        let heightLeft = pdfHeight;
+        let position = 0;
+        
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= 297; // A4 height in mm
+        
+        while (heightLeft > 0) {
+            position = heightLeft - pdfHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+            heightLeft -= 297;
+        }
+        
+        // Save the PDF
+        const filename = `market_report_${reportConfig.year || new Date().getFullYear()}_${Date.now()}.pdf`;
+        pdf.save(filename);
+        
+    } catch (error) {
+        console.error('Error exporting PDF:', error);
+        alert('Error exporting PDF: ' + error.message);
+    }
+}
+
+async function exportPNG() {
+    const preview = document.getElementById('reportPreview');
+    if (!preview || preview.innerHTML.includes('Configure your report')) {
+        alert('Please generate a report first before exporting');
+        return;
+    }
+    
+    try {
+        // Store original content
+        const originalHTML = preview.innerHTML;
+        
+        // Replace input fields with text values
+        const inputs = preview.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            const parent = input.parentElement;
+            const value = input.value || '';
+            const span = document.createElement('span');
+            span.textContent = value;
+            span.style.cssText = window.getComputedStyle(input).cssText;
+            span.style.border = 'none';
+            span.style.background = 'transparent';
+            span.style.padding = '0';
+            
+            // For textarea, preserve line breaks
+            if (input.tagName === 'TEXTAREA') {
+                span.style.whiteSpace = 'pre-wrap';
+                span.style.wordWrap = 'break-word';
+                span.style.display = 'block';
+                span.style.width = '100%';
+            }
+            
+            parent.replaceChild(span, input);
+        });
+        
+        // Hide all buttons
+        const buttons = preview.querySelectorAll('button');
+        buttons.forEach(btn => {
+            btn.style.display = 'none';
+        });
+        
+        // Fix hero image aspect ratio - ensure it's centered and cropped, not stretched
+        const heroImg = preview.querySelector('.hero-image-preview');
+        if (heroImg) {
+            heroImg.style.width = '100%';
+            heroImg.style.height = '150px';
+            heroImg.style.objectFit = 'cover';
+            heroImg.style.objectPosition = 'center';
+            heroImg.style.display = 'block';
+        }
+        
+        // Wait for images to load
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Use html2canvas to capture the report
+        const canvas = await html2canvas(preview, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff'
+        });
+        
+        // Restore original HTML
+        preview.innerHTML = originalHTML;
+        
+        // Re-render chart if needed
+        if (indicators.length > 0) {
+            await renderIndicatorChart();
+        }
+        
+        // Convert to blob and download
+        canvas.toBlob(function(blob) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const filename = `market_report_${reportConfig.year || new Date().getFullYear()}_${Date.now()}.png`;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 'image/png');
+        
+    } catch (error) {
+        console.error('Error exporting PNG:', error);
+        alert('Error exporting PNG: ' + error.message);
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadSavedSearches();
+    renderIndicators();
+    fetchMostRecentSaleDate();
+    
+    // Close modal on outside click
+    const modal = document.getElementById('indicatorBuilderModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeIndicatorBuilder();
+            }
+        });
+    }
+});
+
+function saveReportLayout() {
+    const name = prompt('Enter a name for this report layout:');
+    if (!name) return;
+    
+    const layout = {
+        id: Date.now(),
+        name: name,
+        sections: sections,
+        indicators: indicators,
+        selectedSearches: Array.from(selectedSearches),
+        reportConfig: {
+            title: reportConfig.title,
+            year: reportConfig.year,
+            saleDate: reportConfig.saleDate,
+            nextAuction: reportConfig.nextAuction,
+            offering: reportConfig.offering,
+            passings: reportConfig.passings,
+            nzdUsd: reportConfig.nzdUsd,
+            commentary: reportConfig.commentary,
+            // Note: logo and heroImage are base64, so we'll save them if they exist
+            logo: reportConfig.logo,
+            heroImage: reportConfig.heroImage
+        },
+        created: new Date().toISOString()
+    };
+    
+    // Save to localStorage
+    let savedLayouts = JSON.parse(localStorage.getItem('fusca_report_layouts') || '[]');
+    savedLayouts.push(layout);
+    localStorage.setItem('fusca_report_layouts', JSON.stringify(savedLayouts));
+    
+    // Send to server logs
+    fetch('/api/log_saved_search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            name: name,
+            type: 'report_layout',
+            layout: layout
+        })
+    }).catch(e => console.warn('Failed to log report layout:', e));
+    
+    alert(`Report layout "${name}" saved successfully!`);
+}
+
+function loadReportLayout() {
+    const savedLayouts = JSON.parse(localStorage.getItem('fusca_report_layouts') || '[]');
+    
+    if (savedLayouts.length === 0) {
+        alert('No saved report layouts found.');
+        return;
+    }
+    
+    const layoutNames = savedLayouts.map((l, idx) => `${idx + 1}. ${l.name}`).join('\n');
+    const choice = prompt(`Choose a layout to load:\n\n${layoutNames}\n\nEnter the number:`);
+    
+    if (!choice) return;
+    
+    const index = parseInt(choice) - 1;
+    if (isNaN(index) || index < 0 || index >= savedLayouts.length) {
+        alert('Invalid selection.');
+        return;
+    }
+    
+    const layout = savedLayouts[index];
+    
+    // Load the layout
+    sections = layout.sections || [];
+    indicators = layout.indicators || [];
+    selectedSearches = new Set(layout.selectedSearches || []);
+    
+    // Load report config
+    if (layout.reportConfig) {
+        reportConfig = { ...reportConfig, ...layout.reportConfig };
+    }
+    
+    // Re-render everything
+    renderSavedSearches();
+    renderSections();
+    renderIndicators();
+    
+    alert(`Report layout "${layout.name}" loaded successfully!`);
+}
+
+// Fetch most recent sale date on page load
+async function fetchMostRecentSaleDate() {
+    try {
+        const response = await fetch('/api/market_report/most_recent_date');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.mostRecentDate) {
+                reportConfig.saleDate = data.mostRecentDate;
+                
+                // Also fetch offering and passings for this date
+                try {
+                    const saleDataResponse = await fetch('/api/market_report/sale_stats', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ saleDate: data.mostRecentDate })
+                    });
+                    
+                    if (saleDataResponse.ok) {
+                        const saleData = await saleDataResponse.json();
+                        reportConfig.offering = saleData.totalBales || '';
+                        reportConfig.passings = saleData.passings || '';
+                    }
+                } catch (error) {
+                    console.error('Error fetching sale stats:', error);
+                }
+            }
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            console.error('Request for most recent date timed out');
+        } else {
+            console.error('Error fetching most recent sale date:', error);
+        }
+    }
+}
+
+console.log('Market Reports ready');
+
