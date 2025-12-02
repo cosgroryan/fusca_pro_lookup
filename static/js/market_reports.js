@@ -553,8 +553,7 @@ async function renderReport(reportData) {
     preview.innerHTML = html;
     
     // Render indicator chart if indicators exist (non-blocking - don't await)
-    // TEMPORARILY DISABLED - indicator chart disabled to unblock report generation
-    if (false && indicators.length > 0) {
+    if (indicators.length > 0) {
         // Don't block report generation - load chart in background
         renderIndicatorChart().catch(error => {
             console.error('Indicator chart error (non-blocking):', error);
@@ -600,26 +599,31 @@ function handleHeroUpload(event) {
 
 // Helper function to convert blend data format for API
 function convertBlendDataToApiFormat(blendData) {
-    console.log('Converting blend data:', blendData);
+    console.log('Converting blend data - FULL STRUCTURE:', JSON.stringify(blendData, null, 2));
     
     // Extract the blend structure from saved blend format
-    // blendData is the saved search object, which has blend_data property
+    // blendData is the saved search object - filters are stored at top level
     let entries = [];
     let weights = [];
     let entryFilters = [];
+    let dateFilter = null;
     
-    // Handle different possible structures
-    if (blendData.blend_data) {
-        // Standard saved blend format
+    // Check top level first (this is how blends.js saves it to localStorage)
+    if (blendData.entries) {
+        entries = blendData.entries;
+        weights = blendData.weights || [];
+        entryFilters = blendData.entryFilters || [];
+        dateFilter = blendData.dateFilter || null;
+        console.log('Using top-level structure - entryFilters:', entryFilters);
+    }
+    // Fallback to blend_data structure (for server-logged format)
+    else if (blendData.blend_data) {
         const blend = blendData.blend_data;
         entries = blend.entries || [];
         weights = blend.weights || [];
         entryFilters = blend.entryFilters || [];
-    } else if (blendData.entries) {
-        // Direct format (for backwards compatibility)
-        entries = blendData.entries;
-        weights = blendData.weights || [];
-        entryFilters = blendData.entryFilters || [];
+        dateFilter = blend.dateFilter || null;
+        console.log('Using blend_data structure - entryFilters:', entryFilters);
     }
     
     if (!entries || entries.length === 0) {
@@ -627,15 +631,45 @@ function convertBlendDataToApiFormat(blendData) {
         throw new Error('Invalid blend data: no entries found');
     }
     
-    // Convert to API format (matching blends.js structure)
-    const apiEntries = entries.map((entry, idx) => ({
-        types: entry.types || [],
-        label: entry.label || `Entry ${idx + 1}`,
-        filters: entryFilters[idx] || []
-    }));
+    // Ensure entryFilters array matches entries length
+    while (entryFilters.length < entries.length) {
+        entryFilters.push([]);
+    }
     
-    console.log('Converted API format:', { entries: apiEntries });
-    return { entries: apiEntries };
+    // Log detailed filter structure
+    console.log('Entry filters structure:', {
+        totalEntries: entries.length,
+        entryFiltersLength: entryFilters.length,
+        filtersByEntry: entryFilters.map((filters, idx) => ({
+            entryIdx: idx,
+            filterCount: filters ? filters.length : 0,
+            filters: filters
+        }))
+    });
+    
+    // Convert to API format (matching blends.js structure exactly)
+    const apiEntries = entries.map((entry, idx) => {
+        const filtersForEntry = entryFilters[idx] || [];
+        return {
+            types: entry.types || [],
+            label: entry.label || `Entry ${idx + 1}`,
+            filters: filtersForEntry
+        };
+    });
+    
+    console.log('Converted API format:', { 
+        entries: apiEntries.map(e => ({
+            label: e.label,
+            typesCount: e.types.length,
+            filtersCount: e.filters.length,
+            filters: e.filters
+        }))
+    });
+    
+    return { 
+        entries: apiEntries,
+        dateFilter: dateFilter
+    };
 }
 
 // Helper function to aggregate daily data into monthly averages
@@ -758,7 +792,7 @@ async function renderIndicatorChart() {
     }
     
     // Helper function to add timeout to fetch
-    const fetchWithTimeout = (url, options, timeout = 30000) => {
+    const fetchWithTimeout = (url, options, timeout = 120000) => {
         return Promise.race([
             fetch(url, options),
             new Promise((_, reject) => 
@@ -767,8 +801,11 @@ async function renderIndicatorChart() {
         ]);
     };
     
-    // Create all fetch promises using the blends API
-    const fetchPromises = indicators.map((indicator, i) => {
+    // Process indicators sequentially to avoid connection conflicts
+    const results = [];
+    
+    for (let i = 0; i < indicators.length; i++) {
+        const indicator = indicators[i];
         const startTime = Date.now();
         console.log(`Fetching indicator ${i + 1}/${indicators.length}: ${indicator.name}`);
         
@@ -780,99 +817,91 @@ async function renderIndicatorChart() {
                 throw new Error('No entries in API format');
             }
             
-            // Fetch current year and previous year data in parallel with timeout
-            const currentYearPromise = fetchWithTimeout('/api/compare_chart_blend', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    entries: apiFormat.entries,
-                    date_filter: {
-                        operator: 'between',
-                        value: `${currentYear}-01-01`,
-                        value2: `${currentYear}-12-31`
-                    }
-                })
-            }, 30000);
+            // Debug: Log the filters being sent
+            console.log(`Indicator ${indicator.name} filters:`, apiFormat.entries.map((e, idx) => ({
+                label: e.label,
+                types: e.types,
+                filters: e.filters,
+                filterCount: e.filters ? e.filters.length : 0
+            })));
             
-            const previousYearPromise = fetchWithTimeout('/api/compare_chart_blend', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    entries: apiFormat.entries,
-                    date_filter: {
-                        operator: 'between',
-                        value: `${previousYear}-01-01`,
-                        value2: `${previousYear}-12-31`
-                    }
-                })
-            }, 30000);
-            
-            return Promise.all([currentYearPromise, previousYearPromise])
-                .then(async ([currentResponse, previousResponse]) => {
-                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                    console.log(`Indicator ${indicator.name} responses received in ${elapsed}s`);
-                    
-                    if (!currentResponse.ok) {
-                        const errorText = await currentResponse.text();
-                        throw new Error(`Current year request failed: ${currentResponse.status} - ${errorText}`);
-                    }
-                    
-                    if (!previousResponse.ok) {
-                        const errorText = await previousResponse.text();
-                        throw new Error(`Previous year request failed: ${previousResponse.status} - ${errorText}`);
-                    }
-                    
-                    const currentData = await currentResponse.json();
-                    const previousData = await previousResponse.json();
-                    
-                    console.log(`Indicator ${indicator.name} data parsed, aggregating...`);
-                    
-                    // Aggregate daily data into monthly averages
-                    const currentMonthly = aggregateToMonthly(currentData, currentYear);
-                    const previousMonthly = aggregateToMonthly(previousData, previousYear);
-                    
-                    const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                    console.log(`Indicator ${indicator.name} completed in ${totalElapsed}s`);
-                    
-                    return {
-                        indicator,
-                        data: {
-                            currentYear: currentMonthly,
-                            previousYear: previousMonthly
-                        },
-                        color: colors[i % colors.length]
-                    };
-                })
-                .catch(error => {
-                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                    console.error(`Error fetching indicator data for ${indicator.name} (after ${elapsed}s):`, error);
-                    return { status: 'error', error: error.message, indicator: indicator.name };
-                });
-        } catch (error) {
-            console.error(`Error preparing indicator ${indicator.name}:`, error);
-            return { status: 'error', error: error.message, indicator: indicator.name };
-        }
-    });
-    
-    // Wait for all requests to complete
-    let results = [];
-    try {
-        const settledResults = await Promise.allSettled(fetchPromises);
-        results = settledResults.map(result => {
-            if (result.status === 'fulfilled') {
-                return result.value;
-            } else {
-                console.error('Promise rejected:', result.reason);
-                return { status: 'error', error: result.reason };
+            // Update loading message to show progress
+            if (loadingDiv) {
+                loadingDiv.textContent = `Loading indicator ${i + 1}/${indicators.length}: ${indicator.name}...`;
             }
-        });
-    } catch (error) {
-        console.error('Error fetching indicator data:', error);
-        if (loadingDiv) {
-            loadingDiv.textContent = 'Error loading indicator data. Please try again.';
-            loadingDiv.style.display = 'block';
+            
+            // Fetch current year and previous year data sequentially (one after the other)
+            // This avoids overwhelming database connections
+            const currentYearPayload = {
+                entries: apiFormat.entries,
+                date_filter: {
+                    operator: 'between',
+                    value: `${currentYear}-01-01`,
+                    value2: `${currentYear}-12-31`
+                }
+            };
+            
+            const previousYearPayload = {
+                entries: apiFormat.entries,
+                date_filter: {
+                    operator: 'between',
+                    value: `${previousYear}-01-01`,
+                    value2: `${previousYear}-12-31`
+                }
+            };
+            
+            console.log(`Sending request for ${indicator.name} - current year:`, currentYearPayload);
+            
+            const currentResponse = await fetchWithTimeout('/api/compare_chart_blend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentYearPayload)
+            }, 120000);
+            
+            const previousResponse = await fetchWithTimeout('/api/compare_chart_blend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(previousYearPayload)
+            }, 120000);
+            
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`Indicator ${indicator.name} responses received in ${elapsed}s`);
+            
+            if (!currentResponse.ok) {
+                const errorText = await currentResponse.text();
+                throw new Error(`Current year request failed: ${currentResponse.status} - ${errorText}`);
+            }
+            
+            if (!previousResponse.ok) {
+                const errorText = await previousResponse.text();
+                throw new Error(`Previous year request failed: ${previousResponse.status} - ${errorText}`);
+            }
+            
+            const currentData = await currentResponse.json();
+            const previousData = await previousResponse.json();
+            
+            console.log(`Indicator ${indicator.name} data parsed, aggregating...`);
+            
+            // Aggregate daily data into monthly averages
+            const currentMonthly = aggregateToMonthly(currentData, currentYear);
+            const previousMonthly = aggregateToMonthly(previousData, previousYear);
+            
+            const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`Indicator ${indicator.name} completed in ${totalElapsed}s`);
+            
+            results.push({
+                indicator,
+                data: {
+                    currentYear: currentMonthly,
+                    previousYear: previousMonthly
+                },
+                color: colors[i % colors.length]
+            });
+        } catch (error) {
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.error(`Error fetching indicator data for ${indicator.name} (after ${elapsed}s):`, error);
+            results.push({ status: 'error', error: error.message, indicator: indicator.name });
         }
-        return;
     }
     
     // Build datasets from all results

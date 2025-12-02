@@ -1275,6 +1275,9 @@ def interpolate_series(values):
 @app.route('/api/compare_chart_blend', methods=['POST'])
 def get_compare_chart_blend():
     """Get price comparison data with per-entry filters for blend mode (supports grouped types)"""
+    conn = None
+    tunnel = None
+    cursor = None
     try:
         data = request.json
         entries = data.get('entries', [])
@@ -1292,6 +1295,10 @@ def get_compare_chart_blend():
         
         from collections import defaultdict
         import statistics
+        
+        # Get a single database connection for all queries
+        conn, tunnel = get_db()
+        cursor = conn.cursor(dictionary=True)
         
         all_series = {}
         
@@ -1387,10 +1394,23 @@ def get_compare_chart_blend():
                 
                 query += " ORDER BY sale_date ASC"
                 
-                conn, tunnel = get_db()
-                cursor = conn.cursor(dictionary=True)
-                cursor.execute(query, params)
-                results = cursor.fetchall()
+                # Check connection health and reuse the same cursor
+                try:
+                    if not conn.is_connected():
+                        print("Database connection lost, reconnecting...")
+                        if cursor:
+                            cursor.close()
+                        conn, tunnel = get_db()
+                        cursor = conn.cursor(dictionary=True)
+                    
+                    cursor.execute(query, params)
+                    results = cursor.fetchall()
+                except Exception as query_error:
+                    print(f"Query error in compare_chart_blend: {query_error}")
+                    import traceback
+                    traceback.print_exc()
+                    # Continue to next type if this query fails
+                    continue
                 
                 # Group by date for THIS specific type - store (price, bales, colour, vm)
                 type_date_data = defaultdict(list)
@@ -1554,6 +1574,13 @@ def get_compare_chart_blend():
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+    finally:
+        # Clean up cursor (connection is managed by get_db())
+        if cursor:
+            try:
+                cursor.close()
+            except:
+                pass
 
 @app.route('/api/compare_chart', methods=['POST'])
 def get_compare_chart():
