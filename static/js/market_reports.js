@@ -117,21 +117,52 @@ function toggleSearchSelection(searchId) {
 
 let sectionCount = 0;
 
+// Initialize sectionCount based on existing sections to avoid ID conflicts
+function updateSectionCount() {
+    const maxId = sections.reduce((max, section) => {
+        if (section.id && section.id.startsWith('section_')) {
+            const num = parseInt(section.id.replace('section_', '')) || 0;
+            return Math.max(max, num);
+        }
+        return max;
+    }, -1);
+    sectionCount = maxId + 1;
+}
+
 function addSection() {
-    // Capture currently selected searches when section is created
-    const currentlySelected = Array.from(selectedSearches);
-    const sectionId = `section_${sectionCount++}`;
+    // Use timestamp + random string for unique IDs to avoid conflicts with loaded sections
+    const sectionId = `section_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Allow all saved searches to be added to new sections (not just selected ones)
+    const allSearchIds = savedSearches.map(s => s.id);
     sections.push({
         id: sectionId,
         title: 'New Section',
         searchIds: [],
-        allowedSearchIds: [...currentlySelected] // Only allow searches selected when section was created
+        allowedSearchIds: allSearchIds // Allow all saved searches
     });
     renderSections();
 }
 
 function removeSection(sectionId) {
-    sections = sections.filter(s => s.id !== sectionId);
+    if (!sectionId) {
+        console.error('removeSection called without sectionId');
+        return;
+    }
+    
+    // Store the count before removal
+    const beforeCount = sections.length;
+    
+    // Remove only the section with the exact matching ID
+    sections = sections.filter(s => String(s.id) !== String(sectionId));
+    
+    // Safety check - log if something unexpected happened
+    const removedCount = beforeCount - sections.length;
+    if (removedCount === 0) {
+        console.warn(`removeSection: No section found with ID "${sectionId}"`);
+    } else if (removedCount > 1) {
+        console.error(`removeSection: Removed ${removedCount} sections with ID "${sectionId}". This indicates duplicate IDs!`);
+    }
+    
     renderSections();
 }
 
@@ -155,13 +186,19 @@ function renderSections() {
                 <select id="section_${section.id}_select" style="width: 100%; padding: 4px; font-size: 12px;" 
                         onchange="addSearchToSection('${section.id}', this.value); this.value='';">
                     <option value="">Add saved search to section...</option>
-                    ${(section.allowedSearchIds || []).map(id => {
-                        const search = savedSearches.find(s => s.id === id);
-                        if (!search) return '';
-                        const isInSection = section.searchIds.includes(id);
-                        if (isInSection) return '';
-                        return `<option value="${id}">${search.name}</option>`;
-                    }).join('')}
+                    ${(() => {
+                        // Ensure allowedSearchIds exists and includes all saved searches if empty
+                        if (!section.allowedSearchIds || section.allowedSearchIds.length === 0) {
+                            section.allowedSearchIds = savedSearches.map(s => s.id);
+                        }
+                        return (section.allowedSearchIds || []).map(id => {
+                            const search = savedSearches.find(s => s.id === id);
+                            if (!search) return '';
+                            const isInSection = section.searchIds.includes(id);
+                            if (isInSection) return '';
+                            return `<option value="${id}">${search.name}</option>`;
+                        }).join('');
+                    })()}
                 </select>
                 <div id="section_${section.id}_items" style="margin-top: 8px;">
                     ${section.searchIds.map(id => {
@@ -193,11 +230,17 @@ function addSearchToSection(sectionId, searchId) {
     
     const section = sections.find(s => s.id === sectionId);
     if (section) {
-        // Check if search is allowed in this section
-        if (!section.allowedSearchIds || !section.allowedSearchIds.includes(searchIdNum)) {
-            alert('This search was not selected when the section was created. Please uncheck and re-check it, then add the section again.');
-            return;
+        // Initialize allowedSearchIds if it doesn't exist (for backward compatibility)
+        if (!section.allowedSearchIds || section.allowedSearchIds.length === 0) {
+            section.allowedSearchIds = savedSearches.map(s => s.id);
         }
+        
+        // Check if search is allowed in this section
+        if (!section.allowedSearchIds.includes(searchIdNum)) {
+            // For new sections, allow adding any saved search
+            section.allowedSearchIds.push(searchIdNum);
+        }
+        
         if (!section.searchIds.includes(searchIdNum)) {
             section.searchIds.push(searchIdNum);
             renderSections();
@@ -1768,6 +1811,24 @@ function loadReportLayout() {
     indicators = layout.indicators || [];
     selectedSearches = new Set(layout.selectedSearches || []);
     
+    // Ensure all loaded sections have unique IDs and proper allowedSearchIds
+    const existingIds = new Set();
+    sections = sections.map((section, index) => {
+        // Ensure section has an ID
+        if (!section.id || existingIds.has(section.id)) {
+            // Generate a new unique ID if missing or duplicate
+            section.id = `section_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`;
+        }
+        existingIds.add(section.id);
+        
+        // Ensure allowedSearchIds is populated (allow all saved searches if empty)
+        if (!section.allowedSearchIds || section.allowedSearchIds.length === 0) {
+            section.allowedSearchIds = savedSearches.map(s => s.id);
+        }
+        
+        return section;
+    });
+    
     // Load report config
     if (layout.reportConfig) {
         reportConfig = { ...reportConfig, ...layout.reportConfig };
@@ -1839,6 +1900,9 @@ function manageReportLayouts() {
     sections = layout.sections || [];
     indicators = layout.indicators || [];
     selectedSearches = new Set(layout.selectedSearches || []);
+    
+    // Update sectionCount to avoid ID conflicts when adding new sections
+    updateSectionCount();
     
     // Load report config
     if (layout.reportConfig) {
