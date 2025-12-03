@@ -478,7 +478,6 @@ async function renderReport(reportData) {
     if (indicators.length > 0) {
         html += `
             <div style="margin: 12px 0;">
-                <h2 style="font-size: 12px; font-weight: 600; color: #153D33; margin-bottom: 8px;">Indicator Chart</h2>
                 <div class="indicator-chart-container" style="position: relative; height: 240px; margin: 10px 0;">
                     <div id="indicatorChartLoading" style="text-align: center; padding: 40px; color: #666; font-size: 12px;">Loading indicator chart...</div>
                     <canvas id="indicatorChart" style="display: none;"></canvas>
@@ -1075,10 +1074,7 @@ async function renderIndicatorChart() {
             maintainAspectRatio: false,
             plugins: {
                 title: {
-                    display: true,
-                    text: 'Strong Wool Indicator',
-                    font: { size: 14, weight: 'bold' },
-                    color: '#153D33'
+                    display: false
                 },
                 legend: {
                     display: true,
@@ -1223,13 +1219,74 @@ async function exportPDF() {
         });
         
         // Fix hero image aspect ratio - ensure it's centered and cropped, not stretched
+        const heroContainer = preview.querySelector('.hero-image-container');
         const heroImg = preview.querySelector('.hero-image-preview');
-        if (heroImg) {
-            heroImg.style.width = '100%';
-            heroImg.style.height = '150px';
-            heroImg.style.objectFit = 'cover';
+        if (heroImg && heroContainer) {
+            // Ensure container maintains fixed height and overflow
+            heroContainer.style.height = '150px';
+            heroContainer.style.width = '100%';
+            heroContainer.style.overflow = 'hidden';
+            heroContainer.style.position = 'relative';
+            heroContainer.style.display = 'block';
+            
+            // Find the wrapper div if it exists and remove flex display
+            const wrapper = heroImg.parentElement;
+            if (wrapper && wrapper !== heroContainer) {
+                wrapper.style.width = '100%';
+                wrapper.style.height = '150px';
+                wrapper.style.overflow = 'hidden';
+                wrapper.style.position = 'relative';
+                wrapper.style.display = 'block';
+                wrapper.style.margin = '0';
+                wrapper.style.padding = '0';
+            }
+            
+            // Wait for image to load to get natural dimensions
+            await new Promise((resolve) => {
+                if (heroImg.complete) {
+                    resolve();
+                } else {
+                    heroImg.onload = resolve;
+                    heroImg.onerror = resolve;
+                    setTimeout(resolve, 1000); // Timeout after 1 second
+                }
+            });
+            
+            // Calculate proper dimensions to maintain aspect ratio while filling container
+            const containerWidth = heroContainer.offsetWidth || 800; // Fallback width
+            const containerHeight = 150;
+            const imgNaturalWidth = heroImg.naturalWidth || heroImg.width || containerWidth;
+            const imgNaturalHeight = heroImg.naturalHeight || heroImg.height || containerHeight;
+            const imgAspectRatio = imgNaturalWidth / imgNaturalHeight;
+            const containerAspectRatio = containerWidth / containerHeight;
+            
+            // If image is wider than container, scale by height; otherwise scale by width
+            let finalWidth, finalHeight;
+            if (imgAspectRatio > containerAspectRatio) {
+                // Image is wider - scale to fill height, crop width
+                finalHeight = containerHeight;
+                finalWidth = finalHeight * imgAspectRatio;
+            } else {
+                // Image is taller - scale to fill width, crop height
+                finalWidth = containerWidth;
+                finalHeight = finalWidth / imgAspectRatio;
+            }
+            
+            // Center the image within the container
+            const offsetX = (finalWidth - containerWidth) / 2;
+            const offsetY = (finalHeight - containerHeight) / 2;
+            
+            // Apply styles to maintain aspect ratio and center
+            heroImg.style.position = 'absolute';
+            heroImg.style.width = `${finalWidth}px`;
+            heroImg.style.height = `${finalHeight}px`;
+            heroImg.style.left = `${-offsetX}px`;
+            heroImg.style.top = `${-offsetY}px`;
+            heroImg.style.objectFit = 'none'; // Use explicit sizing instead
             heroImg.style.objectPosition = 'center';
             heroImg.style.display = 'block';
+            heroImg.style.maxWidth = 'none';
+            heroImg.style.maxHeight = 'none';
         }
         
         // Wait for images to load
@@ -1240,7 +1297,9 @@ async function exportPDF() {
             scale: 2,
             useCORS: true,
             logging: false,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            allowTaint: true,
+            imageTimeout: 15000
         });
         
         // Restore original HTML
@@ -1328,13 +1387,74 @@ async function exportPNG() {
         });
         
         // Fix hero image aspect ratio - ensure it's centered and cropped, not stretched
+        const heroContainer = preview.querySelector('.hero-image-container');
         const heroImg = preview.querySelector('.hero-image-preview');
-        if (heroImg) {
-            heroImg.style.width = '100%';
-            heroImg.style.height = '150px';
-            heroImg.style.objectFit = 'cover';
+        if (heroImg && heroContainer) {
+            // Ensure container maintains fixed height and overflow
+            heroContainer.style.height = '150px';
+            heroContainer.style.width = '100%';
+            heroContainer.style.overflow = 'hidden';
+            heroContainer.style.position = 'relative';
+            heroContainer.style.display = 'block';
+            
+            // Find the wrapper div if it exists and remove flex display
+            const wrapper = heroImg.parentElement;
+            if (wrapper && wrapper !== heroContainer) {
+                wrapper.style.width = '100%';
+                wrapper.style.height = '150px';
+                wrapper.style.overflow = 'hidden';
+                wrapper.style.position = 'relative';
+                wrapper.style.display = 'block';
+                wrapper.style.margin = '0';
+                wrapper.style.padding = '0';
+            }
+            
+            // Wait for image to load to get natural dimensions
+            await new Promise((resolve) => {
+                if (heroImg.complete) {
+                    resolve();
+                } else {
+                    heroImg.onload = resolve;
+                    heroImg.onerror = resolve;
+                    setTimeout(resolve, 1000); // Timeout after 1 second
+                }
+            });
+            
+            // Calculate proper dimensions to maintain aspect ratio while filling container
+            const containerWidth = heroContainer.offsetWidth || 800; // Fallback width
+            const containerHeight = 150;
+            const imgNaturalWidth = heroImg.naturalWidth || heroImg.width || containerWidth;
+            const imgNaturalHeight = heroImg.naturalHeight || heroImg.height || containerHeight;
+            const imgAspectRatio = imgNaturalWidth / imgNaturalHeight;
+            const containerAspectRatio = containerWidth / containerHeight;
+            
+            // If image is wider than container, scale by height; otherwise scale by width
+            let finalWidth, finalHeight;
+            if (imgAspectRatio > containerAspectRatio) {
+                // Image is wider - scale to fill height, crop width
+                finalHeight = containerHeight;
+                finalWidth = finalHeight * imgAspectRatio;
+            } else {
+                // Image is taller - scale to fill width, crop height
+                finalWidth = containerWidth;
+                finalHeight = finalWidth / imgAspectRatio;
+            }
+            
+            // Center the image within the container
+            const offsetX = (finalWidth - containerWidth) / 2;
+            const offsetY = (finalHeight - containerHeight) / 2;
+            
+            // Apply styles to maintain aspect ratio and center
+            heroImg.style.position = 'absolute';
+            heroImg.style.width = `${finalWidth}px`;
+            heroImg.style.height = `${finalHeight}px`;
+            heroImg.style.left = `${-offsetX}px`;
+            heroImg.style.top = `${-offsetY}px`;
+            heroImg.style.objectFit = 'none'; // Use explicit sizing instead
             heroImg.style.objectPosition = 'center';
             heroImg.style.display = 'block';
+            heroImg.style.maxWidth = 'none';
+            heroImg.style.maxHeight = 'none';
         }
         
         // Wait for images to load
@@ -1345,7 +1465,9 @@ async function exportPNG() {
             scale: 2,
             useCORS: true,
             logging: false,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            allowTaint: true,
+            imageTimeout: 15000
         });
         
         // Restore original HTML
@@ -1392,49 +1514,144 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function saveReportLayout() {
+// Helper function to compress base64 image data
+function compressImage(base64DataUrl, maxWidth, maxHeight, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+        if (!base64DataUrl) {
+            resolve(null);
+            return;
+        }
+        
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            // Calculate new dimensions while maintaining aspect ratio
+            if (width > maxWidth || height > maxHeight) {
+                const ratio = Math.min(maxWidth / width, maxHeight / height);
+                width = width * ratio;
+                height = height * ratio;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Convert to compressed base64
+            const compressed = canvas.toDataURL('image/jpeg', quality);
+            resolve(compressed);
+        };
+        
+        img.onerror = function() {
+            reject(new Error('Failed to load image'));
+        };
+        
+        img.src = base64DataUrl;
+    });
+}
+
+async function saveReportLayout() {
     const name = prompt('Enter a name for this report layout:');
     if (!name) return;
     
-    const layout = {
-        id: Date.now(),
-        name: name,
-        sections: sections,
-        indicators: indicators,
-        selectedSearches: Array.from(selectedSearches),
-        reportConfig: {
-            title: reportConfig.title,
-            year: reportConfig.year,
-            saleDate: reportConfig.saleDate,
-            nextAuction: reportConfig.nextAuction,
-            offering: reportConfig.offering,
-            passings: reportConfig.passings,
-            nzdUsd: reportConfig.nzdUsd,
-            commentary: reportConfig.commentary,
-            // Note: logo and heroImage are base64, so we'll save them if they exist
-            logo: reportConfig.logo,
-            heroImage: reportConfig.heroImage
-        },
-        created: new Date().toISOString()
-    };
+    try {
+        // Compress images before saving to reduce localStorage size
+        let compressedLogo = null;
+        let compressedHero = null;
+        
+        if (reportConfig.logo) {
+            try {
+                compressedLogo = await compressImage(reportConfig.logo, 400, 200, 0.7);
+                console.log('Logo compressed:', reportConfig.logo.length, '->', compressedLogo ? compressedLogo.length : 0);
+            } catch (e) {
+                console.warn('Failed to compress logo:', e);
+                compressedLogo = reportConfig.logo; // Fallback to original
+            }
+        }
+        
+        if (reportConfig.heroImage) {
+            try {
+                compressedHero = await compressImage(reportConfig.heroImage, 1200, 300, 0.7);
+                console.log('Hero image compressed:', reportConfig.heroImage.length, '->', compressedHero ? compressedHero.length : 0);
+            } catch (e) {
+                console.warn('Failed to compress hero image:', e);
+                compressedHero = reportConfig.heroImage; // Fallback to original
+            }
+        }
+        
+        const layout = {
+            id: Date.now(),
+            name: name,
+            sections: sections,
+            indicators: indicators,
+            selectedSearches: Array.from(selectedSearches),
+            reportConfig: {
+                title: reportConfig.title,
+                year: reportConfig.year,
+                saleDate: reportConfig.saleDate,
+                nextAuction: reportConfig.nextAuction,
+                offering: reportConfig.offering,
+                passings: reportConfig.passings,
+                nzdUsd: reportConfig.nzdUsd,
+                commentary: reportConfig.commentary,
+                logo: compressedLogo,
+                heroImage: compressedHero
+            },
+            created: new Date().toISOString()
+        };
+        
+        // Try to save, with cleanup if quota exceeded
+        try {
+            let savedLayouts = JSON.parse(localStorage.getItem('fusca_report_layouts') || '[]');
+            savedLayouts.push(layout);
+            localStorage.setItem('fusca_report_layouts', JSON.stringify(savedLayouts));
+        } catch (e) {
+            if (e.name === 'QuotaExceededError') {
+                // Remove oldest layouts to free up space
+                let savedLayouts = JSON.parse(localStorage.getItem('fusca_report_layouts') || '[]');
+                // Sort by creation date and keep only the 5 most recent
+                savedLayouts.sort((a, b) => new Date(b.created || 0) - new Date(a.created || 0));
+                savedLayouts = savedLayouts.slice(0, 5);
+                
+                // Try again
+                savedLayouts.push(layout);
+                localStorage.setItem('fusca_report_layouts', JSON.stringify(savedLayouts));
+                alert(`Report layout saved, but older layouts were removed to free up space.`);
+            } else {
+                throw e;
+            }
+        }
+        
+        // Send to server logs (images are already compressed)
+        fetch('/api/log_saved_search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: name,
+                type: 'report_layout',
+                layout: layout
+            })
+        }).catch(e => console.warn('Failed to log report layout:', e));
+        
+        alert(`Report layout "${name}" saved successfully!`);
+    } catch (error) {
+        console.error('Error saving report layout:', error);
+        alert(`Failed to save report layout: ${error.message}`);
+    }
+}
+
+function deleteReportLayout(layoutId) {
+    if (!confirm('Delete this saved report layout?')) return;
     
-    // Save to localStorage
     let savedLayouts = JSON.parse(localStorage.getItem('fusca_report_layouts') || '[]');
-    savedLayouts.push(layout);
+    savedLayouts = savedLayouts.filter(l => l.id !== layoutId);
     localStorage.setItem('fusca_report_layouts', JSON.stringify(savedLayouts));
     
-    // Send to server logs
-    fetch('/api/log_saved_search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            name: name,
-            type: 'report_layout',
-            layout: layout
-        })
-    }).catch(e => console.warn('Failed to log report layout:', e));
-    
-    alert(`Report layout "${name}" saved successfully!`);
+    alert('Report layout deleted successfully!');
 }
 
 function loadReportLayout() {
@@ -1445,18 +1662,112 @@ function loadReportLayout() {
         return;
     }
     
-    const layoutNames = savedLayouts.map((l, idx) => `${idx + 1}. ${l.name}`).join('\n');
-    const choice = prompt(`Choose a layout to load:\n\n${layoutNames}\n\nEnter the number:`);
+    // Sort by creation date (newest first)
+    const sortedLayouts = [...savedLayouts].sort((a, b) => new Date(b.created || 0) - new Date(a.created || 0));
+    
+    // Build a formatted list with size info
+    const layoutList = sortedLayouts.map((l, idx) => {
+        const layoutSize = JSON.stringify(l).length;
+        const sizeKB = (layoutSize / 1024).toFixed(1);
+        const createdDate = l.created ? new Date(l.created).toLocaleDateString() : 'Unknown';
+        return `${idx + 1}. ${l.name} (${sizeKB} KB, ${createdDate})`;
+    }).join('\n');
+    
+    const choice = prompt(`Choose a layout to load:\n\n${layoutList}\n\nEnter the number, or type "delete" followed by the number to delete a layout:`);
     
     if (!choice) return;
     
+    // Check if it's a delete command
+    if (choice.toLowerCase().startsWith('delete')) {
+        const parts = choice.trim().split(/\s+/);
+        if (parts.length >= 2) {
+            const deleteIndex = parseInt(parts[1]) - 1;
+            if (!isNaN(deleteIndex) && deleteIndex >= 0 && deleteIndex < sortedLayouts.length) {
+                deleteReportLayout(sortedLayouts[deleteIndex].id);
+                return;
+            }
+        }
+        alert('Invalid delete command. Format: "delete 1" to delete layout #1');
+        return;
+    }
+    
+    // It's a load command
     const index = parseInt(choice) - 1;
-    if (isNaN(index) || index < 0 || index >= savedLayouts.length) {
+    if (isNaN(index) || index < 0 || index >= sortedLayouts.length) {
         alert('Invalid selection.');
         return;
     }
     
-    const layout = savedLayouts[index];
+    const layout = sortedLayouts[index];
+    
+    // Load the layout
+    sections = layout.sections || [];
+    indicators = layout.indicators || [];
+    selectedSearches = new Set(layout.selectedSearches || []);
+    
+    // Load report config
+    if (layout.reportConfig) {
+        reportConfig = { ...reportConfig, ...layout.reportConfig };
+    }
+    
+    // Re-render everything
+    renderSavedSearches();
+    renderSections();
+    renderIndicators();
+    
+    alert(`Report layout "${layout.name}" loaded successfully!`);
+}
+
+function manageReportLayouts() {
+    const savedLayouts = JSON.parse(localStorage.getItem('fusca_report_layouts') || '[]');
+    
+    if (savedLayouts.length === 0) {
+        alert('No saved report layouts found.');
+        return;
+    }
+    
+    // Sort by creation date (newest first)
+    const sortedLayouts = [...savedLayouts].sort((a, b) => new Date(b.created || 0) - new Date(a.created || 0));
+    
+    // Build a formatted list with size info
+    const layoutList = sortedLayouts.map((l, idx) => {
+        const layoutSize = JSON.stringify(l).length;
+        const sizeKB = (layoutSize / 1024).toFixed(1);
+        const createdDate = l.created ? new Date(l.created).toLocaleDateString() : 'Unknown';
+        return `${idx + 1}. ${l.name} (${sizeKB} KB, ${createdDate})`;
+    }).join('\n');
+    
+    const totalSize = savedLayouts.reduce((sum, l) => sum + JSON.stringify(l).length, 0);
+    const totalSizeKB = (totalSize / 1024).toFixed(1);
+    
+    const choice = prompt(`Manage Report Layouts (${savedLayouts.length} saved, ${totalSizeKB} KB total)\n\n${layoutList}\n\nEnter a number to load, or "delete" followed by a number to delete:`);
+    
+    if (!choice) return;
+    
+    // Check if it's a delete command
+    if (choice.toLowerCase().startsWith('delete')) {
+        const parts = choice.trim().split(/\s+/);
+        if (parts.length >= 2) {
+            const deleteIndex = parseInt(parts[1]) - 1;
+            if (!isNaN(deleteIndex) && deleteIndex >= 0 && deleteIndex < sortedLayouts.length) {
+                deleteReportLayout(sortedLayouts[deleteIndex].id);
+                // Refresh the list
+                manageReportLayouts();
+                return;
+            }
+        }
+        alert('Invalid delete command. Format: "delete 1" to delete layout #1');
+        return;
+    }
+    
+    // It's a load command
+    const index = parseInt(choice) - 1;
+    if (isNaN(index) || index < 0 || index >= sortedLayouts.length) {
+        alert('Invalid selection.');
+        return;
+    }
+    
+    const layout = sortedLayouts[index];
     
     // Load the layout
     sections = layout.sections || [];
