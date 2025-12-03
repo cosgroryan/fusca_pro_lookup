@@ -468,8 +468,8 @@ async function renderReport(reportData) {
                 <div class="hero-image-container" style="position: relative; border-radius: 4px; overflow: hidden; height: 150px; width: 100%; background: #f0f0f0;">
                     <input type="file" id="heroUpload" accept="image/*" onchange="handleHeroUpload(event)" style="display: none;">
                     ${reportConfig.heroImage ? 
-                        `<div style="position: relative; width: 100%; height: 150px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                            <img src="${reportConfig.heroImage}" class="hero-image-preview" style="width: 100%; height: 100%; object-fit: cover; object-position: center; min-height: 150px; min-width: 100%;">
+                        `<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;">
+                            <img src="${reportConfig.heroImage}" class="hero-image-preview" style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block;">
                             <button onclick="document.getElementById('heroUpload').click()" class="btn" style="position: absolute; bottom: 8px; right: 8px; font-size: 10px; padding: 4px 8px; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">Change Image</button>
                         </div>` :
                         `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">
@@ -526,18 +526,18 @@ async function renderReport(reportData) {
     
     // Add Sections with Tables in 2-column grid
     if (sections.length > 0) {
-        html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0;">`;
+        html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0;">`;
         
         sections.forEach((section, sectionIndex) => {
             html += `
                 <div class="section-container" style="page-break-inside: avoid;">
-                    <h2 style="font-size: 14px; font-weight: 600; color: ${colors.primaryDark}; margin-bottom: 8px;">${section.title}</h2>
-                    <table class="price-table" style="width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px;">
+                    <h2 style="font-size: 12px; font-weight: 600; color: ${colors.primaryDark}; margin-bottom: 6px;">${section.title}</h2>
+                    <table class="price-table" style="width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 8px;">
                         <thead>
                             <tr>
-                                <th style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; background: ${colors.primaryDark}; color: ${colors.textOnPrimary}; font-weight: 600; font-size: 10px;">Type Name</th>
-                                <th style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; background: ${colors.primaryDark}; color: ${colors.textOnPrimary}; font-weight: 600; font-size: 10px;">Current Price</th>
-                                <th style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; background: ${colors.primaryDark}; color: ${colors.textOnPrimary}; font-weight: 600; font-size: 10px;">% Change</th>
+                                <th style="padding: 4px 6px; text-align: left; border: 1px solid #ddd; background: ${colors.primaryDark}; color: ${colors.textOnPrimary}; font-weight: 600; font-size: 8px;">Type Name</th>
+                                <th style="padding: 4px 6px; text-align: left; border: 1px solid #ddd; background: ${colors.primaryDark}; color: ${colors.textOnPrimary}; font-weight: 600; font-size: 8px;">Current Price</th>
+                                <th style="padding: 4px 6px; text-align: left; border: 1px solid #ddd; background: ${colors.primaryDark}; color: ${colors.textOnPrimary}; font-weight: 600; font-size: 8px;">% Change</th>
                             </tr>
                         </thead>
                         <tbody id="section_${section.id}_table_body">
@@ -558,9 +558,9 @@ async function renderReport(reportData) {
                 
                 html += `
                     <tr>
-                        <td style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; font-size: 10px;">${search.name}</td>
-                        <td style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; font-size: 10px;">${price}</td>
-                        <td style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; font-size: 10px; ${changeClass ? `color: ${changeClass === 'price-positive' ? '#28a745' : '#dc3545'};` : ''}">${changeDisplay}</td>
+                        <td style="padding: 4px 6px; text-align: left; border: 1px solid #ddd; font-size: 8px;">${search.name}</td>
+                        <td style="padding: 4px 6px; text-align: left; border: 1px solid #ddd; font-size: 8px;">${price}</td>
+                        <td style="padding: 4px 6px; text-align: left; border: 1px solid #ddd; font-size: 8px; ${changeClass ? `color: ${changeClass === 'price-positive' ? '#28a745' : '#dc3545'};` : ''}">${changeDisplay}</td>
                     </tr>
                 `;
             });
@@ -631,8 +631,8 @@ function handleHeroUpload(event) {
         if (container) {
             container.innerHTML = `
                 <input type="file" id="heroUpload" accept="image/*" onchange="handleHeroUpload(event)" style="display: none;">
-                <div style="position: relative; width: 100%; height: 150px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                    <img src="${e.target.result}" class="hero-image-preview" style="width: 100%; height: 150px; object-fit: cover; object-position: center;">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;">
+                    <img src="${e.target.result}" class="hero-image-preview" style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block;">
                     <button onclick="document.getElementById('heroUpload').click()" class="btn" style="position: absolute; bottom: 8px; right: 8px; font-size: 10px; padding: 4px 8px; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">Change Image</button>
                 </div>
             `;
@@ -1332,17 +1332,19 @@ async function exportPDF() {
             
             const wrapper = heroImg.parentElement;
             if (wrapper && wrapper !== heroContainer) {
+                wrapper.style.position = 'absolute';
+                wrapper.style.top = '0';
+                wrapper.style.left = '0';
                 wrapper.style.width = '100%';
-                wrapper.style.height = '150px';
+                wrapper.style.height = '100%';
                 wrapper.style.overflow = 'hidden';
-                wrapper.style.position = 'relative';
+                wrapper.style.margin = '0';
+                wrapper.style.padding = '0';
             }
             
             // Ensure image fills container completely
             heroImg.style.width = '100%';
             heroImg.style.height = '100%';
-            heroImg.style.minWidth = '100%';
-            heroImg.style.minHeight = '150px';
             heroImg.style.objectFit = 'cover';
             heroImg.style.objectPosition = 'center';
             heroImg.style.display = 'block';
@@ -1482,17 +1484,19 @@ async function exportPNG() {
             
             const wrapper = heroImg.parentElement;
             if (wrapper && wrapper !== heroContainer) {
+                wrapper.style.position = 'absolute';
+                wrapper.style.top = '0';
+                wrapper.style.left = '0';
                 wrapper.style.width = '100%';
-                wrapper.style.height = '150px';
+                wrapper.style.height = '100%';
                 wrapper.style.overflow = 'hidden';
-                wrapper.style.position = 'relative';
+                wrapper.style.margin = '0';
+                wrapper.style.padding = '0';
             }
             
             // Ensure image fills container completely
             heroImg.style.width = '100%';
             heroImg.style.height = '100%';
-            heroImg.style.minWidth = '100%';
-            heroImg.style.minHeight = '150px';
             heroImg.style.objectFit = 'cover';
             heroImg.style.objectPosition = 'center';
             heroImg.style.display = 'block';
