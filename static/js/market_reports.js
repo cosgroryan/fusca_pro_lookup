@@ -469,7 +469,7 @@ async function renderReport(reportData) {
                     <input type="file" id="heroUpload" accept="image/*" onchange="handleHeroUpload(event)" style="display: none;">
                     ${reportConfig.heroImage ? 
                         `<div style="position: relative; width: 100%; height: 150px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                            <img src="${reportConfig.heroImage}" class="hero-image-preview" style="width: 100%; height: 150px; object-fit: cover; object-position: center;">
+                            <img src="${reportConfig.heroImage}" class="hero-image-preview" style="width: 100%; height: 100%; object-fit: cover; object-position: center; min-height: 150px; min-width: 100%;">
                             <button onclick="document.getElementById('heroUpload').click()" class="btn" style="position: absolute; bottom: 8px; right: 8px; font-size: 10px; padding: 4px 8px; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">Change Image</button>
                         </div>` :
                         `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">
@@ -1245,8 +1245,8 @@ async function exportPDF() {
         // Store original content
         const originalHTML = preview.innerHTML;
         
-        // Replace input fields with text values
-        const inputs = preview.querySelectorAll('input, textarea');
+        // Replace input fields with text values (but skip file inputs)
+        const inputs = preview.querySelectorAll('input:not([type="file"]), textarea');
         const replacements = [];
         inputs.forEach(input => {
             const parent = input.parentElement;
@@ -1270,84 +1270,85 @@ async function exportPDF() {
             parent.replaceChild(span, input);
         });
         
+        // Hide labels and buttons that are associated with file uploads
+        const labels = preview.querySelectorAll('label');
+        labels.forEach(label => {
+            const forAttr = label.getAttribute('for');
+            if (forAttr) {
+                const associatedInput = preview.querySelector(`#${forAttr}`);
+                if (associatedInput && associatedInput.type === 'file') {
+                    label.style.display = 'none';
+                }
+            }
+            // Also hide labels that contain "Logo:" or are near file inputs
+            if (label.textContent && label.textContent.toLowerCase().includes('logo')) {
+                const nextSibling = label.nextElementSibling;
+                if (nextSibling && nextSibling.type === 'file') {
+                    label.style.display = 'none';
+                }
+            }
+        });
+        
         // Hide all buttons
         const buttons = preview.querySelectorAll('button');
         buttons.forEach(btn => {
             btn.style.display = 'none';
         });
         
-        // Fix hero image aspect ratio - ensure it's centered and cropped, not stretched
+        // Hide all file inputs completely (they might show file paths)
+        const fileInputs = preview.querySelectorAll('input[type="file"]');
+        fileInputs.forEach(input => {
+            input.style.display = 'none';
+            input.style.visibility = 'hidden';
+            input.style.opacity = '0';
+            input.style.position = 'absolute';
+            input.style.width = '0';
+            input.style.height = '0';
+        });
+        
+        // Wait for all images to fully load before capturing
+        const allImages = preview.querySelectorAll('img');
+        const imageLoadPromises = Array.from(allImages).map(img => {
+            return new Promise((resolve) => {
+                if (img.complete && img.naturalWidth > 0) {
+                    resolve();
+                } else {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                    setTimeout(resolve, 3000); // 3 second timeout per image
+                }
+            });
+        });
+        await Promise.all(imageLoadPromises);
+        
+        // Fix hero image to always fill container
         const heroContainer = preview.querySelector('.hero-image-container');
         const heroImg = preview.querySelector('.hero-image-preview');
         if (heroImg && heroContainer) {
-            // Ensure container maintains fixed height and overflow
             heroContainer.style.height = '150px';
             heroContainer.style.width = '100%';
             heroContainer.style.overflow = 'hidden';
             heroContainer.style.position = 'relative';
-            heroContainer.style.display = 'block';
             
-            // Find the wrapper div if it exists and remove flex display
             const wrapper = heroImg.parentElement;
             if (wrapper && wrapper !== heroContainer) {
                 wrapper.style.width = '100%';
                 wrapper.style.height = '150px';
                 wrapper.style.overflow = 'hidden';
                 wrapper.style.position = 'relative';
-                wrapper.style.display = 'block';
-                wrapper.style.margin = '0';
-                wrapper.style.padding = '0';
             }
             
-            // Wait for image to load to get natural dimensions
-            await new Promise((resolve) => {
-                if (heroImg.complete) {
-                    resolve();
-                } else {
-                    heroImg.onload = resolve;
-                    heroImg.onerror = resolve;
-                    setTimeout(resolve, 1000); // Timeout after 1 second
-                }
-            });
-            
-            // Calculate proper dimensions to maintain aspect ratio while filling container
-            const containerWidth = heroContainer.offsetWidth || 800; // Fallback width
-            const containerHeight = 150;
-            const imgNaturalWidth = heroImg.naturalWidth || heroImg.width || containerWidth;
-            const imgNaturalHeight = heroImg.naturalHeight || heroImg.height || containerHeight;
-            const imgAspectRatio = imgNaturalWidth / imgNaturalHeight;
-            const containerAspectRatio = containerWidth / containerHeight;
-            
-            // If image is wider than container, scale by height; otherwise scale by width
-            let finalWidth, finalHeight;
-            if (imgAspectRatio > containerAspectRatio) {
-                // Image is wider - scale to fill height, crop width
-                finalHeight = containerHeight;
-                finalWidth = finalHeight * imgAspectRatio;
-            } else {
-                // Image is taller - scale to fill width, crop height
-                finalWidth = containerWidth;
-                finalHeight = finalWidth / imgAspectRatio;
-            }
-            
-            // Center the image within the container
-            const offsetX = (finalWidth - containerWidth) / 2;
-            const offsetY = (finalHeight - containerHeight) / 2;
-            
-            // Apply styles to maintain aspect ratio and center
-            heroImg.style.position = 'absolute';
-            heroImg.style.width = `${finalWidth}px`;
-            heroImg.style.height = `${finalHeight}px`;
-            heroImg.style.left = `${-offsetX}px`;
-            heroImg.style.top = `${-offsetY}px`;
-            heroImg.style.objectFit = 'none'; // Use explicit sizing instead
+            // Ensure image fills container completely
+            heroImg.style.width = '100%';
+            heroImg.style.height = '100%';
+            heroImg.style.minWidth = '100%';
+            heroImg.style.minHeight = '150px';
+            heroImg.style.objectFit = 'cover';
             heroImg.style.objectPosition = 'center';
             heroImg.style.display = 'block';
-            heroImg.style.maxWidth = 'none';
-            heroImg.style.maxHeight = 'none';
         }
         
-        // Wait for images to load
+        // Additional wait to ensure everything is rendered
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Use html2canvas to capture the report
@@ -1444,78 +1445,60 @@ async function exportPNG() {
             btn.style.display = 'none';
         });
         
-        // Fix hero image aspect ratio - ensure it's centered and cropped, not stretched
+        // Hide all file inputs completely (they might show file paths)
+        const fileInputs = preview.querySelectorAll('input[type="file"]');
+        fileInputs.forEach(input => {
+            input.style.display = 'none';
+            input.style.visibility = 'hidden';
+            input.style.opacity = '0';
+            input.style.position = 'absolute';
+            input.style.width = '0';
+            input.style.height = '0';
+        });
+        
+        // Wait for all images to fully load before capturing
+        const allImages = preview.querySelectorAll('img');
+        const imageLoadPromises = Array.from(allImages).map(img => {
+            return new Promise((resolve) => {
+                if (img.complete && img.naturalWidth > 0) {
+                    resolve();
+                } else {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                    setTimeout(resolve, 3000); // 3 second timeout per image
+                }
+            });
+        });
+        await Promise.all(imageLoadPromises);
+        
+        // Fix hero image to always fill container
         const heroContainer = preview.querySelector('.hero-image-container');
         const heroImg = preview.querySelector('.hero-image-preview');
         if (heroImg && heroContainer) {
-            // Ensure container maintains fixed height and overflow
             heroContainer.style.height = '150px';
             heroContainer.style.width = '100%';
             heroContainer.style.overflow = 'hidden';
             heroContainer.style.position = 'relative';
-            heroContainer.style.display = 'block';
             
-            // Find the wrapper div if it exists and remove flex display
             const wrapper = heroImg.parentElement;
             if (wrapper && wrapper !== heroContainer) {
                 wrapper.style.width = '100%';
                 wrapper.style.height = '150px';
                 wrapper.style.overflow = 'hidden';
                 wrapper.style.position = 'relative';
-                wrapper.style.display = 'block';
-                wrapper.style.margin = '0';
-                wrapper.style.padding = '0';
             }
             
-            // Wait for image to load to get natural dimensions
-            await new Promise((resolve) => {
-                if (heroImg.complete) {
-                    resolve();
-                } else {
-                    heroImg.onload = resolve;
-                    heroImg.onerror = resolve;
-                    setTimeout(resolve, 1000); // Timeout after 1 second
-                }
-            });
-            
-            // Calculate proper dimensions to maintain aspect ratio while filling container
-            const containerWidth = heroContainer.offsetWidth || 800; // Fallback width
-            const containerHeight = 150;
-            const imgNaturalWidth = heroImg.naturalWidth || heroImg.width || containerWidth;
-            const imgNaturalHeight = heroImg.naturalHeight || heroImg.height || containerHeight;
-            const imgAspectRatio = imgNaturalWidth / imgNaturalHeight;
-            const containerAspectRatio = containerWidth / containerHeight;
-            
-            // If image is wider than container, scale by height; otherwise scale by width
-            let finalWidth, finalHeight;
-            if (imgAspectRatio > containerAspectRatio) {
-                // Image is wider - scale to fill height, crop width
-                finalHeight = containerHeight;
-                finalWidth = finalHeight * imgAspectRatio;
-            } else {
-                // Image is taller - scale to fill width, crop height
-                finalWidth = containerWidth;
-                finalHeight = finalWidth / imgAspectRatio;
-            }
-            
-            // Center the image within the container
-            const offsetX = (finalWidth - containerWidth) / 2;
-            const offsetY = (finalHeight - containerHeight) / 2;
-            
-            // Apply styles to maintain aspect ratio and center
-            heroImg.style.position = 'absolute';
-            heroImg.style.width = `${finalWidth}px`;
-            heroImg.style.height = `${finalHeight}px`;
-            heroImg.style.left = `${-offsetX}px`;
-            heroImg.style.top = `${-offsetY}px`;
-            heroImg.style.objectFit = 'none'; // Use explicit sizing instead
+            // Ensure image fills container completely
+            heroImg.style.width = '100%';
+            heroImg.style.height = '100%';
+            heroImg.style.minWidth = '100%';
+            heroImg.style.minHeight = '150px';
+            heroImg.style.objectFit = 'cover';
             heroImg.style.objectPosition = 'center';
             heroImg.style.display = 'block';
-            heroImg.style.maxWidth = 'none';
-            heroImg.style.maxHeight = 'none';
         }
         
-        // Wait for images to load
+        // Additional wait to ensure everything is rendered
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Use html2canvas to capture the report
