@@ -479,7 +479,7 @@ async function renderReport(reportData) {
         html += `
             <div style="margin: 12px 0;">
                 <h2 style="font-size: 12px; font-weight: 600; color: #153D33; margin-bottom: 8px;">Indicator Chart</h2>
-                <div class="indicator-chart-container" style="position: relative; height: 200px; margin: 10px 0;">
+                <div class="indicator-chart-container" style="position: relative; height: 240px; margin: 10px 0;">
                     <div id="indicatorChartLoading" style="text-align: center; padding: 40px; color: #666; font-size: 12px;">Loading indicator chart...</div>
                     <canvas id="indicatorChart" style="display: none;"></canvas>
                 </div>
@@ -672,30 +672,10 @@ function convertBlendDataToApiFormat(blendData) {
     };
 }
 
-// Helper function to aggregate daily data into monthly averages
-function aggregateToMonthly(dailyData, year) {
+// Helper function to extract date-based data (preserve individual sale dates)
+function extractDateBasedData(dailyData, year) {
     try {
-        console.log(`Aggregating data for year ${year}:`, dailyData);
-        
-        const months = [
-            { name: 'Jan', start: `${year}-01-01`, end: `${year}-01-31` },
-            { name: 'Feb', start: `${year}-02-01`, end: `${year}-02-28` },
-            { name: 'Mar', start: `${year}-03-01`, end: `${year}-03-31` },
-            { name: 'Apr', start: `${year}-04-01`, end: `${year}-04-30` },
-            { name: 'May', start: `${year}-05-01`, end: `${year}-05-31` },
-            { name: 'Jun', start: `${year}-06-01`, end: `${year}-06-30` },
-            { name: 'Jul', start: `${year}-07-01`, end: `${year}-07-31` },
-            { name: 'Aug', start: `${year}-08-01`, end: `${year}-08-31` },
-            { name: 'Sep', start: `${year}-09-01`, end: `${year}-09-30` },
-            { name: 'Oct', start: `${year}-10-01`, end: `${year}-10-31` },
-            { name: 'Nov', start: `${year}-11-01`, end: `${year}-11-30` },
-            { name: 'Dec', start: `${year}-12-01`, end: `${year}-12-31` }
-        ];
-        
-        // Handle leap year for February
-        if (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) {
-            months[1].end = `${year}-02-29`;
-        }
+        console.log(`Extracting date-based data for year ${year}:`, dailyData);
         
         // Get all series data (first series in table_data)
         const tableData = dailyData.table_data || {};
@@ -703,7 +683,7 @@ function aggregateToMonthly(dailyData, year) {
         
         if (seriesKeys.length === 0) {
             console.warn(`No table_data found for year ${year}`);
-            return [null, null, null, null, null, null, null, null, null, null, null, null];
+            return { dates: [], prices: {} };
         }
         
         // Use the first (and likely only) series, or combine all if multiple
@@ -711,52 +691,39 @@ function aggregateToMonthly(dailyData, year) {
         seriesKeys.forEach(key => {
             const seriesData = tableData[key] || {};
             Object.keys(seriesData).forEach(date => {
-                if (!allDatesData[date]) {
-                    allDatesData[date] = [];
-                }
-                const entry = seriesData[date];
-                const price = typeof entry === 'object' && entry !== null ? entry.price : entry;
-                if (price !== null && price !== undefined && !isNaN(price)) {
-                    allDatesData[date].push(price);
+                // Filter to only dates within the specified year
+                if (date.startsWith(year + '-')) {
+                    if (!allDatesData[date]) {
+                        allDatesData[date] = [];
+                    }
+                    const entry = seriesData[date];
+                    const price = typeof entry === 'object' && entry !== null ? entry.price : entry;
+                    if (price !== null && price !== undefined && !isNaN(price)) {
+                        allDatesData[date].push(price);
+                    }
                 }
             });
         });
         
         // Average prices for dates that have multiple entries
+        const pricesByDate = {};
         Object.keys(allDatesData).forEach(date => {
             if (allDatesData[date].length > 1) {
                 const sum = allDatesData[date].reduce((a, b) => a + b, 0);
-                allDatesData[date] = sum / allDatesData[date].length;
-            } else {
-                allDatesData[date] = allDatesData[date][0];
+                pricesByDate[date] = parseFloat((sum / allDatesData[date].length).toFixed(2));
+            } else if (allDatesData[date].length === 1) {
+                pricesByDate[date] = parseFloat(allDatesData[date][0].toFixed(2));
             }
         });
         
-        const monthlyAverages = months.map(month => {
-            // Find all dates in this month that have price data
-            const monthDates = Object.keys(allDatesData).filter(date => {
-                return date >= month.start && date <= month.end;
-            });
-            
-            if (monthDates.length === 0) return null;
-            
-            // Get all prices for this month
-            const prices = monthDates
-                .map(date => allDatesData[date])
-                .filter(price => price !== null && price !== undefined && !isNaN(price));
-            
-            if (prices.length === 0) return null;
-            
-            // Calculate average price for the month
-            const sum = prices.reduce((a, b) => a + b, 0);
-            return parseFloat((sum / prices.length).toFixed(2));
-        });
+        // Get sorted dates
+        const dates = Object.keys(pricesByDate).sort();
         
-        console.log(`Monthly averages for ${year}:`, monthlyAverages);
-        return monthlyAverages;
+        console.log(`Date-based data for ${year}: ${dates.length} dates`);
+        return { dates, prices: pricesByDate };
     } catch (error) {
-        console.error(`Error aggregating data for year ${year}:`, error);
-        return [null, null, null, null, null, null, null, null, null, null, null, null];
+        console.error(`Error extracting date-based data for year ${year}:`, error);
+        return { dates: [], prices: {} };
     }
 }
 
@@ -880,11 +847,11 @@ async function renderIndicatorChart() {
             const currentData = await currentResponse.json();
             const previousData = await previousResponse.json();
             
-            console.log(`Indicator ${indicator.name} data parsed, aggregating...`);
+            console.log(`Indicator ${indicator.name} data parsed, extracting dates...`);
             
-            // Aggregate daily data into monthly averages
-            const currentMonthly = aggregateToMonthly(currentData, currentYear);
-            const previousMonthly = aggregateToMonthly(previousData, previousYear);
+            // Extract date-based data (preserve individual sale dates)
+            const currentYearData = extractDateBasedData(currentData, currentYear);
+            const previousYearData = extractDateBasedData(previousData, previousYear);
             
             const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
             console.log(`Indicator ${indicator.name} completed in ${totalElapsed}s`);
@@ -892,8 +859,8 @@ async function renderIndicatorChart() {
             results.push({
                 indicator,
                 data: {
-                    currentYear: currentMonthly,
-                    previousYear: previousMonthly
+                    currentYear: currentYearData,
+                    previousYear: previousYearData
                 },
                 color: colors[i % colors.length]
             });
@@ -904,10 +871,59 @@ async function renderIndicatorChart() {
         }
     }
     
+    // Helper function to normalize date by stripping year (MM-DD format)
+    // This allows dates from different years to overlap on the same timeline
+    const normalizeDate = (dateStr) => {
+        // dateStr is in format "YYYY-MM-DD", extract "MM-DD"
+        const parts = dateStr.split('-');
+        if (parts.length >= 3) {
+            return `${parts[1]}-${parts[2]}`; // MM-DD
+        }
+        return dateStr;
+    };
+    
+    // Collect all unique normalized dates (MM-DD) from all indicators
+    // Store mapping from normalized date to all actual dates that map to it
+    const normalizedDatesSet = new Set();
+    const dateMapping = {}; // normalizedDate -> Set of actual dates
+    
+    results.forEach((result) => {
+        if (!result || result.status === 'error') return;
+        
+        // Process current year dates
+        if (result.data && result.data.currentYear && result.data.currentYear.dates) {
+            result.data.currentYear.dates.forEach(actualDate => {
+                const normalized = normalizeDate(actualDate);
+                normalizedDatesSet.add(normalized);
+                if (!dateMapping[normalized]) {
+                    dateMapping[normalized] = new Set();
+                }
+                dateMapping[normalized].add(actualDate);
+            });
+        }
+        
+        // Process previous year dates
+        if (result.data && result.data.previousYear && result.data.previousYear.dates) {
+            result.data.previousYear.dates.forEach(actualDate => {
+                const normalized = normalizeDate(actualDate);
+                normalizedDatesSet.add(normalized);
+                if (!dateMapping[normalized]) {
+                    dateMapping[normalized] = new Set();
+                }
+                dateMapping[normalized].add(actualDate);
+            });
+        }
+    });
+    
+    // Sort normalized dates chronologically (MM-DD format sorts correctly)
+    const sortedNormalizedDates = Array.from(normalizedDatesSet).sort();
+    
     // Build datasets from all results
+    // IMPORTANT: Add previous year datasets first so they render underneath
     const datasets = [];
     const errors = [];
     
+    // First pass: Add all previous year datasets (so they render behind/underneath)
     results.forEach((result) => {
         if (!result || result.status === 'error' || result.status === 'timeout') {
             if (result && result.status === 'error') {
@@ -919,32 +935,88 @@ async function renderIndicatorChart() {
         const { indicator, data, color } = result;
         const colorRgb = hexToRgb(color);
         
-        // Add current year data
-        if (data.currentYear && data.currentYear.some(v => v !== null)) {
-            datasets.push({
-                label: `${indicator.name} (${currentYear})`,
-                data: data.currentYear,
-                borderColor: color,
-                backgroundColor: `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, 0.2)`,
-                fill: false,
-                tension: 0.4,
-                pointRadius: 3,
-                pointHoverRadius: 5
+        // Add previous year data at 50% opacity (same color) - FIRST so it renders underneath
+        if (data.previousYear && data.previousYear.dates && data.previousYear.dates.length > 0) {
+            // Map prices to normalized dates (null for missing dates)
+            const previousYearValues = sortedNormalizedDates.map(normalizedDate => {
+                // Find any date from previous year that matches this normalized date
+                const matchingDates = Array.from(dateMapping[normalizedDate] || []).filter(date => {
+                    return data.previousYear.dates.includes(date);
+                });
+                
+                if (matchingDates.length === 0) return null;
+                
+                // If multiple dates match (shouldn't happen for same year), average them
+                const prices = matchingDates
+                    .map(date => data.previousYear.prices[date])
+                    .filter(price => price !== null && price !== undefined);
+                
+                if (prices.length === 0) return null;
+                if (prices.length === 1) return prices[0];
+                
+                // Average multiple prices (unlikely but handle it)
+                const sum = prices.reduce((a, b) => a + b, 0);
+                return parseFloat((sum / prices.length).toFixed(2));
             });
-        }
-        
-        // Add previous year data at 50% opacity (same color)
-        if (data.previousYear && data.previousYear.some(v => v !== null)) {
+            
             datasets.push({
                 label: `${indicator.name} (${previousYear})`,
-                data: data.previousYear,
+                data: previousYearValues,
                 borderColor: `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, 0.5)`,
                 backgroundColor: `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, 0.1)`,
                 fill: false,
                 tension: 0.4,
                 pointRadius: 2,
                 pointHoverRadius: 4,
-                borderDash: [5, 5]
+                borderDash: [5, 5],
+                spanGaps: true // Connect sequential points, skip null values
+            });
+        }
+    });
+    
+    // Second pass: Add all current year datasets (so they render on top)
+    results.forEach((result) => {
+        if (!result || result.status === 'error' || result.status === 'timeout') {
+            return;
+        }
+        
+        const { indicator, data, color } = result;
+        const colorRgb = hexToRgb(color);
+        
+        // Add current year data - AFTER previous year so it renders on top
+        if (data.currentYear && data.currentYear.dates && data.currentYear.dates.length > 0) {
+            // Map prices to normalized dates (null for missing dates)
+            const currentYearValues = sortedNormalizedDates.map(normalizedDate => {
+                // Find any date from current year that matches this normalized date
+                const matchingDates = Array.from(dateMapping[normalizedDate] || []).filter(date => {
+                    return data.currentYear.dates.includes(date);
+                });
+                
+                if (matchingDates.length === 0) return null;
+                
+                // If multiple dates match (shouldn't happen for same year), average them
+                const prices = matchingDates
+                    .map(date => data.currentYear.prices[date])
+                    .filter(price => price !== null && price !== undefined);
+                
+                if (prices.length === 0) return null;
+                if (prices.length === 1) return prices[0];
+                
+                // Average multiple prices (unlikely but handle it)
+                const sum = prices.reduce((a, b) => a + b, 0);
+                return parseFloat((sum / prices.length).toFixed(2));
+            });
+            
+            datasets.push({
+                label: `${indicator.name} (${currentYear})`,
+                data: currentYearValues,
+                borderColor: color,
+                backgroundColor: `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, 0.2)`,
+                fill: false,
+                tension: 0.4,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                spanGaps: true // Connect sequential points, skip null values
             });
         }
     });
@@ -977,10 +1049,25 @@ async function renderIndicatorChart() {
             canvas.style.display = 'block';
         }
         
+        // Format normalized dates for chart labels (e.g., "01-15" -> "Jan 15")
+        const formatNormalizedDateLabel = (normalizedDateStr) => {
+            // normalizedDateStr is in format "MM-DD"
+            const parts = normalizedDateStr.split('-');
+            if (parts.length === 2) {
+                const month = parseInt(parts[0], 10) - 1; // 0-indexed months
+                const day = parseInt(parts[1], 10);
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                return `${months[month]} ${day}`;
+            }
+            return normalizedDateStr;
+        };
+        
+        const dateLabels = sortedNormalizedDates.map(formatNormalizedDateLabel);
+        
         indicatorChart = new Chart(canvas, {
             type: 'line',
             data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                labels: dateLabels,
                 datasets: datasets
             },
             options: {
@@ -1039,11 +1126,13 @@ async function renderIndicatorChart() {
                 x: {
                     title: {
                         display: true,
-                        text: 'Month',
+                        text: 'Sale Date',
                         font: { size: 10, weight: 'bold' }
                     },
                     ticks: {
-                        font: { size: 9 }
+                        font: { size: 9 },
+                        maxRotation: 45,
+                        minRotation: 45
                     }
                 }
             },
