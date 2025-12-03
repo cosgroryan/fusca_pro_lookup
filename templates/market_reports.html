@@ -280,6 +280,33 @@
             </div>
         </div>
         
+        <!-- Color Customization -->
+        <div class="panel-section" style="margin-top: 20px;">
+            <h3>Brand Colors</h3>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-size: 11px; font-weight: 600;">Primary Color:</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="color" id="primaryColorPicker" value="#1A4C41" 
+                           onchange="reportConfig.primaryColor = this.value; if(document.getElementById('reportPreview').innerHTML && !document.getElementById('reportPreview').innerHTML.includes('Configure your report')) { generateReport(); }"
+                           style="width: 60px; height: 32px; cursor: pointer; border: 1px solid #ddd; border-radius: 4px;">
+                    <input type="text" id="primaryColorText" value="#1A4C41" 
+                           onchange="reportConfig.primaryColor = this.value; document.getElementById('primaryColorPicker').value = this.value; if(document.getElementById('reportPreview').innerHTML && !document.getElementById('reportPreview').innerHTML.includes('Configure your report')) { generateReport(); }"
+                           style="flex: 1; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px;">
+                </div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-size: 11px; font-weight: 600;">Secondary Color:</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="color" id="secondaryColorPicker" value="#3D7F4B" 
+                           onchange="reportConfig.secondaryColor = this.value; if(document.getElementById('reportPreview').innerHTML && !document.getElementById('reportPreview').innerHTML.includes('Configure your report')) { generateReport(); }"
+                           style="width: 60px; height: 32px; cursor: pointer; border: 1px solid #ddd; border-radius: 4px;">
+                    <input type="text" id="secondaryColorText" value="#3D7F4B" 
+                           onchange="reportConfig.secondaryColor = this.value; document.getElementById('secondaryColorPicker').value = this.value; if(document.getElementById('reportPreview').innerHTML && !document.getElementById('reportPreview').innerHTML.includes('Configure your report')) { generateReport(); }"
+                           style="flex: 1; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px;">
+                </div>
+            </div>
+        </div>
+        
         <div style="margin-top: 20px;">
             <button onclick="saveReportLayout()" class="btn btn-secondary" style="width: 100%; margin-bottom: 8px;">Save Report Layout</button>
             <button onclick="manageReportLayouts()" class="btn btn-secondary" style="width: 100%; margin-bottom: 8px;">Manage Saved Layouts</button>

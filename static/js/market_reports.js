@@ -14,9 +14,44 @@ let reportConfig = {
     offering: '',
     passings: '',
     nzdUsd: '',
-    commentary: ''
+    commentary: '',
+    primaryColor: '#1A4C41', // Default dark green
+    secondaryColor: '#3D7F4B' // Default medium green
 };
 let indicatorChart = null;
+
+// Generate color palette from primary and secondary colors
+function generateColorPalette(primaryColor, secondaryColor) {
+    // Helper function to lighten a color
+    const lighten = (color, percent) => {
+        const num = parseInt(color.replace("#", ""), 16);
+        const r = Math.min(255, (num >> 16) + Math.round((255 - (num >> 16)) * percent));
+        const g = Math.min(255, ((num >> 8) & 0x00FF) + Math.round((255 - ((num >> 8) & 0x00FF)) * percent));
+        const b = Math.min(255, (num & 0x0000FF) + Math.round((255 - (num & 0x0000FF)) * percent));
+        return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+    };
+    
+    // Helper function to darken a color
+    const darken = (color, percent) => {
+        const num = parseInt(color.replace("#", ""), 16);
+        const r = Math.max(0, Math.round((num >> 16) * (1 - percent)));
+        const g = Math.max(0, Math.round(((num >> 8) & 0x00FF) * (1 - percent)));
+        const b = Math.max(0, Math.round((num & 0x0000FF) * (1 - percent)));
+        return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+    };
+    
+    return {
+        primary: primaryColor || '#1A4C41',
+        primaryLight: lighten(primaryColor || '#1A4C41', 0.3),
+        primaryDark: darken(primaryColor || '#1A4C41', 0.2),
+        secondary: secondaryColor || '#3D7F4B',
+        secondaryLight: lighten(secondaryColor || '#3D7F4B', 0.3),
+        secondaryDark: darken(secondaryColor || '#3D7F4B', 0.2),
+        // For text on colored backgrounds
+        textOnPrimary: '#ffffff',
+        textOnSecondary: '#ffffff'
+    };
+}
 
 // Load saved searches on page load
 function loadSavedSearches() {
@@ -397,10 +432,13 @@ async function fetchReportData() {
 async function renderReport(reportData) {
     const preview = document.getElementById('reportPreview');
     
+    // Generate color palette from user's brand colors
+    const colors = generateColorPalette(reportConfig.primaryColor, reportConfig.secondaryColor);
+    
     let html = `
         <div style="max-width: 800px; margin: 0 auto; font-family: 'Nunito Sans', sans-serif; font-size: 10px;">
             <!-- Report Header -->
-            <div class="report-header" style="background: #1A4C41; color: white; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+            <div class="report-header" style="background: ${colors.primary}; color: ${colors.textOnPrimary}; padding: 12px; border-radius: 4px; margin-bottom: 12px;">
                 <div class="report-header-top" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                     <div>
                         <div class="report-title" style="font-size: 18px; font-weight: 700; margin-bottom: 2px;">
@@ -439,7 +477,7 @@ async function renderReport(reportData) {
                         </div>`
                     }
                 </div>
-                <div class="market-info-box" style="background: #1A4C41; color: white; padding: 10px; border-radius: 4px;">
+                <div class="market-info-box" style="background: ${colors.primary}; color: ${colors.textOnPrimary}; padding: 10px; border-radius: 4px;">
                     <div class="market-info-row" style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 10px;">
                         <span style="font-weight: bold;">Sale Date:</span>
                         <input type="date" id="saleDateInput" value="${reportConfig.saleDate}" 
@@ -493,13 +531,13 @@ async function renderReport(reportData) {
         sections.forEach((section, sectionIndex) => {
             html += `
                 <div class="section-container" style="page-break-inside: avoid;">
-                    <h2 style="font-size: 14px; font-weight: 600; color: #153D33; margin-bottom: 8px;">${section.title}</h2>
+                    <h2 style="font-size: 14px; font-weight: 600; color: ${colors.primaryDark}; margin-bottom: 8px;">${section.title}</h2>
                     <table class="price-table" style="width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px;">
                         <thead>
                             <tr>
-                                <th style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; background: #153D33; color: white; font-weight: 600; font-size: 10px;">Type Name</th>
-                                <th style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; background: #153D33; color: white; font-weight: 600; font-size: 10px;">Current Price</th>
-                                <th style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; background: #153D33; color: white; font-weight: 600; font-size: 10px;">% Change</th>
+                                <th style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; background: ${colors.primaryDark}; color: ${colors.textOnPrimary}; font-weight: 600; font-size: 10px;">Type Name</th>
+                                <th style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; background: ${colors.primaryDark}; color: ${colors.textOnPrimary}; font-weight: 600; font-size: 10px;">Current Price</th>
+                                <th style="padding: 6px 8px; text-align: left; border: 1px solid #ddd; background: ${colors.primaryDark}; color: ${colors.textOnPrimary}; font-weight: 600; font-size: 10px;">% Change</th>
                             </tr>
                         </thead>
                         <tbody id="section_${section.id}_table_body">
@@ -540,10 +578,17 @@ async function renderReport(reportData) {
     // Add Market Commentary
     html += `
         <div style="margin: 12px 0;">
-            <h2 style="font-size: 12px; font-weight: 600; color: #153D33; margin-bottom: 8px;">Market Commentary</h2>
+            <h2 style="font-size: 12px; font-weight: 600; color: ${colors.primaryDark}; margin-bottom: 8px;">Market Commentary</h2>
             <textarea id="marketCommentary" onchange="reportConfig.commentary = this.value" 
                       style="width: 100%; min-height: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 10px; font-family: inherit; white-space: pre-wrap; word-wrap: break-word;"
                       placeholder="Enter market commentary...">${reportConfig.commentary}</textarea>
+        </div>
+    `;
+    
+    // Add Footer
+    html += `
+        <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #ddd; text-align: center;">
+            <p style="font-size: 9px; color: #666; margin: 0;">Market report powered by FUSCA</p>
         </div>
     `;
     
@@ -750,7 +795,20 @@ async function renderIndicatorChart() {
     }
     
     // Fetch data for all indicators in parallel using the fast blends API
-    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+    // Generate chart colors based on brand colors
+    const brandPalette = generateColorPalette(reportConfig.primaryColor, reportConfig.secondaryColor);
+    // Create a palette of colors for multiple indicators, starting with brand colors
+    const colors = [
+        brandPalette.primary,
+        brandPalette.secondary,
+        brandPalette.primaryLight,
+        brandPalette.secondaryLight,
+        '#3B82F6', // Fallback blue
+        '#10B981', // Fallback green
+        '#F59E0B', // Fallback orange
+        '#EF4444', // Fallback red
+        '#8B5CF6'  // Fallback purple
+    ];
     
     // Update loading message to show progress
     if (loadingDiv && indicators.length > 0) {
@@ -1502,6 +1560,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSavedSearches();
     renderIndicators();
     fetchMostRecentSaleDate();
+    syncColorPickers(); // Initialize color pickers with default values
     
     // Close modal on outside click
     const modal = document.getElementById('indicatorBuilderModal');
@@ -1654,6 +1713,23 @@ function deleteReportLayout(layoutId) {
     alert('Report layout deleted successfully!');
 }
 
+// Sync color picker UI with reportConfig
+function syncColorPickers() {
+    const primaryPicker = document.getElementById('primaryColorPicker');
+    const primaryText = document.getElementById('primaryColorText');
+    const secondaryPicker = document.getElementById('secondaryColorPicker');
+    const secondaryText = document.getElementById('secondaryColorText');
+    
+    if (primaryPicker && primaryText) {
+        primaryPicker.value = reportConfig.primaryColor || '#1A4C41';
+        primaryText.value = reportConfig.primaryColor || '#1A4C41';
+    }
+    if (secondaryPicker && secondaryText) {
+        secondaryPicker.value = reportConfig.secondaryColor || '#3D7F4B';
+        secondaryText.value = reportConfig.secondaryColor || '#3D7F4B';
+    }
+}
+
 function loadReportLayout() {
     const savedLayouts = JSON.parse(localStorage.getItem('fusca_report_layouts') || '[]');
     
@@ -1709,6 +1785,9 @@ function loadReportLayout() {
     if (layout.reportConfig) {
         reportConfig = { ...reportConfig, ...layout.reportConfig };
     }
+    
+    // Sync color pickers with loaded colors
+    syncColorPickers();
     
     // Re-render everything
     renderSavedSearches();
@@ -1778,6 +1857,9 @@ function manageReportLayouts() {
     if (layout.reportConfig) {
         reportConfig = { ...reportConfig, ...layout.reportConfig };
     }
+    
+    // Sync color pickers with loaded colors
+    syncColorPickers();
     
     // Re-render everything
     renderSavedSearches();
