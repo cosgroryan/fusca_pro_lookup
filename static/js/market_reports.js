@@ -72,8 +72,19 @@ function renderSavedSearches() {
         return;
     }
     
-    // Just display saved searches as a simple list (no checkboxes)
-    container.innerHTML = '<p style="color: #666; font-size: 14px;">All saved searches are available in section dropdowns.</p>';
+    // Display helper text
+    let html = '<p style="color: #666; font-size: 14px;">All saved searches are available in section dropdowns.</p>';
+    
+    // Check if there are saved layouts and show LOAD LAYOUT button
+    const savedLayouts = JSON.parse(localStorage.getItem('fusca_report_layouts') || '[]');
+    if (savedLayouts.length > 0) {
+        html += `<button onclick="manageReportLayouts()" class="simple-save-btn" style="font-size: 12px; margin-top: 8px;">
+            <img src="/static/images/save-svgrepo-com.svg" alt="Load Layout" style="width: 14px; height: 14px;">
+            LOAD LAYOUT
+        </button>`;
+    }
+    
+    container.innerHTML = html;
 }
 
 // Removed toggleSearchSelection - no longer using checkboxes for saved searches
@@ -748,11 +759,33 @@ async function renderReport(reportData) {
     
     preview.innerHTML = html;
     
+    // Show export dropdown when report is generated
+    const exportDropdown = document.getElementById('exportDropdown');
+    if (exportDropdown) {
+        exportDropdown.style.display = 'block';
+        exportDropdown.classList.add('show');
+    }
+    
     // Render indicator chart if indicators exist (non-blocking - don't await)
     if (indicators.length > 0) {
         // Don't block report generation - load chart in background
         renderIndicatorChart().catch(error => {
             console.error('Indicator chart error (non-blocking):', error);
+        });
+    }
+}
+
+function toggleExportDropdown() {
+    const menu = document.getElementById('exportDropdownMenu');
+    if (menu) {
+        menu.classList.toggle('show');
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function closeDropdown(e) {
+            if (!e.target.closest('.export-dropdown')) {
+                menu.classList.remove('show');
+                document.removeEventListener('click', closeDropdown);
+            }
         });
     }
 }
