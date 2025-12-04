@@ -26,6 +26,8 @@
         border-radius: 8px;
         padding: 20px;
         min-height: 800px;
+        position: relative;
+        z-index: 1;
     }
     
     .panel-section {
@@ -45,7 +47,8 @@
         font-weight: 600;
         position: sticky;
         top: 0;
-        background: #f9f9f9;
+        background: #f9f9f9 !important;
+        background-color: #f9f9f9 !important;
         padding: 16px;
         padding-bottom: 8px;
         z-index: 10;
@@ -53,6 +56,7 @@
         margin-left: -16px;
         margin-right: -16px;
         margin-bottom: 12px;
+        opacity: 1 !important;
     }
     
     .panel-section:first-child h3 {
@@ -101,11 +105,9 @@
     }
     
     .export-dropdown {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        margin-bottom: 0;
-        z-index: 100;
+        display: inline-flex;
+        align-items: center;
+        position: relative;
     }
     
     .export-dropdown-btn {
@@ -123,6 +125,7 @@
         padding: 0;
         text-decoration: none;
         transition: color 0.2s ease, text-decoration 0.2s ease;
+        position: relative;
     }
     
     .export-dropdown-btn img {
@@ -151,8 +154,10 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         margin-top: 4px;
         min-width: 120px;
-        z-index: 1000;
+        z-index: 10001;
+        white-space: nowrap;
     }
+    
     
     .export-dropdown-menu.show {
         display: block;
@@ -489,7 +494,20 @@
 {% endblock %}
 
 {% block content %}
-<h1 style="margin-bottom: 20px; color: #153D33;">Market Reports</h1>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 style="margin: 0; color: #153D33;">Market Reports</h1>
+    <div class="export-dropdown" id="exportDropdown" style="display: none;">
+        <button class="export-dropdown-btn" onclick="toggleExportDropdown()">
+            <img src="/static/images/download-minimalistic-svgrepo-com.svg" alt="Download" style="width: 14px; height: 14px;">
+            EXPORT
+            <img src="/static/images/chevron-down-svgrepo-com.svg" alt="▼" style="width: 14px; height: 14px;">
+        </button>
+        <div class="export-dropdown-menu" id="exportDropdownMenu">
+            <a href="#" onclick="exportPDF(); toggleExportDropdown(); return false;">PDF</a>
+            <a href="#" onclick="exportPNG(); toggleExportDropdown(); return false;">PNG</a>
+        </div>
+    </div>
+</div>
 
 <div class="market-reports-container">
     <!-- Left Panel -->
@@ -555,21 +573,11 @@
     </div>
     
     <!-- Report Preview -->
-    <div style="position: relative;">
-        <div class="export-dropdown" id="exportDropdown" style="display: none;">
-            <button class="export-dropdown-btn" onclick="toggleExportDropdown()">
-                <img src="/static/images/download-minimalistic-svgrepo-com.svg" alt="Download" style="width: 14px; height: 14px;">
-                EXPORT
-                <img src="/static/images/chevron-down-svgrepo-com.svg" alt="▼" style="width: 14px; height: 14px;">
-            </button>
-            <div class="export-dropdown-menu" id="exportDropdownMenu">
-                <a href="#" onclick="exportPDF(); toggleExportDropdown(); return false;">PDF</a>
-                <a href="#" onclick="exportPNG(); toggleExportDropdown(); return false;">PNG</a>
-            </div>
-        </div>
+    <div>
         <div class="report-preview" id="reportPreview">
-        <div style="text-align: center; color: #666; padding: 40px;">
-            <p>Configure your report using the left panel, then click "Generate Report" to preview.</p>
+            <div style="text-align: center; color: #666; padding: 40px;">
+                <p>Configure your report using the left panel, then click "Generate Report" to preview.</p>
+            </div>
         </div>
     </div>
 </div>
