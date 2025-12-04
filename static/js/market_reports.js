@@ -71,49 +71,11 @@ function renderSavedSearches() {
         return;
     }
     
-    savedSearches.forEach(search => {
-        const item = document.createElement('div');
-        item.className = 'saved-search-item-selectable';
-        item.innerHTML = `
-            <input type="checkbox" id="search_${search.id}" onchange="toggleSearchSelection(${search.id})">
-            <label for="search_${search.id}" style="cursor: pointer; flex: 1; margin: 0;">
-                ${search.type === 'blend' || search.page === 'blends' ? '✨ ' : ''}${search.name}
-            </label>
-        `;
-        container.appendChild(item);
-    });
+    // Just display saved searches as a simple list (no checkboxes)
+    container.innerHTML = '<p style="color: #666; font-size: 11px;">All saved searches are available in section dropdowns.</p>';
 }
 
-function toggleSearchSelection(searchId) {
-    const checkbox = document.getElementById(`search_${searchId}`);
-    if (checkbox.checked) {
-        selectedSearches.add(searchId);
-        // Add to all sections' allowed searches if they don't already have it
-        sections.forEach(section => {
-            if (!section.allowedSearchIds) {
-                section.allowedSearchIds = [];
-            }
-            if (!section.allowedSearchIds.includes(searchId)) {
-                section.allowedSearchIds.push(searchId);
-            }
-        });
-        renderSections(); // Re-render to show new option in dropdowns
-    } else {
-        selectedSearches.delete(searchId);
-        // Remove from sections
-        sections.forEach(section => {
-            section.searchIds = section.searchIds.filter(id => id !== searchId);
-        });
-        renderSections();
-    }
-    
-    const item = checkbox.closest('.saved-search-item-selectable');
-    if (checkbox.checked) {
-        item.classList.add('selected');
-    } else {
-        item.classList.remove('selected');
-    }
-}
+// Removed toggleSearchSelection - no longer using checkboxes for saved searches
 
 let sectionCount = 0;
 
@@ -132,13 +94,10 @@ function updateSectionCount() {
 function addSection() {
     // Use timestamp + random string for unique IDs to avoid conflicts with loaded sections
     const sectionId = `section_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    // Allow all saved searches to be added to new sections (not just selected ones)
-    const allSearchIds = savedSearches.map(s => s.id);
     sections.push({
         id: sectionId,
         title: 'New Section',
-        searchIds: [],
-        allowedSearchIds: allSearchIds // Allow all saved searches
+        searchIds: []
     });
     renderSections();
 }
@@ -187,16 +146,19 @@ function renderSections() {
                         onchange="addSearchToSection('${section.id}', this.value); this.value='';">
                     <option value="">Add saved search to section...</option>
                     ${(() => {
-                        // Ensure allowedSearchIds exists and includes all saved searches if empty
-                        if (!section.allowedSearchIds || section.allowedSearchIds.length === 0) {
-                            section.allowedSearchIds = savedSearches.map(s => s.id);
-                        }
-                        return (section.allowedSearchIds || []).map(id => {
-                            const search = savedSearches.find(s => s.id === id);
-                            if (!search) return '';
-                            const isInSection = section.searchIds.includes(id);
-                            if (isInSection) return '';
-                            return `<option value="${id}">${search.name}</option>`;
+                        // Show all saved searches, sorted alphabetically, excluding those already in the section
+                        const availableSearches = savedSearches
+                            .filter(search => !section.searchIds.includes(search.id))
+                            .sort((a, b) => {
+                                const nameA = a.name.toLowerCase();
+                                const nameB = b.name.toLowerCase();
+                                if (nameA < nameB) return -1;
+                                if (nameA > nameB) return 1;
+                                return 0;
+                            });
+                        
+                        return availableSearches.map(search => {
+                            return `<option value="${search.id}">${search.type === 'blend' || search.page === 'blends' ? '✨ ' : ''}${search.name}</option>`;
                         }).join('');
                     })()}
                 </select>
@@ -230,17 +192,7 @@ function addSearchToSection(sectionId, searchId) {
     
     const section = sections.find(s => s.id === sectionId);
     if (section) {
-        // Initialize allowedSearchIds if it doesn't exist (for backward compatibility)
-        if (!section.allowedSearchIds || section.allowedSearchIds.length === 0) {
-            section.allowedSearchIds = savedSearches.map(s => s.id);
-        }
-        
-        // Check if search is allowed in this section
-        if (!section.allowedSearchIds.includes(searchIdNum)) {
-            // For new sections, allow adding any saved search
-            section.allowedSearchIds.push(searchIdNum);
-        }
-        
+        // Allow any saved search to be added (no restrictions)
         if (!section.searchIds.includes(searchIdNum)) {
             section.searchIds.push(searchIdNum);
             renderSections();
@@ -408,8 +360,14 @@ async function fetchReportData() {
     const data = {};
     let mostRecentDate = null;
     
-    // Fetch current/previous prices for each selected search
-    for (const searchId of selectedSearches) {
+    // Collect all unique search IDs from all sections
+    const searchIdsToFetch = new Set();
+    sections.forEach(section => {
+        section.searchIds.forEach(id => searchIdsToFetch.add(id));
+    });
+    
+    // Fetch current/previous prices for each search used in sections
+    for (const searchId of searchIdsToFetch) {
         const search = savedSearches.find(s => s.id === searchId);
         if (!search) continue;
         
@@ -1677,7 +1635,6 @@ async function saveReportLayout() {
             name: name,
             sections: sections,
             indicators: indicators,
-            selectedSearches: Array.from(selectedSearches),
             reportConfig: {
                 title: reportConfig.title,
                 year: reportConfig.year,
@@ -1809,9 +1766,8 @@ function loadReportLayout() {
     // Load the layout
     sections = layout.sections || [];
     indicators = layout.indicators || [];
-    selectedSearches = new Set(layout.selectedSearches || []);
     
-    // Ensure all loaded sections have unique IDs and proper allowedSearchIds
+    // Ensure all loaded sections have unique IDs
     const existingIds = new Set();
     sections = sections.map((section, index) => {
         // Ensure section has an ID
@@ -1821,9 +1777,9 @@ function loadReportLayout() {
         }
         existingIds.add(section.id);
         
-        // Ensure allowedSearchIds is populated (allow all saved searches if empty)
-        if (!section.allowedSearchIds || section.allowedSearchIds.length === 0) {
-            section.allowedSearchIds = savedSearches.map(s => s.id);
+        // Remove allowedSearchIds if it exists (no longer needed - all searches are available)
+        if (section.allowedSearchIds) {
+            delete section.allowedSearchIds;
         }
         
         return section;
@@ -1899,7 +1855,6 @@ function manageReportLayouts() {
     // Load the layout
     sections = layout.sections || [];
     indicators = layout.indicators || [];
-    selectedSearches = new Set(layout.selectedSearches || []);
     
     // Update sectionCount to avoid ID conflicts when adding new sections
     updateSectionCount();
