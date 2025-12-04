@@ -35,72 +35,82 @@
             background: #f5f5f5;
             padding: 0;
             font-size: 12px;
+            margin: 0;
         }
         
-        /* Navigation - matching SCSS design system */
-        .top-nav {
-            background: var(--primary-colour, #1A4C41);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 10000;  /* Nav should be above everything */
-        }
-        
-        .nav-container {
-            max-width: 1120px;
-            margin: 0 auto;
+        /* Layout with sidebar */
+        .app-layout {
             display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            gap: 20px;
+            min-height: 100vh;
+        }
+        
+        /* Vertical Sidebar Navigation */
+        .sidebar {
+            background: var(--primary-colour, #1A4C41);
+            width: 250px;
+            min-height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .nav-logo {
             height: 32px;
             width: auto;
-        }
-        
-        .nav-title {
-            color: white;
-            font-size: 16px;
-            font-weight: 600;
-            margin-right: auto;
+            display: block;
         }
         
         .nav-links {
             display: flex;
-            gap: 8px;
-            align-items: center;
-            margin-left: auto;  /* Push links to the right */
+            flex-direction: column;
+            padding: 16px 0;
+            flex: 1;
         }
         
         .nav-link {
             color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
-            padding: 12px 16px;          /* py-3 equivalent */
-            font-size: 12px;
+            padding: 12px 20px;
+            font-size: 16px;
             font-weight: 500;
             transition: all 0.35s;
-            border-bottom: 2px solid transparent;
-            display: inline-block;
+            display: block;
+            border-left: 3px solid transparent;
         }
         
         .nav-link:hover {
-            color: #8FC19F;              /* hover:text-lightGreen (greenBrand-30) */
-            border-bottom-color: #8FC19F; /* hover:border-lightGreen */
+            color: #8FC19F;
+            background: rgba(255, 255, 255, 0.05);
+            border-left-color: #8FC19F;
         }
         
         .nav-link.active, .nav-link--current {
             color: #98c940;
-            border-bottom: 2px solid #98c940;
+            background: rgba(255, 255, 255, 0.1);
+            border-left-color: #98c940;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            width: calc(100% - 250px);
         }
         
         .container {
             max-width: 1120px;
             margin: 0 auto;
             background: white;
-            border-radius: 12px;       /* rounded-xl */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);  /* var(--drop-shadow) */
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             padding: 24px;
             margin-top: 16px;
             margin-bottom: 16px;
@@ -108,10 +118,17 @@
         
         /* Mobile Navigation */
         @media (max-width: 768px) {
-            .nav-container {
-                flex-wrap: wrap;
-                padding: 10px 12px;
-                gap: 10px;
+            .sidebar {
+                width: 100%;
+                min-height: auto;
+                position: relative;
+                flex-direction: row;
+            }
+            
+            .sidebar-header {
+                padding: 12px 16px;
+                border-bottom: none;
+                border-right: 1px solid rgba(255, 255, 255, 0.1);
             }
             
             .nav-logo {
@@ -119,19 +136,29 @@
             }
             
             .nav-links {
-                width: 100%;
-                justify-content: center;
-                flex-wrap: wrap;
-                gap: 6px;
-                margin-left: 0;  /* Reset auto margin on mobile */
+                flex-direction: row;
+                padding: 0;
+                overflow-x: auto;
+                flex: 1;
             }
             
             .nav-link {
-                padding: 6px 12px;
-                font-size: 11px;
-                flex: 1;
-                text-align: center;
-                min-width: 80px;
+                padding: 12px 16px;
+                font-size: 14px;
+                white-space: nowrap;
+                border-left: none;
+                border-bottom: 3px solid transparent;
+            }
+            
+            .nav-link:hover,
+            .nav-link.active {
+                border-left: none;
+                border-bottom-color: #8FC19F;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                width: 100%;
             }
             
             .container {
@@ -145,24 +172,28 @@
     {% block styles %}{% endblock %}
 </head>
 <body>
-    {% if not hide_nav %}
-    <nav class="top-nav">
-        <div class="nav-container">
-            <img src="{{ url_for('static', filename='images/Fusca Logos Final_Fusca Logo White-OldGreen.png') }}" alt="Fusca" class="nav-logo">
-            <div class="nav-links">
+    <div class="app-layout">
+        {% if not hide_nav %}
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="{{ url_for('static', filename='images/Fusca Logos Final_Fusca Logo White-OldGreen.png') }}" alt="Fusca" class="nav-logo">
+            </div>
+            <nav class="nav-links">
                 <a href="/simple" class="nav-link {% if page == 'simple' %}active{% endif %}">Simple Search</a>
                 <a href="/compare" class="nav-link {% if page == 'compare' %}active{% endif %}">Compare Types</a>
                 <a href="/blends" class="nav-link {% if page == 'blends' %}active{% endif %}">Advanced Blends</a>
                 <a href="/metrics" class="nav-link {% if page == 'metrics' %}active{% endif %}">Advanced Metrics</a>
                 <a href="/export-data" class="nav-link {% if page == 'export-data' %}active{% endif %}">Export Data</a>
                 <a href="/market_reports" class="nav-link {% if page == 'market-reports' %}active{% endif %}">Market Reports</a>
+            </nav>
+        </aside>
+        {% endif %}
+        
+        <main class="main-content" {% if hide_nav %}style="margin-left: 0; width: 100%;"{% endif %}>
+            <div class="container" {% if hide_nav %}style="margin-top: 0;"{% endif %}>
+                {% block content %}{% endblock %}
             </div>
-        </div>
-    </nav>
-    {% endif %}
-    
-    <div class="container" {% if hide_nav %}style="margin-top: 0;"{% endif %}>
-        {% block content %}{% endblock %}
+        </main>
     </div>
     
     <script src="{{ url_for('static', filename='js/common.js') }}?v=2.1"></script>

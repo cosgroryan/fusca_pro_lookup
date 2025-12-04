@@ -19,6 +19,7 @@ let reportConfig = {
     secondaryColor: '#3D7F4B' // Default medium green
 };
 let indicatorChart = null;
+let draggedSection = null;
 
 // Generate color palette from primary and secondary colors
 function generateColorPalette(primaryColor, secondaryColor) {
@@ -67,12 +68,12 @@ function renderSavedSearches() {
     container.innerHTML = '';
     
     if (savedSearches.length === 0) {
-        container.innerHTML = '<p style="color: #666; font-size: 11px;">No saved searches found. Save searches in Simple Search or Blends first.</p>';
+        container.innerHTML = '<p style="color: #666; font-size: 14px;">No saved searches found. Save searches in Simple Search or Blends first.</p>';
         return;
     }
     
     // Just display saved searches as a simple list (no checkboxes)
-    container.innerHTML = '<p style="color: #666; font-size: 11px;">All saved searches are available in section dropdowns.</p>';
+    container.innerHTML = '<p style="color: #666; font-size: 14px;">All saved searches are available in section dropdowns.</p>';
 }
 
 // Removed toggleSearchSelection - no longer using checkboxes for saved searches
@@ -97,9 +98,22 @@ function addSection() {
     sections.push({
         id: sectionId,
         title: 'New Section',
-        searchIds: []
+        searchIds: [],
+        collapsed: false // New sections are always open (un-collapsed)
     });
     renderSections();
+    
+    // Scroll to and flash the new section
+    setTimeout(() => {
+        const sectionElement = document.getElementById(`section_${sectionId}`);
+        if (sectionElement) {
+            sectionElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            sectionElement.classList.add('section-flash');
+            setTimeout(() => {
+                sectionElement.classList.remove('section-flash');
+            }, 1000);
+        }
+    }, 100);
 }
 
 function removeSection(sectionId) {
@@ -131,17 +145,27 @@ function renderSections() {
     
     container.innerHTML = '';
     
-    sections.forEach(section => {
+        sections.forEach((section, index) => {
         const sectionDiv = document.createElement('div');
-        sectionDiv.className = 'section-item';
+        sectionDiv.className = `section-item ${section.collapsed ? 'section-collapsed' : ''}`;
+        sectionDiv.id = `section_${section.id}`;
+        sectionDiv.dataset.sectionId = section.id;
+        
+        const isCollapsed = section.collapsed || false;
+        // When collapsed, show chevron-down to indicate "expand down"; when expanded, show chevron-up to indicate "collapse up"
+        const collapseIconPath = isCollapsed ? '/static/images/chevron-down-svgrepo-com.svg' : '/static/images/chevron-up-svgrepo-com.svg';
+        
         sectionDiv.innerHTML = `
-            <div class="section-header">
+            <div class="section-header-row">
+                <button class="section-collapse-btn" onclick="toggleSectionCollapse('${section.id}')" title="${isCollapsed ? 'Expand' : 'Collapse'}">
+                    <img src="${collapseIconPath}" alt="${isCollapsed ? 'Expand' : 'Collapse'}" style="width: 14px; height: 14px;">
+                </button>
                 <input type="text" class="section-title-input" value="${section.title}" 
                        onchange="updateSectionTitle('${section.id}', this.value)" 
-                       placeholder="Section title">
-                <span class="drag-handle">☰</span>
+                       placeholder="Section title" style="flex: 1;">
+                <span class="section-drag-handle" title="Drag to reorder">☰</span>
             </div>
-            <div style="margin-top: 8px;">
+            <div class="section-content">
                 <select id="section_${section.id}_select" style="width: 100%; padding: 4px; font-size: 12px;" 
                         onchange="addSearchToSection('${section.id}', this.value); this.value='';">
                     <option value="">Add saved search to section...</option>
@@ -167,15 +191,29 @@ function renderSections() {
                         const search = savedSearches.find(s => s.id === id);
                         if (!search) return '';
                         return `<div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: white; border-radius: 4px; margin-bottom: 4px;">
-                            <span style="font-size: 11px;">${search.name}</span>
-                            <button onclick="removeSearchFromSection('${section.id}', ${id})" style="background: #dc3545; color: white; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">✕</button>
+                            <span style="font-size: 14px;">${search.name}</span>
+                            <button onclick="removeSearchFromSection('${section.id}', ${id})" style="background: transparent; color: #666; border: none; padding: 2px 6px; font-size: 12px; cursor: pointer; line-height: 1;" onmouseover="this.style.color='#333'" onmouseout="this.style.color='#666'">✕</button>
                         </div>`;
                     }).join('')}
                 </div>
             </div>
-            <button onclick="removeSection('${section.id}')" style="margin-top: 8px; background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; width: 100%;">Remove Section</button>
+            <button class="section-remove-btn" onclick="removeSection('${section.id}')" title="Remove section">
+                <img src="/static/images/trash-bin-minimalistic-svgrepo-com.svg" alt="Remove">
+            </button>
         `;
         container.appendChild(sectionDiv);
+        
+        // Add drag event listeners to the drag handle
+        const dragHandle = sectionDiv.querySelector('.section-drag-handle');
+        if (dragHandle) {
+            dragHandle.draggable = true;
+            dragHandle.addEventListener('dragstart', handleDragStart);
+            dragHandle.addEventListener('dragend', handleDragEnd);
+        }
+        
+        // Add drop zone listeners to the section item
+        sectionDiv.addEventListener('dragover', handleDragOver);
+        sectionDiv.addEventListener('drop', handleDrop);
     });
 }
 
@@ -184,6 +222,120 @@ function updateSectionTitle(sectionId, title) {
     if (section) {
         section.title = title;
     }
+}
+
+function toggleSectionCollapse(sectionId) {
+    const section = sections.find(s => s.id === sectionId);
+    if (section) {
+        section.collapsed = !section.collapsed;
+        renderSections();
+    }
+}
+
+// Drag and drop handlers
+function handleDragStart(e) {
+    // Find the section item from the drag handle
+    const sectionItem = e.target.closest('.section-item');
+    if (!sectionItem) {
+        e.preventDefault();
+        return false;
+    }
+    
+    draggedSection = sectionItem;
+    sectionItem.style.opacity = '0.5';
+    sectionItem.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', sectionItem.dataset.sectionId);
+}
+
+let dropIndicator = null;
+
+function handleDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    
+    if (!draggedSection) return false;
+    
+    e.dataTransfer.dropEffect = 'move';
+    
+    // Find which section we're hovering over
+    const sectionItem = e.target.closest('.section-item');
+    if (!sectionItem || sectionItem === draggedSection) {
+        return false;
+    }
+    
+    // Store the drop target (we'll use it in handleDrop)
+    dropIndicator = sectionItem;
+    
+    return false;
+}
+
+function handleDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+    
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    
+    if (!draggedSection || !dropIndicator) {
+        dropIndicator = null;
+        return false;
+    }
+    
+    const container = document.getElementById('sectionsList');
+    if (!container) {
+        dropIndicator = null;
+        return false;
+    }
+    
+    // Get the index of the drop target
+    const dropIndex = Array.from(container.children).indexOf(dropIndicator);
+    const dragIndex = Array.from(container.children).indexOf(draggedSection);
+    
+    // Only reorder if we're moving to a different position
+    if (dropIndex !== dragIndex) {
+        if (dropIndex > dragIndex) {
+            // Moving down - insert after the drop target
+            container.insertBefore(draggedSection, dropIndicator.nextSibling);
+        } else {
+            // Moving up - insert before the drop target
+            container.insertBefore(draggedSection, dropIndicator);
+        }
+        
+        // Update sections array based on new DOM order
+        const newOrder = Array.from(container.children)
+            .map(child => child.dataset.sectionId)
+            .filter(id => id);
+        
+        // Reorder sections array to match DOM order
+        const reorderedSections = [];
+        newOrder.forEach(id => {
+            const section = sections.find(s => String(s.id) === String(id));
+            if (section) {
+                reorderedSections.push(section);
+            }
+        });
+        sections = reorderedSections;
+        
+        // Re-render to clean up any visual artifacts
+        renderSections();
+    }
+    
+    dropIndicator = null;
+    draggedSection = null;
+    return false;
+}
+
+function handleDragEnd(e) {
+    if (draggedSection) {
+        draggedSection.style.opacity = '';
+        draggedSection.classList.remove('dragging');
+    }
+    dropIndicator = null;
+    draggedSection = null;
 }
 
 function addSearchToSection(sectionId, searchId) {
@@ -292,7 +444,7 @@ function renderIndicators() {
     container.innerHTML = '';
     
     if (indicators.length === 0) {
-        container.innerHTML = '<p style="color: #666; font-size: 11px;">No indicators added yet.</p>';
+        container.innerHTML = '<p style="color: #666; font-size: 14px;">No indicators added yet.</p>';
         return;
     }
     
@@ -302,7 +454,7 @@ function renderIndicators() {
         item.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 12px; font-weight: 600;">${indicator.name}</span>
-                <button onclick="removeIndicator('${indicator.id}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">Remove</button>
+                <button onclick="removeIndicator('${indicator.id}')" style="background: transparent; color: #666; border: none; padding: 2px 6px; font-size: 12px; cursor: pointer; line-height: 1;" onmouseover="this.style.color='#333'" onmouseout="this.style.color='#666'">✕</button>
             </div>
         `;
         container.appendChild(item);
@@ -454,9 +606,8 @@ async function renderReport(reportData) {
                         </div>
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 4px; font-size: 11px; opacity: 0.8;">Logo:</label>
                         <input type="file" id="logoUpload" accept="image/*" onchange="handleLogoUpload(event)" style="display: none;">
-                        <button onclick="document.getElementById('logoUpload').click()" class="btn" style="font-size: 11px; padding: 4px 8px;">Upload Logo</button>
+                        <button onclick="document.getElementById('logoUpload').click()" class="btn" style="font-size: 14px; padding: 4px 8px; margin-bottom: 8px;">Upload Logo</button>
                         <div id="logoPreview" style="margin-top: 8px;">
                             ${reportConfig.logo ? `<img src="${reportConfig.logo}" style="max-height: 60px; max-width: 200px;">` : ''}
                         </div>
@@ -1322,14 +1473,26 @@ async function exportPDF() {
         });
         await Promise.all(imageLoadPromises);
         
-        // Fix hero image to always fill container
+        // Fix hero image to always fill container without stretching
         const heroContainer = preview.querySelector('.hero-image-container');
         const heroImg = preview.querySelector('.hero-image-preview');
         if (heroImg && heroContainer) {
+            // Wait for image to fully load to get natural dimensions
+            await new Promise((resolve) => {
+                if (heroImg.complete && heroImg.naturalWidth > 0) {
+                    resolve();
+                } else {
+                    heroImg.onload = resolve;
+                    heroImg.onerror = resolve;
+                    setTimeout(resolve, 2000);
+                }
+            });
+            
             heroContainer.style.height = '150px';
             heroContainer.style.width = '100%';
             heroContainer.style.overflow = 'hidden';
             heroContainer.style.position = 'relative';
+            heroContainer.style.display = 'block';
             
             const wrapper = heroImg.parentElement;
             if (wrapper && wrapper !== heroContainer) {
@@ -1343,12 +1506,52 @@ async function exportPDF() {
                 wrapper.style.padding = '0';
             }
             
-            // Ensure image fills container completely
-            heroImg.style.width = '100%';
-            heroImg.style.height = '100%';
-            heroImg.style.objectFit = 'cover';
-            heroImg.style.objectPosition = 'center';
-            heroImg.style.display = 'block';
+            // Get container and image dimensions
+            const containerWidth = heroContainer.offsetWidth || 800;
+            const containerHeight = 150;
+            const imgNaturalWidth = heroImg.naturalWidth || heroImg.width || containerWidth;
+            const imgNaturalHeight = heroImg.naturalHeight || heroImg.height || containerHeight;
+            
+            if (imgNaturalWidth > 0 && imgNaturalHeight > 0) {
+                const imgAspectRatio = imgNaturalWidth / imgNaturalHeight;
+                const containerAspectRatio = containerWidth / containerHeight;
+                
+                let finalWidth, finalHeight;
+                
+                // Calculate dimensions to cover container while maintaining aspect ratio
+                if (imgAspectRatio > containerAspectRatio) {
+                    // Image is wider - scale to fill height, crop width
+                    finalHeight = containerHeight;
+                    finalWidth = finalHeight * imgAspectRatio;
+                } else {
+                    // Image is taller - scale to fill width, crop height
+                    finalWidth = containerWidth;
+                    finalHeight = finalWidth / imgAspectRatio;
+                }
+                
+                // Center the image
+                const offsetX = (finalWidth - containerWidth) / 2;
+                const offsetY = (finalHeight - containerHeight) / 2;
+                
+                // Apply explicit sizing to prevent stretching
+                heroImg.style.position = 'absolute';
+                heroImg.style.width = `${finalWidth}px`;
+                heroImg.style.height = `${finalHeight}px`;
+                heroImg.style.left = `${-offsetX}px`;
+                heroImg.style.top = `${-offsetY}px`;
+                heroImg.style.objectFit = 'none'; // Use explicit sizing
+                heroImg.style.objectPosition = 'center';
+                heroImg.style.display = 'block';
+                heroImg.style.maxWidth = 'none';
+                heroImg.style.maxHeight = 'none';
+            } else {
+                // Fallback if image dimensions aren't available
+                heroImg.style.width = '100%';
+                heroImg.style.height = '100%';
+                heroImg.style.objectFit = 'cover';
+                heroImg.style.objectPosition = 'center';
+                heroImg.style.display = 'block';
+            }
         }
         
         // Additional wait to ensure everything is rendered
@@ -1474,14 +1677,26 @@ async function exportPNG() {
         });
         await Promise.all(imageLoadPromises);
         
-        // Fix hero image to always fill container
+        // Fix hero image to always fill container without stretching
         const heroContainer = preview.querySelector('.hero-image-container');
         const heroImg = preview.querySelector('.hero-image-preview');
         if (heroImg && heroContainer) {
+            // Wait for image to fully load to get natural dimensions
+            await new Promise((resolve) => {
+                if (heroImg.complete && heroImg.naturalWidth > 0) {
+                    resolve();
+                } else {
+                    heroImg.onload = resolve;
+                    heroImg.onerror = resolve;
+                    setTimeout(resolve, 2000);
+                }
+            });
+            
             heroContainer.style.height = '150px';
             heroContainer.style.width = '100%';
             heroContainer.style.overflow = 'hidden';
             heroContainer.style.position = 'relative';
+            heroContainer.style.display = 'block';
             
             const wrapper = heroImg.parentElement;
             if (wrapper && wrapper !== heroContainer) {
@@ -1495,12 +1710,52 @@ async function exportPNG() {
                 wrapper.style.padding = '0';
             }
             
-            // Ensure image fills container completely
-            heroImg.style.width = '100%';
-            heroImg.style.height = '100%';
-            heroImg.style.objectFit = 'cover';
-            heroImg.style.objectPosition = 'center';
-            heroImg.style.display = 'block';
+            // Get container and image dimensions
+            const containerWidth = heroContainer.offsetWidth || 800;
+            const containerHeight = 150;
+            const imgNaturalWidth = heroImg.naturalWidth || heroImg.width || containerWidth;
+            const imgNaturalHeight = heroImg.naturalHeight || heroImg.height || containerHeight;
+            
+            if (imgNaturalWidth > 0 && imgNaturalHeight > 0) {
+                const imgAspectRatio = imgNaturalWidth / imgNaturalHeight;
+                const containerAspectRatio = containerWidth / containerHeight;
+                
+                let finalWidth, finalHeight;
+                
+                // Calculate dimensions to cover container while maintaining aspect ratio
+                if (imgAspectRatio > containerAspectRatio) {
+                    // Image is wider - scale to fill height, crop width
+                    finalHeight = containerHeight;
+                    finalWidth = finalHeight * imgAspectRatio;
+                } else {
+                    // Image is taller - scale to fill width, crop height
+                    finalWidth = containerWidth;
+                    finalHeight = finalWidth / imgAspectRatio;
+                }
+                
+                // Center the image
+                const offsetX = (finalWidth - containerWidth) / 2;
+                const offsetY = (finalHeight - containerHeight) / 2;
+                
+                // Apply explicit sizing to prevent stretching
+                heroImg.style.position = 'absolute';
+                heroImg.style.width = `${finalWidth}px`;
+                heroImg.style.height = `${finalHeight}px`;
+                heroImg.style.left = `${-offsetX}px`;
+                heroImg.style.top = `${-offsetY}px`;
+                heroImg.style.objectFit = 'none'; // Use explicit sizing
+                heroImg.style.objectPosition = 'center';
+                heroImg.style.display = 'block';
+                heroImg.style.maxWidth = 'none';
+                heroImg.style.maxHeight = 'none';
+            } else {
+                // Fallback if image dimensions aren't available
+                heroImg.style.width = '100%';
+                heroImg.style.height = '100%';
+                heroImg.style.objectFit = 'cover';
+                heroImg.style.objectPosition = 'center';
+                heroImg.style.display = 'block';
+            }
         }
         
         // Additional wait to ensure everything is rendered
@@ -1562,12 +1817,18 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Helper function to compress base64 image data
-function compressImage(base64DataUrl, maxWidth, maxHeight, quality = 0.8) {
+function compressImage(base64DataUrl, maxWidth, maxHeight, quality = 0.8, preserveFormat = true) {
     return new Promise((resolve, reject) => {
         if (!base64DataUrl) {
             resolve(null);
             return;
         }
+        
+        // Detect original image format more accurately
+        const isPNG = base64DataUrl.toLowerCase().includes('data:image/png') || 
+                     base64DataUrl.toLowerCase().startsWith('data:image/png');
+        const isJPEG = base64DataUrl.toLowerCase().includes('data:image/jpeg') || 
+                      base64DataUrl.toLowerCase().includes('data:image/jpg');
         
         const img = new Image();
         img.onload = function() {
@@ -1586,10 +1847,25 @@ function compressImage(base64DataUrl, maxWidth, maxHeight, quality = 0.8) {
             canvas.height = height;
             
             const ctx = canvas.getContext('2d');
+            
+            // For PNG, preserve transparency - don't fill with background
+            if (isPNG && preserveFormat) {
+                // Clear canvas to transparent
+                ctx.clearRect(0, 0, width, height);
+            }
+            
             ctx.drawImage(img, 0, 0, width, height);
             
-            // Convert to compressed base64
-            const compressed = canvas.toDataURL('image/jpeg', quality);
+            // Convert to compressed base64 - use PNG for PNG images to preserve transparency
+            let compressed;
+            if (isPNG && preserveFormat) {
+                // Use PNG to preserve transparency - no quality parameter for PNG
+                compressed = canvas.toDataURL('image/png');
+            } else {
+                // Use JPEG for other formats or when compression is needed
+                compressed = canvas.toDataURL('image/jpeg', quality);
+            }
+            
             resolve(compressed);
         };
         
@@ -1612,7 +1888,8 @@ async function saveReportLayout() {
         
         if (reportConfig.logo) {
             try {
-                compressedLogo = await compressImage(reportConfig.logo, 400, 200, 0.7);
+                // Preserve PNG format for logos to maintain transparency
+                compressedLogo = await compressImage(reportConfig.logo, 400, 200, 0.7, true);
                 console.log('Logo compressed:', reportConfig.logo.length, '->', compressedLogo ? compressedLogo.length : 0);
             } catch (e) {
                 console.warn('Failed to compress logo:', e);
@@ -1645,7 +1922,9 @@ async function saveReportLayout() {
                 nzdUsd: reportConfig.nzdUsd,
                 commentary: reportConfig.commentary,
                 logo: compressedLogo,
-                heroImage: compressedHero
+                heroImage: compressedHero,
+                primaryColor: reportConfig.primaryColor,
+                secondaryColor: reportConfig.secondaryColor
             },
             created: new Date().toISOString()
         };
@@ -1767,7 +2046,7 @@ function loadReportLayout() {
     sections = layout.sections || [];
     indicators = layout.indicators || [];
     
-    // Ensure all loaded sections have unique IDs
+    // Ensure all loaded sections have unique IDs and preserve collapsed state
     const existingIds = new Set();
     sections = sections.map((section, index) => {
         // Ensure section has an ID
@@ -1775,7 +2054,16 @@ function loadReportLayout() {
             // Generate a new unique ID if missing or duplicate
             section.id = `section_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`;
         }
+        // Preserve collapsed state if it exists, default to false
+        if (section.collapsed === undefined) {
+            section.collapsed = false;
+        }
         existingIds.add(section.id);
+        
+        // Preserve collapsed state if it exists, default to false
+        if (section.collapsed === undefined) {
+            section.collapsed = false;
+        }
         
         // Remove allowedSearchIds if it exists (no longer needed - all searches are available)
         if (section.allowedSearchIds) {

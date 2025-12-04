@@ -19,6 +19,7 @@
         padding: 16px;
         overflow-y: auto;
         max-height: calc(100vh - 100px);
+        position: relative;
     }
     
     .report-preview {
@@ -40,10 +41,25 @@
     }
     
     .panel-section h3 {
-        font-size: 13px;
+        font-size: 18px;
         color: #153D33;
         margin-bottom: 12px;
         font-weight: 600;
+        position: sticky;
+        top: 0;
+        background: #f9f9f9;
+        padding: 16px;
+        padding-bottom: 8px;
+        z-index: 10;
+        margin-top: -16px;
+        margin-left: -16px;
+        margin-right: -16px;
+        margin-bottom: 12px;
+    }
+    
+    .panel-section:first-child h3 {
+        margin-top: -16px;
+        padding-top: 16px;
     }
     
     .saved-search-item-selectable {
@@ -235,7 +251,119 @@
     }
     
     .btn-secondary:hover {
-        background: #f5f5f5;
+        background: #f5f5f5 !important;
+        color: #3D7F4B !important;
+        border-color: #3D7F4B !important;
+    }
+    
+    .section-item {
+        position: relative;
+        min-height: 60px;
+    }
+    
+    .section-remove-btn {
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        background: transparent !important;
+        border: none;
+        padding: 8px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.6;
+        transition: opacity 0.2s ease;
+    }
+    
+    .section-remove-btn:hover {
+        opacity: 1;
+    }
+    
+    .section-remove-btn img {
+        width: 14px;
+        height: 14px;
+        filter: brightness(0) saturate(100%) invert(50%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1) contrast(1);
+        transition: filter 0.2s ease;
+    }
+    
+    .section-remove-btn:hover img {
+        filter: brightness(0) saturate(100%) invert(28%) sepia(85%) saturate(7500%) hue-rotate(345deg) brightness(90%) contrast(88%);
+    }
+    
+    .section-header-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    
+    .section-collapse-btn {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 2px 4px;
+        color: #666;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+    }
+    
+    .section-collapse-btn:hover {
+        background: transparent !important;
+    }
+    
+    .section-drag-handle {
+        cursor: move;
+        color: #666;
+        font-size: 16px;
+        padding: 2px 4px;
+    }
+    
+    .section-drag-handle:hover {
+        color: #3D7F4B;
+    }
+    
+    .section-content {
+        margin-top: 8px;
+        padding-bottom: 32px;
+    }
+    
+    .section-collapsed .section-content {
+        display: none;
+    }
+    
+    .section-collapsed .section-remove-btn {
+        position: absolute;
+        bottom: 8px;
+        right: 12px;
+        top: auto;
+    }
+    
+    .section-collapsed {
+        padding-bottom: 40px;
+    }
+    
+    .section-flash {
+        animation: flashOutline 1s ease-out;
+    }
+    
+    @keyframes flashOutline {
+        0% {
+            box-shadow: 0 0 0 0 rgba(61, 127, 75, 1);
+        }
+        50% {
+            box-shadow: 0 0 0 4px rgba(61, 127, 75, 0.5);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(61, 127, 75, 0);
+        }
+    }
+    
+    .section-item.dragging {
+        opacity: 0.5;
     }
     
     @media (max-width: 1024px) {
@@ -262,21 +390,22 @@
             </div>
         </div>
         
-        <!-- Sections Builder -->
-        <div class="panel-section">
-            <h3>Report Sections</h3>
-            <button onclick="addSection()" class="btn" style="width: 100%; margin-bottom: 12px;">+ Add Section</button>
-            <div id="sectionsList">
-                <!-- Sections will be added here -->
-            </div>
-        </div>
-        
         <!-- Indicator Builder -->
         <div class="panel-section">
             <h3>Indicators</h3>
-            <button onclick="showIndicatorBuilder()" class="btn" style="width: 100%; margin-bottom: 12px;">+ Create Indicator</button>
+            <p style="color: #666; font-size: 14px; margin-bottom: 12px;">These types come from saved blends, and will be displayed on a single graph in the report</p>
+            <button onclick="showIndicatorBuilder()" class="btn btn-secondary" style="width: 100%; margin-bottom: 12px;">+ Create Indicator</button>
             <div id="indicatorsList">
                 <!-- Indicators will be added here -->
+            </div>
+        </div>
+        
+        <!-- Sections Builder -->
+        <div class="panel-section">
+            <h3>Report Sections</h3>
+            <button onclick="addSection()" class="btn btn-secondary" style="width: 100%; margin-bottom: 12px;">+ Add Section</button>
+            <div id="sectionsList">
+                <!-- Sections will be added here -->
             </div>
         </div>
         
@@ -284,25 +413,25 @@
         <div class="panel-section" style="margin-top: 20px;">
             <h3>Brand Colors</h3>
             <div style="margin-bottom: 12px;">
-                <label style="display: block; margin-bottom: 4px; font-size: 11px; font-weight: 600;">Primary Color:</label>
+                <label style="display: block; margin-bottom: 4px; font-size: 14px; font-weight: 600;">Primary Color:</label>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <input type="color" id="primaryColorPicker" value="#1A4C41" 
                            onchange="reportConfig.primaryColor = this.value; if(document.getElementById('reportPreview').innerHTML && !document.getElementById('reportPreview').innerHTML.includes('Configure your report')) { generateReport(); }"
                            style="width: 60px; height: 32px; cursor: pointer; border: 1px solid #ddd; border-radius: 4px;">
                     <input type="text" id="primaryColorText" value="#1A4C41" 
                            onchange="reportConfig.primaryColor = this.value; document.getElementById('primaryColorPicker').value = this.value; if(document.getElementById('reportPreview').innerHTML && !document.getElementById('reportPreview').innerHTML.includes('Configure your report')) { generateReport(); }"
-                           style="flex: 1; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px;">
+                           style="flex: 1; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
                 </div>
             </div>
             <div style="margin-bottom: 12px;">
-                <label style="display: block; margin-bottom: 4px; font-size: 11px; font-weight: 600;">Secondary Color:</label>
+                <label style="display: block; margin-bottom: 4px; font-size: 14px; font-weight: 600;">Secondary Color:</label>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <input type="color" id="secondaryColorPicker" value="#3D7F4B" 
                            onchange="reportConfig.secondaryColor = this.value; if(document.getElementById('reportPreview').innerHTML && !document.getElementById('reportPreview').innerHTML.includes('Configure your report')) { generateReport(); }"
                            style="width: 60px; height: 32px; cursor: pointer; border: 1px solid #ddd; border-radius: 4px;">
                     <input type="text" id="secondaryColorText" value="#3D7F4B" 
                            onchange="reportConfig.secondaryColor = this.value; document.getElementById('secondaryColorPicker').value = this.value; if(document.getElementById('reportPreview').innerHTML && !document.getElementById('reportPreview').innerHTML.includes('Configure your report')) { generateReport(); }"
-                           style="flex: 1; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px;">
+                           style="flex: 1; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
                 </div>
             </div>
         </div>

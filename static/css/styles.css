@@ -177,20 +177,28 @@ input[type="text"], input[type="number"], select, input[type="date"] {
 h1 {
     color: var(--primary-colour);
     margin: 0;
-    font-size: 18px;
+    font-size: 24px;
     font-weight: 600;
 }
 
 h2 {
-    font-size: 14px;
+    font-size: 20px;
     font-weight: 600;
     color: var(--primary-colour);
 }
 
 h3 {
-    font-size: 13px;
+    font-size: 18px;
     font-weight: 600;
     color: var(--primary-colour);
+}
+
+p {
+    font-size: 16px;
+}
+
+a {
+    font-size: 16px;
 }
 
 /* Button styles - matching SCSS design system */
