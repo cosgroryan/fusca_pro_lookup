@@ -50,6 +50,31 @@
         align-items: center;
         margin-bottom: 8px;
         font-size: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .blend-filter-row .blend-filter-column {
+        min-width: 150px;
+        width: max-content;
+        flex: 0 0 auto;
+    }
+    
+    .blend-filter-row .blend-filter-operator {
+        min-width: 40px;
+        width: max-content;
+        flex: 0 0 auto;
+    }
+    
+    .blend-filter-row .blend-filter-value,
+    .blend-filter-row .blend-filter-value2 {
+        min-width: 50px;
+        width: max-content;
+        flex: 0 0 auto;
+    }
+    
+    .blend-filter-row .apply-to-all-btn,
+    .blend-filter-row .remove-blend-filter-btn {
+        flex-shrink: 0;
     }
     
     /* Button Styles */
@@ -148,6 +173,7 @@
         font-size: 12px;
         cursor: pointer;
         height: 28px;
+        width: fit-content;
     }
     
     .add-blend-filter-btn:hover {
@@ -155,33 +181,66 @@
     }
     
     .remove-blend-filter-btn {
-        background: #dc3545;
-        color: white;
-        border: none;
-        padding: 5px 10px;
-        border-radius: 3px;
+        background: transparent !important;
+        background-color: transparent !important;
+        color: #666 !important;
+        border: none !important;
+        padding: 2px 6px;
+        border-radius: 0;
         font-size: 12px;
         cursor: pointer;
-        height: 28px;
+        height: auto;
+        width: fit-content;
+        line-height: 1;
     }
     
-    .remove-blend-filter-btn:hover {
-        background: #c82333;
+    .remove-blend-filter-btn:hover,
+    .remove-blend-filter-btn:hover:focus,
+    .remove-blend-filter-btn:hover:active {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        color: #dc3545 !important;
+    }
+    
+    .remove-blend-filter-btn:active,
+    .remove-blend-filter-btn:focus {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
     }
     
     .apply-to-all-btn {
-        background: #28a745;
-        color: white;
+        background: transparent !important;
+        background-color: transparent !important;
         border: none;
-        padding: 5px 10px;
-        border-radius: 3px;
+        color: #666;
         font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
         cursor: pointer;
-        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0;
+        text-decoration: none;
+        transition: color 0.2s ease, text-decoration 0.2s ease;
+        width: fit-content;
+        height: auto;
     }
     
-    .apply-to-all-btn:hover {
-        background: #218838;
+    .apply-to-all-btn:hover,
+    .apply-to-all-btn:focus,
+    .apply-to-all-btn:active {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        color: #3D7F4B;
+        text-decoration: underline;
     }
     
     .help-icon {
@@ -284,21 +343,25 @@
         }
         
         .blend-filter-row {
-            flex-direction: column;
+            flex-direction: row;
+            flex-wrap: wrap;
             gap: 6px;
-            align-items: stretch;
+            align-items: center;
         }
         
         .blend-filter-row select,
-        .blend-filter-row input,
-        .blend-filter-row button {
-            width: 100%;
-            margin: 0;
+        .blend-filter-row input {
+            flex: 1;
+            min-width: 120px;
+            margin: 0 !important;
             box-sizing: border-box;
         }
         
-        .add-blend-filter-btn {
-            width: 100%;
+        .blend-filter-row button {
+            flex-shrink: 0;
+            width: fit-content !important;
+            margin: 0 !important;
+            box-sizing: border-box;
         }
         
         /* Tooltip mobile fix */

@@ -139,7 +139,7 @@ function populateBlendWeights(entries) {
             <div class="blend-filters">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-size: 13px; color: #666;">Custom filters for ${entry.label}:</span>
-                    <button class="add-blend-filter-btn" onclick="addBlendFilter(${idx})">+ Add Filter</button>
+                    <button class="add-blend-filter-btn" onclick="addBlendFilter(${idx})" style="width: fit-content; margin-left: auto;">+ Add Filter</button>
                 </div>
                 <div id="blend_filters_${idx}"></div>
             </div>
@@ -157,6 +157,7 @@ function addBlendFilter(typeIdx) {
     filterRow.id = filterId;
     filterRow.setAttribute('data-type-idx', typeIdx);
     filterRow.innerHTML = `
+        <button class="remove-blend-filter-btn" onclick="removeBlendFilter('${filterId}')" title="Remove filter">✕</button>
         <select class="blend-filter-column">
             <option value="">Select Column</option>
             ${columns.filter(c => c.name !== 'sale_date').map(col => 
@@ -174,8 +175,9 @@ function addBlendFilter(typeIdx) {
         </select>
         <input type="text" class="blend-filter-value" placeholder="Value" />
         <input type="text" class="blend-filter-value2" placeholder="Value 2" style="display:none;" />
-        <button class="apply-to-all-btn" onclick="applyFilterToAll('${filterId}', ${typeIdx})" title="Apply this filter to all types">Apply to All</button>
-        <button class="remove-blend-filter-btn" onclick="removeBlendFilter('${filterId}')">✕</button>
+        <button class="apply-to-all-btn" onclick="applyFilterToAll('${filterId}', ${typeIdx})" title="Apply this filter to all types">
+            APPLY TO ALL
+        </button>
     `;
     
     const operatorSelect = filterRow.querySelector('.blend-filter-operator');
