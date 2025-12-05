@@ -16,8 +16,16 @@
         border-radius: 8px;
         padding: 16px;
         overflow-y: auto;
-        max-height: calc(100vh - 100px);
-        position: relative;
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+        max-height: 100vh;
+    }
+    
+    .report-preview-wrapper {
+        display: flex;
+        flex-direction: column;
+        min-height: 800px;
     }
     
     .report-preview {
@@ -557,7 +565,7 @@
     </div>
     
     <!-- Report Preview -->
-    <div>
+    <div class="report-preview-wrapper">
         <div class="report-preview" id="reportPreview">
             <div style="text-align: center; color: #666; padding: 40px;">
                 <p>Configure your report using the left panel, then click "Generate Report" to preview.</p>
@@ -582,5 +590,47 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="{{ url_for('static', filename='js/market_reports.js') }}?v=1.0"></script>
+<script>
+    // Sync left panel height with report container
+    function syncPanelHeight() {
+        const leftPanel = document.querySelector('.left-panel');
+        const reportWrapper = document.querySelector('.report-preview-wrapper');
+        
+        if (leftPanel && reportWrapper) {
+            const reportHeight = reportWrapper.offsetHeight;
+            leftPanel.style.maxHeight = reportHeight + 'px';
+        }
+    }
+    
+    // Sync on load and after report generation
+    document.addEventListener('DOMContentLoaded', function() {
+        syncPanelHeight();
+        
+        // Sync after a delay to ensure content is loaded
+        setTimeout(syncPanelHeight, 100);
+        
+        // Sync when window resizes
+        window.addEventListener('resize', syncPanelHeight);
+        
+        // Observe report container for size changes
+        const reportWrapper = document.querySelector('.report-preview-wrapper');
+        if (reportWrapper) {
+            const resizeObserver = new ResizeObserver(function(entries) {
+                syncPanelHeight();
+            });
+            resizeObserver.observe(reportWrapper);
+        }
+    });
+    
+    // Override generateReport to sync height after generation
+    const originalGenerateReport = window.generateReport;
+    if (originalGenerateReport) {
+        window.generateReport = function() {
+            const result = originalGenerateReport.apply(this, arguments);
+            setTimeout(syncPanelHeight, 500);
+            return result;
+        };
+    }
+</script>
 {% endblock %}
 
