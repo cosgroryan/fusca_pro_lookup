@@ -590,15 +590,23 @@ th.sortable.sort-desc::after {
 /* Mobile responsive */
 @media (max-width: 768px) {
     .search-bar {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: wrap;
         gap: 6px;
-        align-items: stretch;
+        align-items: center;
         width: 100%;
     }
     
-    .search-bar input,
+    .search-bar input {
+        flex: 1;
+        min-width: 150px;
+        margin: 0 !important;
+        box-sizing: border-box;
+    }
+    
     .search-bar button {
-        width: 100%;
+        flex-shrink: 0;
+        width: fit-content;
         margin: 0 !important;
         box-sizing: border-box;
     }

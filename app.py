@@ -2490,59 +2490,69 @@ def get_search_prices():
         query += " ORDER BY sale_date DESC LIMIT 1000"
         
         conn, tunnel = get_db()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute(query, params)
-        results = cursor.fetchall()
-        
-        if not results:
+        cursor = None
+        try:
+            cursor = conn.cursor(dictionary=True)
+            # Ensure connection is alive before executing
+            conn.ping(reconnect=True)
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            
+            if not results:
+                return jsonify({
+                    'current_price': None,
+                    'current_date': None,
+                    'previous_price': None,
+                    'previous_date': None,
+                    'percent_change': None
+                })
+            
+            # Get unique sale dates, sorted desc
+            dates = sorted(set(r['sale_date'] for r in results if r['sale_date']), reverse=True)
+            
+            if len(dates) == 0:
+                return jsonify({
+                    'current_price': None,
+                    'current_date': None,
+                    'previous_price': None,
+                    'previous_date': None,
+                    'percent_change': None
+                })
+            
+            # Calculate weighted average for latest date
+            latest_date = dates[0]
+            latest_rows = [r for r in results if r['sale_date'] == latest_date]
+            total_weight = sum(float(r['bales']) for r in latest_rows)
+            current_price = sum(float(r['price']) * float(r['bales']) for r in latest_rows) / total_weight if total_weight > 0 else 0
+            
+            # Get previous date price
+            previous_price = None
+            previous_date = None
+            if len(dates) > 1:
+                previous_date = dates[1]
+                prev_rows = [r for r in results if r['sale_date'] == previous_date]
+                prev_weight = sum(float(r['bales']) for r in prev_rows)
+                previous_price = sum(float(r['price']) * float(r['bales']) for r in prev_rows) / prev_weight if prev_weight > 0 else 0
+            
+            # Calculate percent change: (current - previous)/current*100
+            percent_change = None
+            if current_price and previous_price:
+                percent_change = ((current_price - previous_price) / current_price) * 100
+            
+            # Return prices in cents (as stored in database)
             return jsonify({
-                'current_price': None,
-                'current_date': None,
-                'previous_price': None,
-                'previous_date': None,
-                'percent_change': None
+                'current_price': round(current_price, 2) if current_price else None,  # Already in cents
+                'current_date': str(latest_date) if latest_date else None,
+                'previous_price': round(previous_price, 2) if previous_price else None,  # Already in cents
+                'previous_date': str(previous_date) if previous_date else None,
+                'percent_change': round(percent_change, 2) if percent_change is not None else None
             })
-        
-        # Get unique sale dates, sorted desc
-        dates = sorted(set(r['sale_date'] for r in results if r['sale_date']), reverse=True)
-        
-        if len(dates) == 0:
-            return jsonify({
-                'current_price': None,
-                'current_date': None,
-                'previous_price': None,
-                'previous_date': None,
-                'percent_change': None
-            })
-        
-        # Calculate weighted average for latest date
-        latest_date = dates[0]
-        latest_rows = [r for r in results if r['sale_date'] == latest_date]
-        total_weight = sum(float(r['bales']) for r in latest_rows)
-        current_price = sum(float(r['price']) * float(r['bales']) for r in latest_rows) / total_weight if total_weight > 0 else 0
-        
-        # Get previous date price
-        previous_price = None
-        previous_date = None
-        if len(dates) > 1:
-            previous_date = dates[1]
-            prev_rows = [r for r in results if r['sale_date'] == previous_date]
-            prev_weight = sum(float(r['bales']) for r in prev_rows)
-            previous_price = sum(float(r['price']) * float(r['bales']) for r in prev_rows) / prev_weight if prev_weight > 0 else 0
-        
-        # Calculate percent change: (current - previous)/current*100
-        percent_change = None
-        if current_price and previous_price:
-            percent_change = ((current_price - previous_price) / current_price) * 100
-        
-        # Return prices in cents (as stored in database)
-        return jsonify({
-            'current_price': round(current_price, 2) if current_price else None,  # Already in cents
-            'current_date': str(latest_date) if latest_date else None,
-            'previous_price': round(previous_price, 2) if previous_price else None,  # Already in cents
-            'previous_date': str(previous_date) if previous_date else None,
-            'percent_change': round(percent_change, 2) if percent_change is not None else None
-        })
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except:
+                    pass
     
     except Exception as e:
         print(f"Search prices error: {e}")
