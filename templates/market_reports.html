@@ -482,6 +482,95 @@
             max-height: 400px;
         }
     }
+    
+    @media (max-width: 768px) {
+        .market-reports-container {
+            grid-template-columns: 1fr;
+            width: 100%;
+            max-width: 100%;
+            padding: 0;
+            margin: 0;
+            gap: 12px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+        
+        .left-panel {
+            width: 100%;
+            max-width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            overflow-x: hidden !important;
+            overflow-y: auto;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .left-panel > * {
+            flex-shrink: 0;
+            overflow: visible !important;
+        }
+        
+        .report-preview-wrapper {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+        
+        .report-preview {
+            width: 100%;
+            max-width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            min-height: auto;
+        }
+        
+        .panel-section {
+            width: 100%;
+            box-sizing: border-box;
+            overflow: visible !important;
+            overflow-x: hidden !important;
+            overflow-y: visible !important;
+        }
+        
+        .panel-section * {
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow: visible !important;
+        }
+        
+        .left-panel > * {
+            overflow: visible !important;
+        }
+        
+        .left-panel .panel-section,
+        .left-panel .panel-section > * {
+            overflow: visible !important;
+            overflow-y: visible !important;
+        }
+        
+        .container {
+            padding: 8px;
+            margin: 8px;
+            width: calc(100% - 16px);
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 20px;
+            margin-bottom: 12px;
+            word-wrap: break-word;
+        }
+        
+        .export-dropdown {
+            font-size: 10px;
+        }
+    }
 </style>
 {% endblock %}
 
